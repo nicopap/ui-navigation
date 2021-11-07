@@ -8,6 +8,7 @@ use bevy_ui_navigation::{Focusable, Focused, NavCommand, NavNode, NavigationPlug
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
+        // 1: Add the NavigationPlugin
         .add_plugin(NavigationPlugin)
         .init_resource::<ButtonMaterials>()
         .add_startup_system(setup)
@@ -52,6 +53,8 @@ fn keyboard_input(mut keyboard: EventReader<KeyboardInput>, mut nav_cmds: EventW
 
 fn button_system(
     button_materials: Res<ButtonMaterials>,
+    // I'm considering a system where it is less cumbersome to check for focus
+    // (I think I'll add `focused` and `active` fields to `Focusable`)
     mut interaction_query: Query<(Option<&Focused>, &mut Handle<ColorMaterial>), With<Button>>,
 ) {
     for (interaction, mut material) in interaction_query.iter_mut() {
@@ -94,6 +97,9 @@ fn setup(mut commands: Commands, button_materials: Res<ButtonMaterials>) {
             },
             ..Default::default()
         })
+        // Currently the `Focusable`s must be transitive child of a `NavNode`
+        // I'll probably drop the requirement in the next iteration
+        // 3. Add a `NavNode`
         .insert(NavNode)
         .with_children(|commands| {
             for pos in positions {
@@ -118,5 +124,6 @@ fn spawn_button(position: Vec2, commands: &mut ChildBuilder, button_materials: &
             material: button_materials.normal.clone(),
             ..Default::default()
         })
+        // 2. Add the `Focusable` component to the navigable Entity
         .insert(Focusable);
 }
