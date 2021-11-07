@@ -1,7 +1,7 @@
 use bevy::input::{keyboard::KeyboardInput, ElementState};
 use bevy::prelude::*;
 
-use bevy_ui_navigation::{Focusable, Focused, NavCommand, NavNode, NavigationPlugin};
+use bevy_ui_navigation::{Focusable, Focused, NavCommand, NavigationPlugin};
 
 /// This example illustrates how to mark buttons as focusable and let
 /// NavigationPlugin figure out how to go from one to another.
@@ -97,10 +97,6 @@ fn setup(mut commands: Commands, button_materials: Res<ButtonMaterials>) {
             },
             ..Default::default()
         })
-        // Currently the `Focusable`s must be transitive child of a `NavNode`
-        // I'll probably drop the requirement in the next iteration
-        // 3. Add a `NavNode`
-        .insert(NavNode)
         .with_children(|commands| {
             for pos in positions {
                 spawn_button(pos, commands, &button_materials);

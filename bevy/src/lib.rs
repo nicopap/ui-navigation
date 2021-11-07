@@ -97,6 +97,21 @@ fn change_focus_at(
     move_focus_at(direction, focused, siblings, transform)
 }
 
+fn rootless_change_focus(
+    command: NavCommand,
+    focused: Entity,
+    is_focusable: &Query<Entity, With<Focusable>>,
+    transform: &Query<&GlobalTransform>,
+    mut disactivated: Vec<Entity>,
+) -> NavEvent {
+    let siblings: Vec<Entity> = is_focusable.iter().collect();
+    disactivated.push(focused);
+    match change_focus_at(command, focused, &siblings, transform) {
+        Some(to) => NavEvent::FocusChanged { to, disactivated },
+        None => NavEvent::Uncaught { command, focused },
+    }
+}
+
 fn change_focus(
     focused: Entity,
     command: NavCommand,
@@ -111,8 +126,7 @@ fn change_focus(
     let nav_node = match containing_navnode(focused, parents, is_nav_node) {
         Some(entity) => entity,
         None => {
-            let focused = *disactivated.first().unwrap_or(&focused);
-            return NavEvent::Uncaught { command, focused };
+            return rootless_change_focus(command, focused, is_focusable, transform, disactivated)
         }
     };
     let siblings = all_focusables(nav_node, children, is_focusable, is_nav_node);
@@ -190,7 +204,6 @@ fn containing_navnode(
     }
 }
 /// All sibling focusables within a single NavNode
-// TODO: maybe combine this with `get_active`
 fn all_focusables(
     nav_node: Entity,
     children: &Query<&Children>,
