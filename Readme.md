@@ -14,13 +14,17 @@ This repo contains two crates:
 * `bevy`: A completely independent implementation of the same algorithm using
   the bevy ECS. It doesn't at all depend on `generic`.
 
+### Examples
+
+Check out the `bevy/examples` directory for bevy examples.
+
 ## Roadmap
 
-[X] Basic flat hierarchy 2D navigation (requires element location deduction)
-[ ] Hierarchical navigation with Action/Cancel (requires tree layer without
+- [X] Basic flat hierarchy 2D navigation (requires element location deduction)
+- [ ] Hierarchical navigation with Action/Cancel (requires tree layer without
     an active trail)
-[ ] Tabbed navigation demo (requires Forward/Backward commands support)
-[ ] Complex hierarchy with focus memory (requires tree)
+- [ ] Tabbed navigation demo (requires Forward/Backward commands support)
+- [ ] Complex hierarchy with focus memory (requires tree)
 
 # License
 
