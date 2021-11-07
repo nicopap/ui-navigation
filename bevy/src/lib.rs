@@ -101,14 +101,24 @@ fn rootless_change_focus(
     command: NavCommand,
     focused: Entity,
     is_focusable: &Query<Entity, With<Focusable>>,
+    is_nav_node: &Query<(), With<NavNode>>,
     transform: &Query<&GlobalTransform>,
     mut disactivated: Vec<Entity>,
 ) -> NavEvent {
-    let siblings: Vec<Entity> = is_focusable.iter().collect();
-    disactivated.push(focused);
-    match change_focus_at(command, focused, &siblings, transform) {
-        Some(to) => NavEvent::FocusChanged { to, disactivated },
-        None => NavEvent::Uncaught { command, focused },
+    // In the case the user doesn't specify ANY NavNode, it's the most
+    // simple case
+    if is_nav_node.is_empty() {
+        let siblings: Vec<Entity> = is_focusable.iter().collect();
+        disactivated.push(focused);
+        match change_focus_at(command, focused, &siblings, transform) {
+            Some(to) => NavEvent::FocusChanged { to, disactivated },
+            None => NavEvent::Uncaught { command, focused },
+        }
+    } else {
+        // In case the user has specified AT LEAST one NavNode, we will act as
+        // if there were no orphan Focusable (this may not be true, but it
+        // would be very expensive to manage that case)
+        NavEvent::Uncaught { command, focused }
     }
 }
 
@@ -126,7 +136,14 @@ fn change_focus(
     let nav_node = match containing_navnode(focused, parents, is_nav_node) {
         Some(entity) => entity,
         None => {
-            return rootless_change_focus(command, focused, is_focusable, transform, disactivated)
+            return rootless_change_focus(
+                command,
+                focused,
+                is_focusable,
+                is_nav_node,
+                transform,
+                disactivated,
+            )
         }
     };
     let siblings = all_focusables(nav_node, children, is_focusable, is_nav_node);

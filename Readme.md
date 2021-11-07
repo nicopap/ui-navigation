@@ -21,8 +21,8 @@ Check out the `bevy/examples` directory for bevy examples.
 ## Roadmap
 
 - [X] Basic flat hierarchy 2D navigation (requires element location deduction)
-- [ ] 2D navigation jumping through nested node bounds
-- [ ] Cleanup noisy `Component`s I think instead of having a `Focused`,
+- [X] 2D navigation jumping through nested node bounds
+- [ ] Cleanup noisy `Component`s. I think instead of having a `Focused`,
       `Focusable`, `NavNode` and `Active`, we can just have all of those as
       fields of `Focusable`. This probably also reduces massively the number of
       arguments I pass around in the functions I call…
