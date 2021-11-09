@@ -1,7 +1,7 @@
 use bevy::input::{keyboard::KeyboardInput, ElementState};
 use bevy::prelude::*;
 
-use bevy_ui_navigation::{Focusable, Focused, NavCommand, NavNode, NavigationPlugin};
+use bevy_ui_navigation::{Focusable, Focused, NavEvent, NavFence, NavRequest, NavigationPlugin};
 
 /// Shows how navigation is supported even between siblings separated by a
 /// hierahierarchical level of nodes, shows how to "wall of" a part of the UI
@@ -13,6 +13,7 @@ fn main() {
         .init_resource::<ButtonMaterials>()
         .add_startup_system(setup)
         .add_system(button_system)
+        .add_system(print_nav_events)
         .add_system(keyboard_input)
         .run();
 }
@@ -40,10 +41,17 @@ impl FromWorld for ButtonMaterials {
     }
 }
 
-fn keyboard_input(mut keyboard: EventReader<KeyboardInput>, mut nav_cmds: EventWriter<NavCommand>) {
-    use NavCommand::*;
-    let command_mapping = |code: KeyCode| match code {
+fn print_nav_events(mut events: EventReader<NavEvent>) {
+    for event in events.iter() {
+        println!("{:?}", event);
+    }
+}
+
+fn keyboard_input(mut keyboard: EventReader<KeyboardInput>, mut nav_cmds: EventWriter<NavRequest>) {
+    use NavRequest::*;
+    let command_mapping = |code| match code {
         KeyCode::Return => Some(Action),
+        KeyCode::Back => Some(Cancel),
         KeyCode::Up => Some(MoveUp),
         KeyCode::Down => Some(MoveDown),
         KeyCode::Left => Some(MoveLeft),
@@ -61,8 +69,6 @@ fn keyboard_input(mut keyboard: EventReader<KeyboardInput>, mut nav_cmds: EventW
 
 fn button_system(
     button_materials: Res<ButtonMaterials>,
-    // I'm considering a system where it is less cumbersome to check for focus
-    // (I think I'll add `focused` and `active` fields to `Focusable`)
     mut interaction_query: Query<(Option<&Focused>, &mut Handle<ColorMaterial>), With<Button>>,
 ) {
     for (interaction, mut material) in interaction_query.iter_mut() {
@@ -94,14 +100,14 @@ fn setup(mut commands: Commands, button_materials: Res<ButtonMaterials>) {
         // The `Focusable`s buttons are not direct siblings, we can navigate through
         // them beyond direct hierarchical relationships.
         //
-        // To prevent this, we can add a `NavNode` as a sort of boundary
+        // To prevent this, we can add a `NavFence` as a sort of boundary
         // between different sets of `Focusable`s. This requires having an
-        // englobing `NavNode` that contains all other `NavNode`s or
+        // englobing `NavFence` that contains all other `NavFence`s or
         // `Focusable`s
         //
-        // YOU MUSTE ADD A NavNode enclosing ALL Focusable and ALL NavNode (but
+        // YOU MUSTE ADD A NavFence enclosing ALL Focusable and ALL NavFence (but
         // themselves) Subtile broken behavior will ensure otherwise
-        .insert(NavNode)
+        .insert(NavFence::default())
         .with_children(|commands| {
             let proportions = [(45.0, 50.0), (45.0, 45.0), (60.0, 45.0)];
             for (i, proportion) in proportions.iter().enumerate() {
@@ -132,8 +138,8 @@ fn setup(mut commands: Commands, button_materials: Res<ButtonMaterials>) {
                     ..Default::default()
                 })
                 // We don't want to be able to access the pink square, so we
-                // add a `NavNode` as boundary
-                .insert(NavNode)
+                // add a `NavFence` as boundary
+                .insert(NavFence::default())
                 .with_children(|commands| {
                     spawn_button(commands, &button_materials);
                     spawn_button(commands, &button_materials);
@@ -155,5 +161,5 @@ fn spawn_button(commands: &mut ChildBuilder, button_materials: &ButtonMaterials)
         })
         // The `Focusable`s are not direct siblings, we can navigate through
         // them beyond direct hierarchical relationships.
-        .insert(Focusable);
+        .insert(Focusable::default());
 }

@@ -22,12 +22,13 @@ Check out the `bevy/examples` directory for bevy examples.
 
 - [X] Basic flat hierarchy 2D navigation (requires element location deduction)
 - [X] 2D navigation jumping through nested node bounds
-- [ ] Cleanup noisy `Component`s. I think instead of having a `Focused`,
+- [X] Cleanup noisy `Component`s. I think instead of having a `Focused`,
       `Focusable`, `NavNode` and `Active`, we can just have all of those as
       fields of `Focusable`. This probably also reduces massively the number of
       arguments I pass around in the functions I call…
 - [ ] Hierarchical navigation with Action/Cancel (requires tree layer without
       an active trail)
+- [ ] Hierarchical navigation with Action/Cancel **with downward focus memory**
 - [ ] Tabbed navigation demo (requires Forward/Backward commands support)
 - [ ] Complex hierarchy with focus memory (requires tree)
 

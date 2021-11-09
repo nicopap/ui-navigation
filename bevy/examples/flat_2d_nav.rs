@@ -1,7 +1,7 @@
 use bevy::input::{keyboard::KeyboardInput, ElementState};
 use bevy::prelude::*;
 
-use bevy_ui_navigation::{Focusable, Focused, NavCommand, NavigationPlugin};
+use bevy_ui_navigation::{Focusable, NavEvent, NavRequest, NavigationPlugin};
 
 /// This example illustrates how to mark buttons as focusable and let
 /// NavigationPlugin figure out how to go from one to another.
@@ -14,28 +14,32 @@ fn main() {
         .add_startup_system(setup)
         .add_system(button_system)
         .add_system(keyboard_input)
+        .add_system(print_nav_events)
         .run();
 }
 
 struct ButtonMaterials {
     normal: Handle<ColorMaterial>,
     focused: Handle<ColorMaterial>,
+    active: Handle<ColorMaterial>,
 }
 
 impl FromWorld for ButtonMaterials {
     fn from_world(world: &mut World) -> Self {
         let mut materials = world.get_resource_mut::<Assets<ColorMaterial>>().unwrap();
         ButtonMaterials {
-            normal: materials.add(Color::rgb(0.15, 0.15, 0.15).into()),
-            focused: materials.add(Color::rgb(0.35, 0.75, 0.35).into()),
+            normal: materials.add(Color::DARK_GRAY.into()),
+            focused: materials.add(Color::ORANGE_RED.into()),
+            active: materials.add(Color::GOLD.into()),
         }
     }
 }
 
-fn keyboard_input(mut keyboard: EventReader<KeyboardInput>, mut nav_cmds: EventWriter<NavCommand>) {
-    use NavCommand::*;
-    let command_mapping = |code: KeyCode| match code {
+fn keyboard_input(mut keyboard: EventReader<KeyboardInput>, mut nav_cmds: EventWriter<NavRequest>) {
+    use NavRequest::*;
+    let command_mapping = |code| match code {
         KeyCode::Return => Some(Action),
+        KeyCode::Back => Some(Cancel),
         KeyCode::Up => Some(MoveUp),
         KeyCode::Down => Some(MoveDown),
         KeyCode::Left => Some(MoveLeft),
@@ -53,19 +57,24 @@ fn keyboard_input(mut keyboard: EventReader<KeyboardInput>, mut nav_cmds: EventW
 
 fn button_system(
     button_materials: Res<ButtonMaterials>,
-    // I'm considering a system where it is less cumbersome to check for focus
-    // (I think I'll add `focused` and `active` fields to `Focusable`)
-    mut interaction_query: Query<(Option<&Focused>, &mut Handle<ColorMaterial>), With<Button>>,
+    mut interaction_query: Query<
+        (&Focusable, &mut Handle<ColorMaterial>),
+        (Changed<Focusable>, With<Button>),
+    >,
 ) {
-    for (interaction, mut material) in interaction_query.iter_mut() {
-        match interaction {
-            Some(_) => {
-                *material = button_materials.focused.clone();
-            }
-            None => {
-                *material = button_materials.normal.clone();
-            }
+    for (focus_state, mut material) in interaction_query.iter_mut() {
+        if focus_state.is_focused() {
+            *material = button_materials.focused.clone();
+        } else if focus_state.is_active() {
+            *material = button_materials.active.clone();
+        } else {
+            *material = button_materials.normal.clone();
         }
+    }
+}
+fn print_nav_events(mut events: EventReader<NavEvent>) {
+    for event in events.iter() {
+        println!("{:?}", event);
     }
 }
 
@@ -121,5 +130,5 @@ fn spawn_button(position: Vec2, commands: &mut ChildBuilder, button_materials: &
             ..Default::default()
         })
         // 2. Add the `Focusable` component to the navigable Entity
-        .insert(Focusable);
+        .insert(Focusable::default());
 }

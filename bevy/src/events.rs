@@ -1,7 +1,7 @@
 use bevy::ecs::entity::Entity;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub enum Command {
+pub enum NavRequest {
     MoveUp,
     MoveDown,
     MoveLeft,
@@ -12,19 +12,18 @@ pub enum Command {
     Cancel,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum NavEvent {
     FocusChanged {
         to: Entity,
-        disactivated: Vec<Entity>,
+        from: Vec<Entity>,
     },
     Caught {
-        container: Entity,
         focused: Entity,
-        command: Command,
+        request: NavRequest,
     },
     Uncaught {
         focused: Entity,
-        command: Command,
+        request: NavRequest,
     },
 }

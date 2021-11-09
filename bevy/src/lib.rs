@@ -1,3 +1,4 @@
+// TODO: review all uses of `.unwrap()`!
 mod events;
 
 use std::cmp::Ordering;
@@ -6,23 +7,40 @@ use bevy::ecs::system::{QuerySingleError, SystemParam};
 use bevy::math::Vec3Swizzles;
 use bevy::prelude::*;
 
-pub use crate::events::{Command as NavCommand, NavEvent};
+pub use crate::events::{NavEvent, NavRequest};
 
 #[derive(SystemParam)]
 struct NavQueries<'w, 's> {
     children: Query<'w, 's, &'static Children>,
     parents: Query<'w, 's, &'static Parent>,
-    focusables: Query<'w, 's, Entity, With<Focusable>>,
-    nav_nodes: Query<'w, 's, (), With<NavNode>>,
-    actives: Query<'w, 's, (), Or<(With<Active>, With<Focused>)>>,
+    focusables: Query<'w, 's, (Entity, &'static Focusable), With<Focusable>>,
+    nav_fences: Query<'w, 's, &'static NavFence, With<NavFence>>,
     transform: Query<'w, 's, &'static GlobalTransform>,
 }
 
-#[derive(Component)]
-pub struct NavNode;
+#[derive(Component, Default)]
+#[non_exhaustive]
+pub struct NavFence;
 
-#[derive(Component)]
-pub struct Focusable;
+#[derive(Component, Default)]
+pub struct Focusable {
+    is_active: bool,
+    is_focused: bool,
+}
+impl Focusable {
+    pub fn is_focused(&self) -> bool {
+        self.is_focused
+    }
+    pub fn is_active(&self) -> bool {
+        self.is_active
+    }
+    fn focused() -> Self {
+        Focusable {
+            is_focused: true,
+            is_active: true,
+        }
+    }
+}
 
 // TODO: consider using bevy::prelude::Interaction
 // or at least something more ergonomic you can use methods on
@@ -34,10 +52,6 @@ pub struct Focusable;
 #[derive(Component)]
 #[non_exhaustive]
 pub struct Focused;
-
-#[derive(Component)]
-#[non_exhaustive]
-pub struct Active;
 
 // Alternative design: Instead of evaluating at focus-change time the
 // neighbores, somehow cache them
@@ -59,11 +73,11 @@ impl Direction {
         }
     }
 }
-impl TryFrom<NavCommand> for Direction {
+impl TryFrom<NavRequest> for Direction {
     type Error = ();
-    fn try_from(value: NavCommand) -> Result<Self, Self::Error> {
+    fn try_from(value: NavRequest) -> Result<Self, Self::Error> {
         use Direction::*;
-        use NavCommand::*;
+        use NavRequest::*;
         match value {
             MoveUp => Ok(North),
             MoveDown => Ok(South),
@@ -74,7 +88,9 @@ impl TryFrom<NavCommand> for Direction {
     }
 }
 
-fn move_focus_at(
+/// Which `Entity` in `siblings` can be reached from `focused` in
+/// `direction` given entities `transform` if any, otherwise `None`
+fn resolve_location_within(
     focused: Entity,
     direction: Direction,
     siblings: &[Entity],
@@ -97,56 +113,64 @@ fn move_focus_at(
         .cloned()
 }
 
-fn change_focus_at(
+/// Change focus within provided set of `siblings`, `None` if impossible.
+fn resolve_within(
     focused: Entity,
-    command: NavCommand,
+    request: NavRequest,
     siblings: &[Entity],
     transform: &Query<&GlobalTransform>,
 ) -> Option<Entity> {
-    let direction: Direction = command.try_into().ok()?;
-    move_focus_at(focused, direction, siblings, transform)
+    let direction: Direction = request.try_into().ok()?;
+    resolve_location_within(focused, direction, siblings, transform)
 }
 
-fn rootless_change_focus(
+/// Resolves `request` when there is no more containing `NavFence`
+///
+/// This can happen for two distinct reasons:
+/// 1. The Request cannot be resolved, in ths case it is `Uncaught`
+/// 2. It is a flat no-headache `Focusable` setup, in which case, we make sure
+///    there is actually no `NavFence`s.
+fn rootless_resolve(
     focused: Entity,
-    command: NavCommand,
+    request: NavRequest,
     queries: &NavQueries,
-    mut disactivated: Vec<Entity>,
+    mut from: Vec<Entity>,
 ) -> NavEvent {
-    // In the case the user doesn't specify ANY NavNode, it's the most
+    // In the case the user doesn't specify ANY NavFence, it's the most
     // simple case
-    if queries.nav_nodes.is_empty() {
-        let siblings: Vec<Entity> = queries.focusables.iter().collect();
-        disactivated.push(focused);
-        match change_focus_at(focused, command, &siblings, &queries.transform) {
-            Some(to) => NavEvent::FocusChanged { to, disactivated },
-            None => NavEvent::Uncaught { command, focused },
+    if queries.nav_fences.is_empty() {
+        let siblings: Vec<Entity> = queries.focusables.iter().map(|tpl| tpl.0).collect();
+        from.push(focused);
+        match resolve_within(focused, request, &siblings, &queries.transform) {
+            Some(to) => NavEvent::FocusChanged { to, from },
+            None => NavEvent::Uncaught { request, focused },
         }
     } else {
-        // In case the user has specified AT LEAST one NavNode, we will act as
+        // In case the user has specified AT LEAST one NavFence, we will act as
         // if there were no orphan Focusable (this may not be true, but it
         // would be very expensive to manage that case)
-        NavEvent::Uncaught { command, focused }
+        let focused = *from.last().unwrap();
+        NavEvent::Uncaught { request, focused }
     }
 }
 
-fn change_focus(
+/// Resolve `request` where the focused element is `focused`
+fn resolve(
     focused: Entity,
-    command: NavCommand,
+    request: NavRequest,
     queries: &NavQueries,
-    mut disactivated: Vec<Entity>,
+    mut from: Vec<Entity>,
 ) -> NavEvent {
-    let nav_node = match containing_navnode(focused, queries) {
+    let nav_fence = match parent_nav_fence(focused, queries) {
         Some(entity) => entity,
-        None => return rootless_change_focus(focused, command, queries, disactivated),
+        None => return rootless_resolve(focused, request, queries, from),
     };
-    let siblings = all_focusables(nav_node, queries);
-    // TODO: better handling of missing Active/Focused
-    let focused = get_active(&siblings, &queries.actives).unwrap_or(*siblings.first().unwrap());
-    disactivated.push(focused);
-    match change_focus_at(focused, command, &siblings, &queries.transform) {
-        Some(to) => NavEvent::FocusChanged { to, disactivated },
-        None => change_focus(nav_node, command, queries, disactivated),
+    let siblings = children_focusables(nav_fence, queries);
+    let focused = get_active(&siblings, queries).unwrap();
+    from.push(focused);
+    match resolve_within(focused, request, &siblings, &queries.transform) {
+        Some(to) => NavEvent::FocusChanged { to, from },
+        None => resolve(nav_fence, request, queries, from),
     }
 }
 // Consideration: exploring a part of the UI graph every time a navigation
@@ -154,68 +178,79 @@ fn change_focus(
 // navigation graph.
 fn listen_nav_requests(
     focused: Query<Entity, With<Focused>>,
-    mut events: EventReader<NavCommand>,
+    mut requests: EventReader<NavRequest>,
     queries: NavQueries,
+    mut events: EventWriter<NavEvent>,
     mut commands: Commands,
 ) {
     // TODO: this most likely breaks when there is more than a single event
-    for command in events.iter() {
+    for request in requests.iter() {
+        // TODO: This code needs cleanup
         let focused_id = focused.get_single().unwrap_or_else(|err| {
             if matches!(err, QuerySingleError::MultipleEntities(_)) {
                 panic!("Multiple focused, not possible");
             }
-            queries.focusables.iter().next().unwrap()
+            queries.focusables.iter().next().unwrap().0
         });
-        let change = change_focus(focused_id, *command, &queries, Vec::new());
-        if let NavEvent::FocusChanged { to, disactivated } = change {
-            for elem in disactivated {
+        let event = resolve(focused_id, *request, &queries, Vec::new());
+        if let NavEvent::FocusChanged { to, from } = event.clone() {
+            for elem in from {
                 commands.entity(elem).remove::<Focused>();
-                commands.entity(elem).remove::<Active>();
+                commands.entity(elem).insert(Focusable::default());
             }
-            commands.entity(to).insert(Focused);
-        }
+            commands
+                .entity(to)
+                .insert_bundle((Focused, Focusable::focused()));
+        };
+        events.send(event);
     }
 }
 
-fn containing_navnode(focusable: Entity, queries: &NavQueries) -> Option<Entity> {
+/// The `NavFence` containing `focusable`, if any
+fn parent_nav_fence(focusable: Entity, queries: &NavQueries) -> Option<Entity> {
     match queries.parents.get(focusable).ok() {
-        Some(Parent(parent)) if queries.nav_nodes.get(*parent).is_ok() => Some(*parent),
-        Some(Parent(parent)) => containing_navnode(*parent, queries),
+        Some(Parent(parent)) if queries.nav_fences.get(*parent).is_ok() => Some(*parent),
+        Some(Parent(parent)) => parent_nav_fence(*parent, queries),
         None => None,
     }
 }
-/// All sibling focusables within a single NavNode
-fn all_focusables(nav_node: Entity, queries: &NavQueries) -> Vec<Entity> {
-    match queries.children.get(nav_node).ok() {
+
+/// All sibling focusables within a single NavFence
+fn children_focusables(nav_fence: Entity, queries: &NavQueries) -> Vec<Entity> {
+    match queries.children.get(nav_fence).ok() {
         Some(direct_children) => {
-            let (mut focusables, others): (Vec<Entity>, Vec<Entity>) = direct_children
+            let focusables = direct_children
                 .iter()
-                .partition(|e| queries.focusables.get(**e).is_ok());
-            let transitive_focusables = others
+                .filter(|e| queries.focusables.get(**e).is_ok())
+                .cloned();
+            let transitive_focusables = direct_children
                 .iter()
-                .filter(|e| queries.nav_nodes.get(**e).is_err())
-                .flat_map(|e| all_focusables(*e, queries));
-            focusables.extend(transitive_focusables);
-            focusables
+                .filter(|e| queries.focusables.get(**e).is_err())
+                .filter(|e| queries.nav_fences.get(**e).is_err())
+                .flat_map(|e| children_focusables(*e, queries));
+            focusables.chain(transitive_focusables).collect()
         }
-        None => vec![],
+        None => Vec::new(),
     }
 }
 
-fn get_active(
-    focusables: &[Entity],
-    actives: &Query<(), Or<(With<Active>, With<Focused>)>>,
-) -> Option<Entity> {
+/// Which `Entity` in `focusables` is `Active`, or the first in `focusables` if
+/// none found.
+///
+/// (which is shouldn't happen outside of the very first focus action)
+fn get_active(focusables: &[Entity], queries: &NavQueries) -> Option<Entity> {
     focusables
         .iter()
-        .find(|focus| actives.get(**focus).is_ok())
+        .find(|e| queries.focusables.get(**e).iter().any(|f| f.1.is_active))
+        .or_else(|| focusables.first())
         .cloned()
 }
 
 pub struct NavigationPlugin;
 impl Plugin for NavigationPlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<NavCommand>()
+        app.add_event::<NavRequest>()
+            .add_event::<NavEvent>()
             .add_system(listen_nav_requests);
     }
 }
