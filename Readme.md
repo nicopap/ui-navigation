@@ -5,18 +5,9 @@ currently limiting itself to targeting the Bevy engine default UI library.
 
 The design document is [available here](https://github.com/nicopap/rfcs/blob/ui-navigation/rfcs/41-ui-navigation.md).
 
-## Structure
-
-This repo contains two crates:
-* `generic`: An implementation of the navigation algorithm using the classical
-  tree data structure. It is here for reference and as an help to understand
-  the algorithm for people not necessarilly familiar with ECS.
-* `bevy`: A completely independent implementation of the same algorithm using
-  the bevy ECS. It doesn't at all depend on `generic`.
-
 ### Examples
 
-Check out the `bevy/examples` directory for bevy examples.
+Check out the `examples` directory for bevy examples.
 
 ## Roadmap
 
@@ -34,7 +25,7 @@ Check out the `bevy/examples` directory for bevy examples.
 - [X] Remove distinction between `Uncaught` and `Caught` events.
 - [ ] Tabbed navigation demo (requires Forward/Backward commands support)
 - [ ] Complex hierarchy with focus memory (requires tree)
-- [ ] Remove "generic" crate
+- [X] Remove "generic" crate
 - [ ] Replace most calls to `.iter().find(…)` for child non_inert by checking
       the `NavFence`'s `non_inert_child` rather than `query.nav_fences`. This
       fixes the most likely hotspot which is the recursive function
