@@ -19,17 +19,35 @@ use bevy_ui_navigation::{Direction, Focusable, NavEvent, NavFence, NavRequest, N
 /// and press `ENTER`, to navigate to the left, press `BACKSPACE`. Notice how
 /// going back to an already explored menu sets the focused element to the last
 /// focused one.
+///
+/// This example also demonstrates the `NavRequest::FocusOn` request. When
+/// `ENTER` is pressed when a green circle button is focused, it sends the
+/// `FocusOn` request with a first row button as target.
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugin(NavigationPlugin)
         .init_resource::<Materials>()
+        .insert_resource(Gameui::new())
         .add_startup_system(setup)
         .add_system(button_system)
         .add_system(query_bad_stuff)
         .add_system(keyboard_input)
         .add_system(handle_nav_events)
         .run();
+}
+
+struct Gameui {
+    from: Vec<Entity>,
+    to: Entity,
+}
+impl Gameui {
+    pub fn new() -> Self {
+        Self {
+            from: Vec::new(),
+            to: Entity::new(1),
+        }
+    }
 }
 
 fn query_bad_stuff(query: Query<(Entity, &NavFence, &Focusable), Changed<Focusable>>) {
@@ -45,12 +63,14 @@ struct Materials {
     dormant: Handle<ColorMaterial>,
     background: Handle<ColorMaterial>,
     rarrow: Handle<ColorMaterial>,
+    circle: Handle<ColorMaterial>,
 }
 
 impl FromWorld for Materials {
     fn from_world(world: &mut World) -> Self {
         let assets = world.get_resource::<AssetServer>().unwrap();
         let rarrow = assets.load("rarrow.png").into();
+        let circle = assets.load("green_circle.png").into();
         let mut materials = world.get_resource_mut::<Assets<ColorMaterial>>().unwrap();
         Materials {
             inert: materials.add(Color::DARK_GRAY.into()),
@@ -59,6 +79,7 @@ impl FromWorld for Materials {
             dormant: materials.add(Color::GRAY.into()),
             background: materials.add(Color::BLACK.into()),
             rarrow: materials.add(rarrow),
+            circle: materials.add(circle),
         }
     }
 }
@@ -104,9 +125,20 @@ fn button_system(
         }
     }
 }
-fn handle_nav_events(mut events: EventReader<NavEvent>) {
+fn handle_nav_events(
+    mut events: EventReader<NavEvent>,
+    mut requests: EventWriter<NavRequest>,
+    game: Res<Gameui>,
+) {
     for event in events.iter() {
         println!("{:?}", event);
+        match event {
+            NavEvent::Uncaught {
+                from,
+                request: NavRequest::Action,
+            } if game.from.contains(from.first()) => requests.send(NavRequest::FocusOn(game.to)),
+            _ => {}
+        }
     }
 }
 
@@ -128,7 +160,7 @@ fn menu(materials: &Materials) -> NodeBundle {
         ..Default::default()
     }
 }
-fn setup(mut commands: Commands, materials: Res<Materials>) {
+fn setup(mut commands: Commands, materials: Res<Materials>, mut game: ResMut<Gameui>) {
     // ui camera
     commands.spawn_bundle(UiCameraBundle::default());
 
@@ -143,12 +175,18 @@ fn setup(mut commands: Commands, materials: Res<Materials>) {
         style,
         ..Default::default()
     };
+    let image_style = Style {
+        size: size_fn(100.0, 100.0),
+        ..Default::default()
+    };
     let rarrow = ImageBundle {
-        style: Style {
-            size: size_fn(100.0, 100.0),
-            ..Default::default()
-        },
+        style: image_style.clone(),
         material: materials.rarrow.clone(),
+        ..Default::default()
+    };
+    let circle = ImageBundle {
+        style: image_style,
+        material: materials.circle.clone(),
         ..Default::default()
     };
 
@@ -165,11 +203,22 @@ fn setup(mut commands: Commands, materials: Res<Materials>) {
                         for i in 0..4 {
                             let mut button = commands.spawn_bundle(button(&materials));
                             button.insert(Focusable::default());
+                            if j == 0 && i == 3 {
+                                game.to = button.id();
+                            }
                             if j == i {
                                 button.with_children(|commands| {
                                     commands.spawn_bundle(rarrow.clone());
                                 });
                                 next_menu_button = Some(button.id());
+                            }
+                            if j == 4 {
+                                let to_add = button
+                                    .with_children(|commands| {
+                                        commands.spawn_bundle(circle.clone());
+                                    })
+                                    .id();
+                                game.from.push(to_add);
                             }
                         }
                     });

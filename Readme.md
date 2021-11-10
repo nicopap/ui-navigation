@@ -29,7 +29,7 @@ Check out the `bevy/examples` directory for bevy examples.
 - [X] Hierarchical navigation with Action/Cancel (requires tree layer without
       an active trail)
 - [X] Hierarchical navigation with Action/Cancel **with downward focus memory**
-- [ ] `NavRequest::FocusOn` support
+- [X] `NavRequest::FocusOn` support
 - [ ] Do not climb the navigation tree on failed `NavRequest::Move`.
 - [ ] Tabbed navigation demo (requires Forward/Backward commands support)
 - [ ] Complex hierarchy with focus memory (requires tree)

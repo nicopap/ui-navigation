@@ -1,8 +1,14 @@
 // TODO: review all uses of `.unwrap()`!
+// Notes on the structure of this file:
+//
+// All "helper functions" are defined after `listen_nav_requests`,
+// algorithms are specified over `listen_nav_requests`. While structs and enums
+// are defined before all.
 mod events;
 
 use std::cmp::Ordering;
 use std::fmt;
+use std::num::NonZeroUsize;
 
 use bevy::ecs::system::{QuerySingleError, SystemParam};
 use bevy::math::Vec3Swizzles;
@@ -285,12 +291,11 @@ fn resolve(
         Next | Previous => {
             todo!("Manage 'menu' events")
         }
-        FocusOn(_new_to_focus) => {
-            todo!(
-                "Create a FocusChanged event with \
-                    ascending and descending path between \
-                    the currently focused element and new_to_focus"
-            )
+        FocusOn(new_to_focus) => {
+            let mut from = root_path(focused, queries);
+            let mut to = root_path(new_to_focus, queries);
+            trim_common_tail(&mut from, &mut to);
+            NavEvent::FocusChanged { from, to }
         }
     }
 }
@@ -374,11 +379,76 @@ fn non_inert_within<'a, 'b>(siblings: &'a [Entity], queries: &'b NavQueries) -> 
         .or_else(|| siblings.first())
 }
 
+/// Remove all but one mutually identical elements at the end of `v1` and `v2`
+///
+/// # Example
+///
+/// ```rust,ignore
+/// # use non_empty_vec::ne_vec;
+/// let mut v1 = ne_vec![1,2,3,4,5,6,7];
+/// let mut v2 = ne_vec![3,2,1,4,5,6,7];
+///
+/// trim_common_tail(&mut v1, &mut v2);
+///
+/// assert_eq!(v1, ne_vec![1,2,3,4]);
+/// assert_eq!(v2, ne_vec![3,2,1,4]);
+/// ```
+fn trim_common_tail<T: PartialEq>(v1: &mut NonEmpty<T>, v2: &mut NonEmpty<T>) {
+    let mut i1 = v1.len().get() - 1;
+    let mut i2 = v2.len().get() - 1;
+    loop {
+        if v1[i1] != v2[i2] {
+            let l1 = NonZeroUsize::new(i1.saturating_add(2)).unwrap();
+            let l2 = NonZeroUsize::new(i2.saturating_add(2)).unwrap();
+            v1.truncate(l1);
+            v2.truncate(l2);
+            return;
+        } else if i1 != 0 && i2 != 0 {
+            i1 -= 1;
+            i2 -= 1;
+        } else {
+            // There is no changes to be made to the input vectors
+            return;
+        }
+    }
+}
+fn root_path(mut from: Entity, queries: &NavQueries) -> NonEmpty<Entity> {
+    let mut ret = NonEmpty::new(from);
+    loop {
+        from = match parent_nav_fence(from, queries) {
+            // purely personal preference over deeply nested pattern match
+            Some((_, fence)) if fence.focus_parent.is_some() => fence.focus_parent.unwrap(),
+            _ => return ret,
+        };
+        if ret.contains(&from) {
+            panic!(
+                "Navigation graph cycle detected! This panic has prevented a stack \
+                overflow, please check usages of `NavFence::reachable_from`"
+            );
+        }
+        ret.push(from);
+    }
+}
+
 pub struct NavigationPlugin;
 impl Plugin for NavigationPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<NavRequest>()
             .add_event::<NavEvent>()
             .add_system(listen_nav_requests);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::trim_common_tail;
+    #[test]
+    fn test_trim_common_tail() {
+        use non_empty_vec::ne_vec;
+        let mut v1 = ne_vec![1, 2, 3, 4, 5, 6, 7];
+        let mut v2 = ne_vec![3, 2, 1, 4, 5, 6, 7];
+        trim_common_tail(&mut v1, &mut v2);
+        assert_eq!(v1, ne_vec![1, 2, 3, 4]);
+        assert_eq!(v2, ne_vec![3, 2, 1, 4]);
     }
 }
