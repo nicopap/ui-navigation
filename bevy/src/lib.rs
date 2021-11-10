@@ -200,37 +200,6 @@ fn resolve_2d(
         .cloned()
 }
 
-/// Resolves `request` when there is no more containing [[NavFence]]
-///
-/// This can happen for two distinct reasons:
-/// 1. The Request cannot be resolved, in this case it is `Uncaught`
-/// 2. It is a flat no-headache [[Focusable]] setup, in which case, we make sure
-///    there is actually no [[NavFence]]s.
-fn rootless_resolve(
-    focused: Entity,
-    request: NavRequest,
-    queries: &NavQueries,
-    from: NonEmpty<Entity>,
-) -> NavEvent {
-    if !queries.nav_fences.is_empty() {
-        // In case the user has specified AT LEAST one NavFence, we will act as
-        // if there were no orphan Focusable (this may not be true, but it
-        // would be very expensive to manage that case)
-        return NavEvent::Uncaught { request, from };
-    }
-    // In the case the user doesn't specify ANY NavFence, it's the most
-    // simple graph (ie: no graph, only a flat relationship between Focusables)
-    if let NavRequest::Move(direction) = request {
-        let siblings: Vec<Entity> = queries.focusables.iter().map(|tpl| tpl.0).collect();
-        match resolve_2d(focused, direction, &siblings, &queries.transform) {
-            Some(to) => NavEvent::focus_changed(to, from),
-            None => NavEvent::Uncaught { request, from },
-        }
-    } else {
-        NavEvent::Uncaught { request, from }
-    }
-}
-
 /// Resolve `request` where the focused element is `focused`
 fn resolve(
     focused: Entity,
@@ -252,26 +221,24 @@ fn resolve(
 
     let mut from = (from, focused).into();
 
-    let (parent, nav_fence) = match parent_nav_fence(focused, queries) {
-        Some(entity) => entity,
-        None => return rootless_resolve(focused, request, queries, from),
-    };
     match request {
         Move(direction) => {
-            let siblings = children_focusables(parent, queries);
-            let resolved = resolve_2d(focused, direction, &siblings, &queries.transform);
-            match (resolved, nav_fence.focus_parent) {
-                (None, Some(focused)) => resolve(focused, request, queries, from.into()),
-                (Some(to), _) => NavEvent::focus_changed(to, from),
-                (None, None) => NavEvent::Uncaught { from, request },
+            let siblings = match parent_nav_fence(focused, queries) {
+                Some((parent, _)) => children_focusables(parent, queries),
+                None => queries.focusables.iter().map(|tpl| tpl.0).collect(),
+            };
+            match resolve_2d(focused, direction, &siblings, &queries.transform) {
+                Some(to) => NavEvent::focus_changed(to, from),
+                None => NavEvent::Uncaught { from, request },
             }
         }
-        Cancel => match nav_fence.focus_parent {
-            Some(to) => {
+        Cancel => match parent_nav_fence(focused, queries) {
+            Some((_, to)) if to.focus_parent.is_some() => {
+                let to = to.focus_parent.unwrap();
                 from.push(to);
                 NavEvent::focus_changed(to, from)
             }
-            None => NavEvent::Uncaught { from, request },
+            _ => NavEvent::Uncaught { from, request },
         },
         Action => {
             let child_nav_fence = queries

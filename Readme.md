@@ -30,7 +30,8 @@ Check out the `bevy/examples` directory for bevy examples.
       an active trail)
 - [X] Hierarchical navigation with Action/Cancel **with downward focus memory**
 - [X] `NavRequest::FocusOn` support
-- [ ] Do not climb the navigation tree on failed `NavRequest::Move`.
+- [X] Do not climb the navigation tree on failed `NavRequest::Move`.
+- [ ] Remove distinction between `Uncaught` and `Caught` events.
 - [ ] Tabbed navigation demo (requires Forward/Backward commands support)
 - [ ] Complex hierarchy with focus memory (requires tree)
 - [ ] Replace most calls to `.iter().find(…)` for child non_inert by checking
