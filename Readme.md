@@ -26,11 +26,17 @@ Check out the `bevy/examples` directory for bevy examples.
       `Focusable`, `NavNode` and `Active`, we can just have all of those as
       fields of `Focusable`. This probably also reduces massively the number of
       arguments I pass around in the functions I call…
-- [ ] Hierarchical navigation with Action/Cancel (requires tree layer without
+- [X] Hierarchical navigation with Action/Cancel (requires tree layer without
       an active trail)
-- [ ] Hierarchical navigation with Action/Cancel **with downward focus memory**
+- [X] Hierarchical navigation with Action/Cancel **with downward focus memory**
+- [ ] `NavRequest::FocusOn` support
+- [ ] Do not climb the navigation tree on failed `NavRequest::Move`.
 - [ ] Tabbed navigation demo (requires Forward/Backward commands support)
 - [ ] Complex hierarchy with focus memory (requires tree)
+- [ ] Replace most calls to `.iter().find(…)` for child non_inert by checking
+      the `NavFence`'s `non_inert_child` rather than `query.nav_fences`. This
+      fixes the most likely hotspot which is the recursive function
+      `children_focusables`.
 
 # License
 

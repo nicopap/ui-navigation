@@ -1,7 +1,7 @@
 use bevy::input::{keyboard::KeyboardInput, ElementState};
 use bevy::prelude::*;
 
-use bevy_ui_navigation::{Focusable, NavEvent, NavRequest, NavigationPlugin};
+use bevy_ui_navigation::{Direction, Focusable, NavEvent, NavRequest, NavigationPlugin};
 
 /// This example illustrates how to mark buttons as focusable and let
 /// NavigationPlugin figure out how to go from one to another.
@@ -36,14 +36,15 @@ impl FromWorld for ButtonMaterials {
 }
 
 fn keyboard_input(mut keyboard: EventReader<KeyboardInput>, mut nav_cmds: EventWriter<NavRequest>) {
+    use Direction::*;
     use NavRequest::*;
     let command_mapping = |code| match code {
         KeyCode::Return => Some(Action),
         KeyCode::Back => Some(Cancel),
-        KeyCode::Up => Some(MoveUp),
-        KeyCode::Down => Some(MoveDown),
-        KeyCode::Left => Some(MoveLeft),
-        KeyCode::Right => Some(MoveRight),
+        KeyCode::Up => Some(Move(North)),
+        KeyCode::Down => Some(Move(South)),
+        KeyCode::Left => Some(Move(West)),
+        KeyCode::Right => Some(Move(East)),
         _ => None,
     };
     for event in keyboard.iter() {

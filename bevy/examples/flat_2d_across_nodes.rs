@@ -1,7 +1,9 @@
 use bevy::input::{keyboard::KeyboardInput, ElementState};
 use bevy::prelude::*;
 
-use bevy_ui_navigation::{Focusable, Focused, NavEvent, NavFence, NavRequest, NavigationPlugin};
+use bevy_ui_navigation::{
+    Direction, Focusable, Focused, NavEvent, NavFence, NavRequest, NavigationPlugin,
+};
 
 /// Shows how navigation is supported even between siblings separated by a
 /// hierahierarchical level of nodes, shows how to "wall of" a part of the UI
@@ -48,14 +50,15 @@ fn print_nav_events(mut events: EventReader<NavEvent>) {
 }
 
 fn keyboard_input(mut keyboard: EventReader<KeyboardInput>, mut nav_cmds: EventWriter<NavRequest>) {
+    use Direction::*;
     use NavRequest::*;
     let command_mapping = |code| match code {
         KeyCode::Return => Some(Action),
         KeyCode::Back => Some(Cancel),
-        KeyCode::Up => Some(MoveUp),
-        KeyCode::Down => Some(MoveDown),
-        KeyCode::Left => Some(MoveLeft),
-        KeyCode::Right => Some(MoveRight),
+        KeyCode::Up => Some(Move(North)),
+        KeyCode::Down => Some(Move(South)),
+        KeyCode::Left => Some(Move(West)),
+        KeyCode::Right => Some(Move(East)),
         _ => None,
     };
     for event in keyboard.iter() {
@@ -84,19 +87,22 @@ fn button_system(
 }
 
 fn setup(mut commands: Commands, button_materials: Res<ButtonMaterials>) {
-    let size = |(width, height): (f32, f32)| Size::new(Val::Percent(width), Val::Percent(height));
+    let size = |width, height| Size::new(Val::Percent(width), Val::Percent(height));
     let flex_wrap = FlexWrap::Wrap;
+    let style = Style {
+        size: size(100.0, 100.0),
+        flex_wrap,
+        ..Style::default()
+    };
+    let bundle = NodeBundle {
+        style,
+        ..Default::default()
+    };
+    let size = size(45.0, 45.0);
     // ui camera
     commands.spawn_bundle(UiCameraBundle::default());
     commands
-        .spawn_bundle(NodeBundle {
-            style: Style {
-                size: size((100.0, 100.0)),
-                flex_wrap,
-                ..Default::default()
-            },
-            ..Default::default()
-        })
+        .spawn_bundle(bundle)
         // The `Focusable`s buttons are not direct siblings, we can navigate through
         // them beyond direct hierarchical relationships.
         //
@@ -107,39 +113,38 @@ fn setup(mut commands: Commands, button_materials: Res<ButtonMaterials>) {
         //
         // YOU MUSTE ADD A NavFence enclosing ALL Focusable and ALL NavFence (but
         // themselves) Subtile broken behavior will ensure otherwise
-        .insert(NavFence::default())
+        .insert(NavFence::root())
         .with_children(|commands| {
-            let proportions = [(45.0, 50.0), (45.0, 45.0), (60.0, 45.0)];
-            for (i, proportion) in proportions.iter().enumerate() {
+            for i in 0..3 {
                 let style = Style {
-                    size: size(*proportion),
+                    size,
+                    ..Style::default()
+                };
+                let bundle = NodeBundle {
+                    style,
+                    material: button_materials.backgrounds[i].clone(),
                     ..Default::default()
                 };
-                commands
-                    .spawn_bundle(NodeBundle {
-                        style,
-                        material: button_materials.backgrounds[i].clone(),
-                        ..Default::default()
-                    })
-                    .with_children(|commands| {
-                        spawn_button(commands, &button_materials);
-                        spawn_button(commands, &button_materials);
-                        spawn_button(commands, &button_materials);
-                    });
+                commands.spawn_bundle(bundle).with_children(|commands| {
+                    spawn_button(commands, &button_materials);
+                    spawn_button(commands, &button_materials);
+                    spawn_button(commands, &button_materials);
+                });
             }
             let style = Style {
-                size: size((40.0, 50.0)),
+                size,
+                ..Style::default()
+            };
+            let bundle = NodeBundle {
+                style,
+                material: button_materials.pink.clone(),
                 ..Default::default()
             };
             commands
-                .spawn_bundle(NodeBundle {
-                    style,
-                    material: button_materials.pink.clone(),
-                    ..Default::default()
-                })
+                .spawn_bundle(bundle)
                 // We don't want to be able to access the pink square, so we
                 // add a `NavFence` as boundary
-                .insert(NavFence::default())
+                .insert(NavFence::root())
                 .with_children(|commands| {
                     spawn_button(commands, &button_materials);
                     spawn_button(commands, &button_materials);
