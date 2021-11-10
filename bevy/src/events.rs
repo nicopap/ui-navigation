@@ -52,10 +52,6 @@ pub enum NavEvent {
         from: NonEmpty<Entity>,
     },
     Caught {
-        focused: Entity,
-        request: NavRequest,
-    },
-    Uncaught {
         from: NonEmpty<Entity>,
         request: NavRequest,
     },

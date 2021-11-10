@@ -31,13 +31,15 @@ Check out the `bevy/examples` directory for bevy examples.
 - [X] Hierarchical navigation with Action/Cancel **with downward focus memory**
 - [X] `NavRequest::FocusOn` support
 - [X] Do not climb the navigation tree on failed `NavRequest::Move`.
-- [ ] Remove distinction between `Uncaught` and `Caught` events.
+- [X] Remove distinction between `Uncaught` and `Caught` events.
 - [ ] Tabbed navigation demo (requires Forward/Backward commands support)
 - [ ] Complex hierarchy with focus memory (requires tree)
+- [ ] Remove "generic" crate
 - [ ] Replace most calls to `.iter().find(…)` for child non_inert by checking
       the `NavFence`'s `non_inert_child` rather than `query.nav_fences`. This
       fixes the most likely hotspot which is the recursive function
       `children_focusables`.
+- [ ] Add mouse support
 
 # License
 

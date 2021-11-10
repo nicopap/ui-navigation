@@ -133,7 +133,7 @@ fn handle_nav_events(
     for event in events.iter() {
         println!("{:?}", event);
         match event {
-            NavEvent::Uncaught {
+            NavEvent::Caught {
                 from,
                 request: NavRequest::Action,
             } if game.from.contains(from.first()) => requests.send(NavRequest::FocusOn(game.to)),

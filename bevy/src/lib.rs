@@ -229,7 +229,7 @@ fn resolve(
             };
             match resolve_2d(focused, direction, &siblings, &queries.transform) {
                 Some(to) => NavEvent::focus_changed(to, from),
-                None => NavEvent::Uncaught { from, request },
+                None => NavEvent::Caught { from, request },
             }
         }
         Cancel => match parent_nav_fence(focused, queries) {
@@ -238,7 +238,7 @@ fn resolve(
                 from.push(to);
                 NavEvent::focus_changed(to, from)
             }
-            _ => NavEvent::Uncaught { from, request },
+            _ => NavEvent::Caught { from, request },
         },
         Action => {
             let child_nav_fence = queries
@@ -246,7 +246,7 @@ fn resolve(
                 .iter()
                 .find(|e| e.1.focus_parent == Some(focused));
             match child_nav_fence {
-                None => NavEvent::Uncaught { from, request },
+                None => NavEvent::Caught { from, request },
                 Some((child_nav_fence, _)) => {
                     let to = children_focusables(child_nav_fence, queries);
                     let to = non_inert_within(&to, queries).unwrap();
