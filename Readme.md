@@ -23,13 +23,16 @@ Check out the `examples` directory for bevy examples.
 - [X] `NavRequest::FocusOn` support
 - [X] Do not climb the navigation tree on failed `NavRequest::Move`.
 - [X] Remove distinction between `Uncaught` and `Caught` events.
-- [ ] Tabbed navigation demo (requires Forward/Backward commands support)
-- [ ] Complex hierarchy with focus memory (requires tree)
+- [X] Tabbed navigation demo (requires Forward/Backward commands support)
+- [X] Complex hierarchy with focus memory (requires tree)
+- [ ] Add more lööps, brother
 - [X] Remove "generic" crate
 - [ ] Replace most calls to `.iter().find(…)` for child non_inert by checking
       the `NavFence`'s `non_inert_child` rather than `query.nav_fences`. This
       fixes the most likely hotspot which is the recursive function
       `children_focusables`.
+- [ ] Descend the hierarchy on Next and Previous (requires non_inert_child
+      otherwise it's going to be very difficult to implement)
 - [ ] Add mouse support
 
 # License

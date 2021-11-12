@@ -15,7 +15,7 @@ use bevy::math::Vec3Swizzles;
 use bevy::prelude::*;
 use non_empty_vec::NonEmpty;
 
-pub use crate::events::{Direction, NavEvent, NavRequest};
+pub use crate::events::{Direction, MenuDirection, NavEvent, NavRequest};
 
 #[derive(SystemParam)]
 struct NavQueries<'w, 's> {
@@ -61,7 +61,12 @@ pub struct NavFence {
     /// The `Focusable` of the scoping `NavFence` that links to this
     /// `NavFence` (None if this `NavFence` is the navigation graph root)
     focus_parent: Option<Entity>,
-    // TODO:
+
+    /// Wether navigating this fence requires [[NavRequest::Next]] and
+    /// [[NavRequest::Previous]] requests
+    is_sequence_menu: bool,
+    // TODO: (for caching and not having to discover all contained focusables
+    // just to find the one we are interested in)
     // The child of interest
     //
     // This is a sort of cache to not have to walk down the ECS hierarchy
@@ -74,12 +79,27 @@ impl NavFence {
     /// `new` is useful to programmatically set the parent if you have an
     /// optional value. This saves you from a `match focus_parent`.
     pub fn new(focus_parent: Option<Entity>) -> Self {
-        NavFence { focus_parent }
+        NavFence {
+            focus_parent,
+            is_sequence_menu: false,
+        }
     }
 
     /// Set this fence as having no parents
     pub fn root() -> Self {
-        NavFence { focus_parent: None }
+        NavFence {
+            focus_parent: None,
+            is_sequence_menu: false,
+        }
+    }
+
+    // Set this fence as being a sequence menu
+    //
+    // Meaning: controlled with [[NavRequest::Next]] and
+    // [[NavRequest::Previous]]
+    pub fn sequence(mut self) -> Self {
+        self.is_sequence_menu = true;
+        self
     }
 
     // Should this be `unsafe`? Kinda annoying to have such an important part
@@ -97,6 +117,7 @@ impl NavFence {
     pub fn reachable_from(focusable: Entity) -> Self {
         NavFence {
             focus_parent: Some(focusable),
+            is_sequence_menu: false,
         }
     }
 }
@@ -200,6 +221,24 @@ fn resolve_2d(
         .cloned()
 }
 
+/// Returns the next or previous entity based on `direction`
+fn resolve_sequence(
+    focused: Entity,
+    direction: MenuDirection,
+    siblings: &[Entity],
+) -> Option<&Entity> {
+    let focused_index = siblings
+        .iter()
+        .enumerate()
+        .find(|e| *e.1 == focused)
+        .map(|e| e.0)?;
+    match direction {
+        MenuDirection::Next => siblings.get(focused_index + 1),
+        MenuDirection::Previous if focused_index == 0 => None,
+        MenuDirection::Previous => siblings.get(focused_index - 1),
+    }
+}
+
 /// Resolve `request` where the focused element is `focused`
 fn resolve(
     focused: Entity,
@@ -255,8 +294,21 @@ fn resolve(
                 }
             }
         }
-        Next | Previous => {
-            todo!("Manage 'menu' events")
+        MenuMove(menu_direction) => {
+            let (parent, nav_fence) = match parent_nav_fence(focused, queries) {
+                Some(inner) => inner,
+                None => return NavEvent::Caught { from, request },
+            };
+            let siblings = children_focusables(parent, queries);
+            if nav_fence.is_sequence_menu {
+                match resolve_sequence(focused, menu_direction, &siblings) {
+                    Some(to) => NavEvent::focus_changed(*to, from),
+                    None => NavEvent::Caught { from, request },
+                }
+            } else {
+                let focused = nav_fence.focus_parent.unwrap();
+                resolve(focused, request, queries, from.into())
+            }
         }
         FocusOn(new_to_focus) => {
             let mut from = root_path(focused, queries);
@@ -277,6 +329,8 @@ fn listen_nav_requests(
     mut commands: Commands,
 ) {
     // TODO: this most likely breaks when there is more than a single event
+    // When no `Focused` found, should take a direct child of a
+    // `NavFence.focus_parent == None`
     for request in requests.iter() {
         // TODO: This code needs cleanup
         let focused_id = focused.get_single().unwrap_or_else(|err| {

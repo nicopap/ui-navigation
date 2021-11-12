@@ -5,13 +5,17 @@ use non_empty_vec::NonEmpty;
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum NavRequest {
     Move(Direction),
-    Previous,
-    Next,
+    MenuMove(MenuDirection),
     Action,
     Cancel,
     FocusOn(Entity),
 }
 
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum MenuDirection {
+    Next,
+    Previous,
+}
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Direction {
     South,

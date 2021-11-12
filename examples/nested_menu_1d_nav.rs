@@ -30,8 +30,8 @@ fn main() {
         .init_resource::<Materials>()
         .insert_resource(Gameui::new())
         .add_startup_system(setup)
-        .add_system(button_system)
         .add_system(query_bad_stuff)
+        .add_system(button_system)
         .add_system(keyboard_input)
         .add_system(handle_nav_events)
         .run();
@@ -125,6 +125,7 @@ fn button_system(
         }
     }
 }
+
 fn handle_nav_events(
     mut events: EventReader<NavEvent>,
     mut requests: EventWriter<NavRequest>,
