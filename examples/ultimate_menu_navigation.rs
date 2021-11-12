@@ -27,6 +27,7 @@ fn main() {
         .add_plugin(NavigationPlugin)
         .add_startup_system(setup)
         .add_system(button_system)
+        .add_system(gamepad_input)
         .add_system(keyboard_input)
         .run();
 }
@@ -54,6 +55,51 @@ impl FromWorld for Materials {
             focused: materials.add(Color::ORANGE_RED.into()),
             active: materials.add(Color::GOLD.into()),
             dormant: materials.add(Color::GRAY.into()),
+        }
+    }
+}
+
+fn gamepad_input(
+    mut events: EventReader<GamepadEvent>,
+    mut nav_cmds: EventWriter<NavRequest>,
+    mut lapse: ResMut<Lapse>,
+    time: Res<Time>,
+) {
+    use Direction::*;
+    use MenuDirection::{Previous, Next};
+    use NavRequest::{MenuMove, Action, Cancel, Move};
+    use GamepadAxisType::{DPadX, DPadY};
+    use GamepadButtonType as Butt;
+
+    let hat_to_dir = |axis: GamepadAxisType, value: f32| {
+        match () {
+            () if axis == DPadX && value > 0.0 => Some(East),
+            () if axis == DPadX && value < 0.0 => Some(West),
+            () if axis == DPadY && value > 0.0 => Some(North),
+            () if axis == DPadY && value < 0.0 => Some(South),
+            () => None,
+        }
+    };
+    let button_to_request = |button: GamepadButtonType| {
+        match () {
+            () if button == Butt::South => Some(Action),
+            () if button == Butt::East => Some(Cancel),
+            () if button == Butt::LeftTrigger => Some(MenuMove(Previous)),
+            () if button == Butt::RightTrigger => Some(MenuMove(Next)),
+            () => None,
+        }
+    };
+    for event in events.iter() {
+        let maybe_cmd = match &event {
+            GamepadEvent(Gamepad(0), GamepadEventType::AxisChanged(axis, value)) =>
+                hat_to_dir(*axis, *value).map(|dir| Move(dir)),
+            GamepadEvent(Gamepad(0), GamepadEventType::ButtonChanged(button, v)) if v > &0.0 =>
+                button_to_request(*button),
+            _ => None
+        };
+        if let Some(cmd) = maybe_cmd {
+            lapse.0 = time.seconds_since_startup();
+            nav_cmds.send(cmd)
         }
     }
 }
