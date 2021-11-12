@@ -16,15 +16,28 @@ use bevy_ui_navigation::{
 /// The use of macros is not _needed_ but extremely useful. Removes the noise
 /// from the ui declaration and helps focus the example on the important stuff,
 /// not the UI building boilerplate.
+///
+/// Use `Q` and `E` to navigate tabs, use `WASD` for moving within containers,
+/// `ENTER` and `BACKSPACE` for going down/up the hierarchy.
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .init_resource::<Materials>()
+        .insert_resource(Lapse(0.0))
         .add_plugin(NavigationPlugin)
         .add_startup_system(setup)
         .add_system(button_system)
         .add_system(keyboard_input)
         .run();
+}
+
+struct Lapse(f64);
+
+#[derive(Default, Clone, Bundle)]
+struct FocusableButtonBundle {
+    #[bundle]
+    button_bundle: ButtonBundle,
+    focus: Focusable,
 }
 
 struct Materials {
@@ -45,7 +58,12 @@ impl FromWorld for Materials {
     }
 }
 
-fn keyboard_input(mut keyboard: EventReader<KeyboardInput>, mut nav_cmds: EventWriter<NavRequest>) {
+fn keyboard_input(
+    mut keyboard: EventReader<KeyboardInput>,
+    mut nav_cmds: EventWriter<NavRequest>,
+    mut lapse: ResMut<Lapse>,
+    time: Res<Time>,
+) {
     use Direction::*;
     use NavRequest::*;
     let command_mapping = |code| match code {
@@ -62,6 +80,7 @@ fn keyboard_input(mut keyboard: EventReader<KeyboardInput>, mut nav_cmds: EventW
     for event in keyboard.iter() {
         if event.state == ElementState::Released {
             if let Some(cmd) = event.key_code.and_then(command_mapping) {
+                lapse.0 = time.seconds_since_startup();
                 nav_cmds.send(cmd)
             }
         }
@@ -70,12 +89,22 @@ fn keyboard_input(mut keyboard: EventReader<KeyboardInput>, mut nav_cmds: EventW
 
 fn button_system(
     materials: Res<Materials>,
+    lapse: Res<Lapse>,
+    time: Res<Time>,
     mut interaction_query: Query<
         (&Focusable, &mut Handle<ColorMaterial>),
         (Changed<Focusable>, With<Button>),
     >,
 ) {
+    let mut already_displayed = false;
     for (focus_state, mut material) in interaction_query.iter_mut() {
+        if !already_displayed {
+            println!(
+                "request handling time: {:.3}",
+                time.seconds_since_startup() - lapse.0
+            );
+            already_displayed = true;
+        }
         if focus_state.is_focused() {
             *material = materials.focused.clone();
         } else if focus_state.is_active() {
@@ -124,29 +153,37 @@ fn setup(
     let gray = materials.add(Color::rgba(0.9, 0.9, 0.9, 0.3).into());
     let black = our_materials.inert.clone();
 
-    let focus = || Focusable::default();
-    let square = ButtonBundle {
-        style: style! {
-            size: size!(40 px, 40 px),
-            margin: rect!(2 px),
+    let square = FocusableButtonBundle {
+        button_bundle: ButtonBundle {
+            style: style! {
+                size: size!(40 px, 40 px),
+                margin: rect!(2 px),
+            },
+            material: black.clone(),
+            ..Default::default()
         },
-        material: black.clone(),
         ..Default::default()
     };
-    let select_square = ButtonBundle {
-        style: style! {
-            size: size!(100 pct, 40 px),
-            margin: rect!(2 px),
+    let select_square = FocusableButtonBundle {
+        button_bundle: ButtonBundle {
+            style: style! {
+                size: size!(100 pct, 40 px),
+                margin: rect!(2 px),
+            },
+            material: black.clone(),
+            ..Default::default()
         },
-        material: black.clone(),
         ..Default::default()
     };
-    let tab_square = ButtonBundle {
-        style: style! {
-            size: size!(100 px, 40 px),
-            margin: rect!(30 px, 0 px),
+    let tab_square = FocusableButtonBundle {
+        button_bundle: ButtonBundle {
+            style: style! {
+                size: size!(100 px, 40 px),
+                margin: rect!(30 px, 0 px),
+            },
+            material: black,
+            ..Default::default()
         },
-        material: black,
         ..Default::default()
     };
     let column_box = NodeBundle {
@@ -175,8 +212,7 @@ fn setup(
 
     let fence = |id: Entity| NavFence::reachable_from(id);
     let loop_fence = |id: Entity| NavFence::reachable_from(id).looping();
-    let mut spawn =
-        |bundle: &ButtonBundle| commands.spawn_bundle(bundle.clone()).insert(focus()).id();
+    let mut spawn = |bundle: &FocusableButtonBundle| commands.spawn_bundle(bundle.clone()).id();
 
     let tab_red = spawn(&tab_square);
     let tab_green = spawn(&tab_square);
@@ -191,6 +227,8 @@ fn setup(
     let g4 = spawn(&select_square);
     let g5 = spawn(&select_square);
     let g6 = spawn(&select_square);
+    let g7 = spawn(&select_square);
+    let g8 = spawn(&select_square);
 
     // The macro is a very thin wrapper over the "normal" UI declaration
     // technic. Please look at the doc for `build_ui` for info on what it does.
@@ -211,53 +249,29 @@ fn setup(
                 column[red, fence(tab_red)](
                     vertical(id(select_1), id(select_2)),
                     horizontal{flex_wrap: Wrap}[gray, loop_fence(select_1)](
-                        square[focus()], square[focus()], square[focus()], square[focus()],
-                        square[focus()], square[focus()], square[focus()], square[focus()],
-                        square[focus()], square[focus()], square[focus()], square[focus()],
-                        square[focus()], square[focus()], square[focus()], square[focus()],
-                        square[focus()], square[focus()], square[focus()], square[focus()]
+                        square, square, square, square, square, square, square, square,
+                        square, square, square, square, square, square, square, square,
+                        square, square, square, square
                     ),
                     horizontal{flex_wrap: Wrap}[gray, loop_fence(select_2)](
-                        square[focus()], square[focus()], square[focus()], square[focus()],
-                        square[focus()], square[focus()], square[focus()], square[focus()]
+                        square, square, square, square, square, square, square, square
                     )
                 ),
                 //            vvvvvvvvvvvvvvvv
                 column[green, fence(tab_green)](
-                    horizontal(id(g1), horizontal[gray, fence(g1)](square[focus()])),
-                    horizontal(
-                        id(g2),
-                        horizontal[gray, loop_fence(g2)](
-                            square[focus()], square[focus()]
-                        )
-                    ),
-                    horizontal(
-                        id(g3),
-                        horizontal[gray, loop_fence(g3)](
-                            square[focus()], square[focus()], square[focus()]
-                        )
-                    ),
-                    horizontal(id(g4), horizontal[gray, loop_fence(g4)](square[focus()])),
-                    horizontal(
-                        id(g5),
-                        horizontal[gray, loop_fence(g5)](
-                            square[focus()], square[focus()], square[focus()]
-                        )
-                    ),
-                    horizontal(
-                        id(g6),
-                        horizontal[gray, loop_fence(g6)](
-                            square[focus()], square[focus()]
-                        )
-                    )
+                    horizontal(id(g1), horizontal[gray, fence(g1)](square)),
+                    horizontal(id(g2), horizontal[gray, loop_fence(g2)](square, square)),
+                    horizontal(id(g3), horizontal[gray, fence(g3)](square, square, square)),
+                    horizontal(id(g4), horizontal[gray, loop_fence(g4)](square)),
+                    horizontal(id(g5), horizontal[gray, fence(g5)](square, square, square)),
+                    horizontal(id(g6), horizontal[gray, loop_fence(g6)](square, square)),
+                    horizontal(id(g7), horizontal[gray, fence(g7)](square, square, square, square)),
+                    horizontal(id(g8), horizontal[gray, loop_fence(g8)](square, square, square, square))
                 ),
                 //           vvvvvvvvvvvvvvv
                 column[blue, fence(tab_blue)](
                     vertical(
-                        vertical(
-                            select_square[focus()], select_square[focus()],
-                            select_square[focus()], select_square[focus()]
-                        ),
+                        vertical(select_square, select_square, select_square, select_square),
                         colored_square
                     )
                 )
