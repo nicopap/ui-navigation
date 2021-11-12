@@ -335,18 +335,18 @@ fn resolve_sequence(
     new_index.and_then(|i| siblings.get(i))
 }
 
-// TODO: I see a lot of `None => return NavEvent::Caught { from, request }`, we
-// might be able to wrap this function into another one that calls it, and
-// matches on the output (`Some(x) => x, None => Caught{from,request}`) style
-//
-// this way, instead of eternally doing `match Some/None` we can just do `?`
 /// Resolve `request` where the focused element is `focused`
-fn resolve(
+fn resolve(focused: Entity, request: NavRequest, queries: &NavQueries) -> NavEvent {
+    resolve_helper(focused, request, queries, Vec::new())
+        .unwrap_or_else(|from| NavEvent::Caught { from, request })
+}
+
+fn resolve_helper(
     focused: Entity,
     request: NavRequest,
     queries: &NavQueries,
     from: Vec<Entity>,
-) -> NavEvent {
+) -> Result<NavEvent, NonEmpty<Entity>> {
     use NavRequest::*;
 
     assert!(
@@ -361,10 +361,18 @@ fn resolve(
 
     let mut from = (from, focused).into();
 
+    macro_rules! or_caught {
+        ($to_match:expr) => {
+            match $to_match {
+                Some(x) => x,
+                None => return Err(from),
+            }
+        };
+    }
     match request {
         Move(direction) => {
             let (parent, loops) = match parent_nav_fence(focused, queries) {
-                Some(val) if !val.1.setting.is_2d() => return NavEvent::Caught { from, request },
+                Some(val) if !val.1.setting.is_2d() => return Err(from),
                 Some(val) => (Some(val.0), val.1.setting.loops()),
                 None => (None, true),
             };
@@ -378,56 +386,44 @@ fn resolve(
                     panic!("There must be at least one `Focusable` when sending a `NavRequest`!")
                 }
             };
-            match resolve_2d(focused, direction, loops, &siblings, &queries.transform) {
-                Some(to) => NavEvent::focus_changed(*to, from),
-                None => NavEvent::Caught { from, request },
-            }
+            let to = resolve_2d(focused, direction, loops, &siblings, &queries.transform);
+            let to = or_caught!(to);
+            Ok(NavEvent::focus_changed(*to, from))
         }
-        Cancel => match parent_nav_fence(focused, queries) {
-            Some((_, to)) if to.focus_parent.is_some() => {
-                let to = to.focus_parent.unwrap();
-                from.push(to);
-                NavEvent::focus_changed(to, from)
-            }
-            _ => NavEvent::Caught { from, request },
-        },
+        Cancel => {
+            let to = or_caught!(parent_nav_fence(focused, queries));
+            let to = or_caught!(to.1.focus_parent);
+            from.push(to);
+            Ok(NavEvent::focus_changed(to, from))
+        }
         Action => {
             let child_nav_fence = queries
                 .nav_fences
                 .iter()
                 .find(|e| e.1.focus_parent == Some(focused));
-            match child_nav_fence {
-                None => NavEvent::Caught { from, request },
-                Some((child_nav_fence, _)) => {
-                    let to = children_focusables(child_nav_fence, queries);
-                    let to = non_inert_within(&to, queries);
-                    let to = (*to, from.clone().into()).into();
-                    NavEvent::FocusChanged { to, from }
-                }
-            }
+            let (child_nav_fence, _) = or_caught!(child_nav_fence);
+            let to = children_focusables(child_nav_fence, queries);
+            let to = non_inert_within(&to, queries);
+            let to = (*to, from.clone().into()).into();
+            Ok(NavEvent::FocusChanged { to, from })
         }
-        MenuMove(menu_direction) => {
-            let (parent, nav_fence) = match parent_nav_fence(focused, queries) {
-                Some(inner) => inner,
-                None => return NavEvent::Caught { from, request },
-            };
+        MenuMove(menu_dir) => {
+            let (parent, nav_fence) = or_caught!(parent_nav_fence(focused, queries));
             let siblings = children_focusables(parent, queries);
-            if nav_fence.setting.is_sequence() {
-                let loops = nav_fence.setting.loops();
-                match resolve_sequence(focused, menu_direction, loops, &siblings) {
-                    Some(to) => NavEvent::focus_changed(*to, from),
-                    None => NavEvent::Caught { from, request },
-                }
-            } else {
+            if !nav_fence.setting.is_sequence() {
                 let focused = nav_fence.focus_parent.unwrap();
-                resolve(focused, request, queries, from.into())
+                resolve_helper(focused, request, queries, from.into())
+            } else {
+                let loops = nav_fence.setting.loops();
+                let to = or_caught!(resolve_sequence(focused, menu_dir, loops, &siblings));
+                Ok(NavEvent::focus_changed(*to, from))
             }
         }
         FocusOn(new_to_focus) => {
             let mut from = root_path(focused, queries);
             let mut to = root_path(new_to_focus, queries);
             trim_common_tail(&mut from, &mut to);
-            NavEvent::FocusChanged { from, to }
+            Ok(NavEvent::FocusChanged { from, to })
         }
     }
 }
@@ -453,7 +449,7 @@ fn listen_nav_requests(
             );
             queries.focusables.iter().next().unwrap().0
         });
-        let event = resolve(focused_id, *request, &queries, Vec::new());
+        let event = resolve(focused_id, *request, &queries);
         if let NavEvent::FocusChanged { to, from } = &event {
             let focused = Focusable::with_state(FocusState::Focused);
             let inert = Focusable::with_state(FocusState::Inert);

@@ -27,7 +27,7 @@ Check out the `examples` directory for bevy examples.
 - [X] Complex hierarchy with focus memory (requires tree)
 - [X] Add more lööps, brother
 - [X] Remove "generic" crate
-- [ ] Minor refactor of `resolve` function + Add FocusableButtonBundle to
+- [X] Minor refactor of `resolve` function + Add FocusableButtonBundle to
       examples to simplify them greatly
 - [ ] Replace most calls to `.iter().find(…)` for child non_inert by checking
       the `NavFence`'s `non_inert_child` rather than `query.nav_fences`. This
