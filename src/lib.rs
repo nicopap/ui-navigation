@@ -34,6 +34,58 @@ enum FocusState {
     Inert,
 }
 
+#[derive(Clone, Debug, Copy, PartialEq)]
+enum NavSetting {
+    /// 2d movement that doesn't loop
+    ClosedXY,
+    /// 2d movement looping on both axis
+    LoopXY,
+    /// Next/Previous menu without loop
+    ClosedSequence,
+    /// Next/Previous menu with loop
+    LoopSequence,
+}
+impl NavSetting {
+    fn closed(self) -> Self {
+        use NavSetting::*;
+        match self {
+            ClosedXY | LoopXY => ClosedXY,
+            ClosedSequence | LoopSequence => ClosedSequence,
+        }
+    }
+    fn looping(self) -> Self {
+        use NavSetting::*;
+        match self {
+            ClosedXY | LoopXY => LoopXY,
+            ClosedSequence | LoopSequence => LoopSequence,
+        }
+    }
+    fn sequence(self) -> Self {
+        use NavSetting::*;
+        match self {
+            ClosedSequence | ClosedXY => ClosedSequence,
+            LoopSequence | LoopXY => LoopSequence,
+        }
+    }
+    fn loops(&self) -> bool {
+        use NavSetting::*;
+        match self {
+            LoopSequence | LoopXY => true,
+            ClosedSequence | ClosedXY => false,
+        }
+    }
+    fn is_2d(&self) -> bool {
+        !self.is_sequence()
+    }
+    fn is_sequence(&self) -> bool {
+        use NavSetting::*;
+        match self {
+            ClosedSequence | LoopSequence => true,
+            ClosedXY | LoopXY => false,
+        }
+    }
+}
+
 /// A "scope" that isolate children [[Focusable]]s from other focusables and
 /// specify navigation method within itself.
 ///
@@ -62,9 +114,8 @@ pub struct NavFence {
     /// `NavFence` (None if this `NavFence` is the navigation graph root)
     focus_parent: Option<Entity>,
 
-    /// Wether navigating this fence requires [[NavRequest::Next]] and
-    /// [[NavRequest::Previous]] requests
-    is_sequence_menu: bool,
+    /// How we expect the user to move between [[Focusable]]s within this fence
+    setting: NavSetting,
     // TODO: (for caching and not having to discover all contained focusables
     // just to find the one we are interested in)
     // The child of interest
@@ -81,7 +132,7 @@ impl NavFence {
     pub fn new(focus_parent: Option<Entity>) -> Self {
         NavFence {
             focus_parent,
-            is_sequence_menu: false,
+            setting: NavSetting::ClosedXY,
         }
     }
 
@@ -89,8 +140,22 @@ impl NavFence {
     pub fn root() -> Self {
         NavFence {
             focus_parent: None,
-            is_sequence_menu: false,
+            setting: NavSetting::ClosedXY,
         }
+    }
+
+    /// Set this fence as closed (no looping)
+    pub fn closed(mut self) -> Self {
+        self.setting = self.setting.closed();
+        self
+    }
+
+    /// Set this fence as looping
+    ///
+    /// ie: going left from the leftmost element goes to the rightmost element
+    pub fn looping(mut self) -> Self {
+        self.setting = self.setting.looping();
+        self
     }
 
     // Set this fence as being a sequence menu
@@ -98,7 +163,7 @@ impl NavFence {
     // Meaning: controlled with [[NavRequest::Next]] and
     // [[NavRequest::Previous]]
     pub fn sequence(mut self) -> Self {
-        self.is_sequence_menu = true;
+        self.setting = self.setting.sequence();
         self
     }
 
@@ -117,7 +182,7 @@ impl NavFence {
     pub fn reachable_from(focusable: Entity) -> Self {
         NavFence {
             focus_parent: Some(focusable),
-            is_sequence_menu: false,
+            setting: NavSetting::ClosedXY,
         }
     }
 }
@@ -198,47 +263,83 @@ pub struct Focused;
 
 /// Which `Entity` in `siblings` can be reached from `focused` in
 /// `direction` given entities `transform` if any, otherwise `None`
-fn resolve_2d(
+fn resolve_2d<'a, 'b, 'c>(
     focused: Entity,
     direction: Direction,
-    siblings: &[Entity],
-    transform: &Query<&GlobalTransform>,
-) -> Option<Entity> {
-    let focused_loc = transform.get(focused).unwrap().translation.xy();
-    siblings
-        .iter()
-        .filter(|sibling| {
-            let sibling_loc = transform.get(**sibling).unwrap().translation;
-            direction.is_in(focused_loc, sibling_loc.xy()) && **sibling != focused
-        })
-        .min_by(|s1, s2| {
-            let s1_loc = transform.get(**s1).unwrap().translation;
-            let s2_loc = transform.get(**s2).unwrap().translation;
-            let s1_dist = focused_loc.distance_squared(s1_loc.xy());
-            let s2_dist = focused_loc.distance_squared(s2_loc.xy());
-            s1_dist.partial_cmp(&s2_dist).unwrap_or(Ordering::Equal)
-        })
-        .cloned()
+    loops: bool,
+    siblings: &'a [Entity],
+    transform: &'b Query<&'c GlobalTransform>,
+) -> Option<&'a Entity> {
+    use Direction::*;
+
+    let pos_of = |entity: Entity| transform.get(entity).unwrap().translation;
+    let focused_pos = transform.get(focused).unwrap().translation.xy();
+    let closest = siblings.iter().filter(|sibling| {
+        direction.is_in(focused_pos, pos_of(**sibling).xy()) && **sibling != focused
+    });
+    let closest = max_by_in_iter(closest, |s| -focused_pos.distance_squared(pos_of(**s).xy()));
+    match closest {
+        None if loops => {
+            let direction = direction.opposite();
+
+            let furthest = siblings.iter().filter(|sibling| {
+                direction.is_in(focused_pos, pos_of(**sibling).xy()) && **sibling != focused
+            });
+            max_by_in_iter(furthest, |s| {
+                let pos = pos_of(**s);
+
+                // In a grid, ideally if we are at the leftmost tile and press
+                // left, we loop back ON THE SAME ROW to rightmost tile. To do
+                // this, we minimize first `axial_diff` then we care about
+                // `focused_pos`.
+                //
+                // FIXME: this is unoptimal because a very tinny pixel missalignment
+                // will cause the loop to favor a different entity than
+                // probably expected.
+                let axial_diff = if matches!(direction, South | North) {
+                    (pos.x - focused_pos.x).abs()
+                } else {
+                    (pos.y - focused_pos.y).abs()
+                };
+                (-axial_diff, focused_pos.distance_squared(pos.xy()))
+            })
+        }
+        anyelse => anyelse,
+    }
+}
+
+fn max_by_in_iter<U, T: PartialOrd>(
+    iter: impl Iterator<Item = U>,
+    f: impl Fn(&U) -> T,
+) -> Option<U> {
+    iter.max_by(|s1, s2| {
+        let s1_val = f(s1);
+        let s2_val = f(s2);
+        s1_val.partial_cmp(&s2_val).unwrap_or(Ordering::Equal)
+    })
 }
 
 /// Returns the next or previous entity based on `direction`
 fn resolve_sequence(
     focused: Entity,
     direction: MenuDirection,
-    siblings: &[Entity],
+    loops: bool,
+    siblings: &NonEmpty<Entity>,
 ) -> Option<&Entity> {
     let focused_index = siblings
         .iter()
         .enumerate()
         .find(|e| *e.1 == focused)
         .map(|e| e.0)?;
-    match direction {
-        MenuDirection::Next => siblings.get(focused_index + 1),
-        MenuDirection::Previous if focused_index == 0 => None,
-        MenuDirection::Previous => siblings.get(focused_index - 1),
-    }
+    let new_index = resolve_index(focused_index, loops, direction, siblings.len().get() - 1);
+    new_index.and_then(|i| siblings.get(i))
 }
 
+// TODO: I see a lot of `None => return NavEvent::Caught { from, request }`, we
+// might be able to wrap this function into another one that calls it, and
+// matches on the output (`Some(x) => x, None => Caught{from,request}`) style
+//
+// this way, instead of eternally doing `match Some/None` we can just do `?`
 /// Resolve `request` where the focused element is `focused`
 fn resolve(
     focused: Entity,
@@ -262,12 +363,23 @@ fn resolve(
 
     match request {
         Move(direction) => {
-            let siblings = match parent_nav_fence(focused, queries) {
-                Some((parent, _)) => children_focusables(parent, queries),
-                None => queries.focusables.iter().map(|tpl| tpl.0).collect(),
+            let (parent, loops) = match parent_nav_fence(focused, queries) {
+                Some(val) if !val.1.setting.is_2d() => return NavEvent::Caught { from, request },
+                Some(val) => (Some(val.0), val.1.setting.loops()),
+                None => (None, true),
             };
-            match resolve_2d(focused, direction, &siblings, &queries.transform) {
-                Some(to) => NavEvent::focus_changed(to, from),
+            let siblings = match parent {
+                Some(parent) => children_focusables(parent, queries),
+                None if !queries.focusables.is_empty() => {
+                    let focusables: Vec<_> = queries.focusables.iter().map(|tpl| tpl.0).collect();
+                    NonEmpty::try_from(focusables).unwrap()
+                }
+                None => {
+                    panic!("There must be at least one `Focusable` when sending a `NavRequest`!")
+                }
+            };
+            match resolve_2d(focused, direction, loops, &siblings, &queries.transform) {
+                Some(to) => NavEvent::focus_changed(*to, from),
                 None => NavEvent::Caught { from, request },
             }
         }
@@ -288,7 +400,7 @@ fn resolve(
                 None => NavEvent::Caught { from, request },
                 Some((child_nav_fence, _)) => {
                     let to = children_focusables(child_nav_fence, queries);
-                    let to = non_inert_within(&to, queries).unwrap();
+                    let to = non_inert_within(&to, queries);
                     let to = (*to, from.clone().into()).into();
                     NavEvent::FocusChanged { to, from }
                 }
@@ -300,8 +412,9 @@ fn resolve(
                 None => return NavEvent::Caught { from, request },
             };
             let siblings = children_focusables(parent, queries);
-            if nav_fence.is_sequence_menu {
-                match resolve_sequence(focused, menu_direction, &siblings) {
+            if nav_fence.setting.is_sequence() {
+                let loops = nav_fence.setting.loops();
+                match resolve_sequence(focused, menu_direction, loops, &siblings) {
                     Some(to) => NavEvent::focus_changed(*to, from),
                     None => NavEvent::Caught { from, request },
                 }
@@ -373,7 +486,17 @@ fn parent_nav_fence(focusable: Entity, queries: &NavQueries) -> Option<(Entity, 
 }
 
 /// All sibling [[Focusable]]s within a single [[NavFence]]
-fn children_focusables(nav_fence: Entity, queries: &NavQueries) -> Vec<Entity> {
+fn children_focusables(nav_fence: Entity, queries: &NavQueries) -> NonEmpty<Entity> {
+    let ret = children_focusables_helper(nav_fence, queries);
+    assert!(
+        !ret.is_empty(),
+        "A NavFence MUST AT LEAST HAVE ONE Focusable child, {:?} has none",
+        nav_fence
+    );
+    NonEmpty::try_from(ret).unwrap()
+}
+
+fn children_focusables_helper(nav_fence: Entity, queries: &NavQueries) -> Vec<Entity> {
     match queries.children.get(nav_fence).ok() {
         Some(direct_children) => {
             let focusables = direct_children
@@ -384,7 +507,7 @@ fn children_focusables(nav_fence: Entity, queries: &NavQueries) -> Vec<Entity> {
                 .iter()
                 .filter(|e| queries.focusables.get(**e).is_err())
                 .filter(|e| queries.nav_fences.get(**e).is_err())
-                .flat_map(|e| children_focusables(*e, queries));
+                .flat_map(|e| children_focusables_helper(*e, queries));
             focusables.chain(transitive_focusables).collect()
         }
         None => Vec::new(),
@@ -393,11 +516,11 @@ fn children_focusables(nav_fence: Entity, queries: &NavQueries) -> Vec<Entity> {
 
 /// Which `Entity` in `siblings` is not _inert_, or the first in `siblings` if
 /// none found.
-fn non_inert_within<'a, 'b>(siblings: &'a [Entity], queries: &'b NavQueries) -> Option<&'a Entity> {
+fn non_inert_within<'a, 'b>(siblings: &'a NonEmpty<Entity>, queries: &'b NavQueries) -> &'a Entity {
     siblings
         .iter()
         .find(|e| queries.focusables.get(**e).iter().any(|f| !f.1.is_inert()))
-        .or_else(|| siblings.first())
+        .unwrap_or_else(|| siblings.first())
 }
 
 /// Remove all but one mutually identical elements at the end of `v1` and `v2`
@@ -433,6 +556,7 @@ fn trim_common_tail<T: PartialEq>(v1: &mut NonEmpty<T>, v2: &mut NonEmpty<T>) {
         }
     }
 }
+
 fn root_path(mut from: Entity, queries: &NavQueries) -> NonEmpty<Entity> {
     let mut ret = NonEmpty::new(from);
     loop {
@@ -441,13 +565,30 @@ fn root_path(mut from: Entity, queries: &NavQueries) -> NonEmpty<Entity> {
             Some((_, fence)) if fence.focus_parent.is_some() => fence.focus_parent.unwrap(),
             _ => return ret,
         };
-        if ret.contains(&from) {
-            panic!(
-                "Navigation graph cycle detected! This panic has prevented a stack \
-                overflow, please check usages of `NavFence::reachable_from`"
-            );
-        }
+        assert!(
+            !ret.contains(&from),
+            "Navigation graph cycle detected! This panic has prevented a stack \
+            overflow, please check usages of `NavFence::reachable_from`"
+        );
         ret.push(from);
+    }
+}
+
+fn resolve_index(
+    from: usize,
+    loops: bool,
+    direction: MenuDirection,
+    max_value: usize,
+) -> Option<usize> {
+    use MenuDirection::*;
+    match (direction, loops, from) {
+        (Previous, true, 0) => Some(max_value),
+        (Previous, true, from) => Some(from - 1),
+        (Previous, false, 0) => None,
+        (Previous, false, from) => Some(from - 1),
+        (Next, true, from) => Some((from + 1) % (max_value + 1)),
+        (Next, false, from) if from == max_value => None,
+        (Next, false, from) => Some(from + 1),
     }
 }
 

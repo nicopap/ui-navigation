@@ -34,6 +34,15 @@ impl Direction {
             West => coord.y > coord.x && coord.y < -coord.x,
         }
     }
+    pub(crate) fn opposite(&self) -> Self {
+        use Direction::*;
+        match self {
+            South => North,
+            East => West,
+            West => East,
+            North => South,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

@@ -76,7 +76,6 @@ fn button_system(
     >,
 ) {
     for (focus_state, mut material) in interaction_query.iter_mut() {
-        println!("REDRAW {:?}", focus_state);
         if focus_state.is_focused() {
             *material = materials.focused.clone();
         } else if focus_state.is_active() {
@@ -175,6 +174,7 @@ fn setup(
     };
 
     let fence = |id: Entity| NavFence::reachable_from(id);
+    let loop_fence = |id: Entity| NavFence::reachable_from(id).looping();
     let mut spawn =
         |bundle: &ButtonBundle| commands.spawn_bundle(bundle.clone()).insert(focus()).id();
 
@@ -200,22 +200,24 @@ fn setup(
         #[cmd(commands)]
         // The tab menu should be navigated with `MenuDirection::{Next, Previous}`
         // hence the `.sequence()`
-        vertical{size:size!(100 pct, 100 pct)}[NavFence::root().sequence()](
+        vertical{size:size!(100 pct, 100 pct)}[NavFence::root().looping().sequence()](
             horizontal{justify_content: FlexStart, flex_basis: unit!(10 pct)}(
                 // tab_{red,green,blue} link to their respective columns
-                // vvvvvvv      vvvvvvvvv      vvvvvvvv 
+                // vvvvvvv      vvvvvvvvv      vvvvvvvv
                 id(tab_red), id(tab_green), id(tab_blue)
             ),
             column_box(
                 //          vvvvvvvvvvvvvv
                 column[red, fence(tab_red)](
                     vertical(id(select_1), id(select_2)),
-                    horizontal{flex_wrap: Wrap}[gray, fence(select_1)](
+                    horizontal{flex_wrap: Wrap}[gray, loop_fence(select_1)](
+                        square[focus()], square[focus()], square[focus()], square[focus()],
+                        square[focus()], square[focus()], square[focus()], square[focus()],
                         square[focus()], square[focus()], square[focus()], square[focus()],
                         square[focus()], square[focus()], square[focus()], square[focus()],
                         square[focus()], square[focus()], square[focus()], square[focus()]
                     ),
-                    horizontal{flex_wrap: Wrap}[gray, fence(select_2)](
+                    horizontal{flex_wrap: Wrap}[gray, loop_fence(select_2)](
                         square[focus()], square[focus()], square[focus()], square[focus()],
                         square[focus()], square[focus()], square[focus()], square[focus()]
                     )
@@ -225,26 +227,26 @@ fn setup(
                     horizontal(id(g1), horizontal[gray, fence(g1)](square[focus()])),
                     horizontal(
                         id(g2),
-                        horizontal[gray, fence(g2)](
+                        horizontal[gray, loop_fence(g2)](
                             square[focus()], square[focus()]
                         )
                     ),
                     horizontal(
                         id(g3),
-                        horizontal[gray, fence(g3)](
+                        horizontal[gray, loop_fence(g3)](
                             square[focus()], square[focus()], square[focus()]
                         )
                     ),
-                    horizontal(id(g4), horizontal[gray, fence(g4)](square[focus()])),
+                    horizontal(id(g4), horizontal[gray, loop_fence(g4)](square[focus()])),
                     horizontal(
                         id(g5),
-                        horizontal[gray, fence(g5)](
+                        horizontal[gray, loop_fence(g5)](
                             square[focus()], square[focus()], square[focus()]
                         )
                     ),
                     horizontal(
                         id(g6),
-                        horizontal[gray, fence(g6)](
+                        horizontal[gray, loop_fence(g6)](
                             square[focus()], square[focus()]
                         )
                     )

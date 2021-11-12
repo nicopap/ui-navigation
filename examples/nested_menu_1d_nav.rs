@@ -199,7 +199,7 @@ fn setup(mut commands: Commands, materials: Res<Materials>, mut game: ResMut<Gam
             for j in 0..5 {
                 commands
                     .spawn_bundle(menu(&materials))
-                    .insert(NavFence::new(next_menu_button))
+                    .insert(NavFence::new(next_menu_button).looping())
                     .with_children(|commands| {
                         for i in 0..4 {
                             let mut button = commands.spawn_bundle(button(&materials));
