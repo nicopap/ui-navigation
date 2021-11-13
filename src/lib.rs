@@ -337,17 +337,12 @@ fn resolve_sequence(
 }
 
 /// Resolve `request` where the focused element is `focused`
-fn resolve(focused: Entity, request: NavRequest, queries: &NavQueries) -> NavEvent {
-    resolve_helper(focused, request, queries, Vec::new())
-        .unwrap_or_else(|from| NavEvent::Caught { from, request })
-}
-
-fn resolve_helper(
+fn resolve(
     focused: Entity,
     request: NavRequest,
     queries: &NavQueries,
     from: Vec<Entity>,
-) -> Result<NavEvent, NonEmpty<Entity>> {
+) -> NavEvent {
     use NavRequest::*;
 
     assert!(
@@ -366,14 +361,14 @@ fn resolve_helper(
         ($to_match:expr) => {
             match $to_match {
                 Some(x) => x,
-                None => return Err(from),
+                None => return NavEvent::Caught { from, request },
             }
         };
     }
     match request {
         Move(direction) => {
             let (parent, loops) = match parent_nav_fence(focused, queries) {
-                Some(val) if !val.1.setting.is_2d() => return Err(from),
+                Some(val) if !val.1.setting.is_2d() => return NavEvent::Caught { from, request },
                 Some(val) => (Some(val.0), val.1.setting.loops()),
                 None => (None, true),
             };
@@ -389,13 +384,13 @@ fn resolve_helper(
             };
             let to = resolve_2d(focused, direction, loops, &siblings, &queries.transform);
             let to = or_caught!(to);
-            Ok(NavEvent::focus_changed(*to, from))
+            NavEvent::focus_changed(*to, from)
         }
         Cancel => {
             let to = or_caught!(parent_nav_fence(focused, queries));
             let to = or_caught!(to.1.focus_parent);
             from.push(to);
-            Ok(NavEvent::focus_changed(to, from))
+            NavEvent::focus_changed(to, from)
         }
         Action => {
             let child_nav_fence = queries
@@ -406,25 +401,25 @@ fn resolve_helper(
             let to = children_focusables(child_nav_fence, queries);
             let to = non_inert_within(&to, queries);
             let to = (*to, from.clone().into()).into();
-            Ok(NavEvent::FocusChanged { to, from })
+            NavEvent::FocusChanged { to, from }
         }
         MenuMove(menu_dir) => {
             let (parent, nav_fence) = or_caught!(parent_nav_fence(focused, queries));
             let siblings = children_focusables(parent, queries);
             if !nav_fence.setting.is_sequence() {
                 let focused = nav_fence.focus_parent.unwrap();
-                resolve_helper(focused, request, queries, from.into())
+                resolve(focused, request, queries, from.into())
             } else {
                 let loops = nav_fence.setting.loops();
                 let to = or_caught!(resolve_sequence(focused, menu_dir, loops, &siblings));
-                Ok(NavEvent::focus_changed(*to, from))
+                NavEvent::focus_changed(*to, from)
             }
         }
         FocusOn(new_to_focus) => {
             let mut from = root_path(focused, queries);
             let mut to = root_path(new_to_focus, queries);
             trim_common_tail(&mut from, &mut to);
-            Ok(NavEvent::FocusChanged { from, to })
+            NavEvent::FocusChanged { from, to }
         }
     }
 }
@@ -450,7 +445,7 @@ fn listen_nav_requests(
             );
             queries.focusables.iter().next().unwrap().0
         });
-        let event = resolve(focused_id, *request, &queries);
+        let event = resolve(focused_id, *request, &queries, Vec::new());
         if let NavEvent::FocusChanged { to, from } = &event {
             let focused = Focusable::with_state(FocusState::Focused);
             let inert = Focusable::with_state(FocusState::Inert);
@@ -594,6 +589,7 @@ impl Plugin for NavigationPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<NavRequest>()
             .add_event::<NavEvent>()
+            // TODO: add label to system so that it can be sorted
             .add_system(listen_nav_requests);
     }
 }
