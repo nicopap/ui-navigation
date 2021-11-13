@@ -3,7 +3,8 @@ use bevy::prelude::*;
 use bevy::input::{keyboard::KeyboardInput, ElementState};
 use bevy_ui_build_macros::{build_ui, rect, size, style, unit};
 use bevy_ui_navigation::{
-    Direction, Focusable, MenuDirection, NavFence, NavRequest, NavigationPlugin,
+    components::FocusableButtonBundle, Direction, Focusable, MenuDirection, NavFence, NavRequest,
+    NavigationPlugin,
 };
 
 /// THE ULTIMATE MENU DEMONSTRATION
@@ -19,6 +20,8 @@ use bevy_ui_navigation::{
 ///
 /// Use `Q` and `E` to navigate tabs, use `WASD` for moving within containers,
 /// `ENTER` and `BACKSPACE` for going down/up the hierarchy.
+///
+/// Navigation also works with controller
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
@@ -33,13 +36,6 @@ fn main() {
 }
 
 struct Lapse(f64);
-
-#[derive(Default, Clone, Bundle)]
-struct FocusableButtonBundle {
-    #[bundle]
-    button_bundle: ButtonBundle,
-    focus: Focusable,
-}
 
 struct Materials {
     inert: Handle<ColorMaterial>,
@@ -66,36 +62,34 @@ fn gamepad_input(
     time: Res<Time>,
 ) {
     use Direction::*;
-    use MenuDirection::{Previous, Next};
-    use NavRequest::{MenuMove, Action, Cancel, Move};
     use GamepadAxisType::{DPadX, DPadY};
     use GamepadButtonType as Butt;
+    use MenuDirection::{Next, Previous};
+    use NavRequest::{Action, Cancel, MenuMove, Move};
 
-    let hat_to_dir = |axis: GamepadAxisType, value: f32| {
-        match () {
-            () if axis == DPadX && value > 0.0 => Some(East),
-            () if axis == DPadX && value < 0.0 => Some(West),
-            () if axis == DPadY && value > 0.0 => Some(North),
-            () if axis == DPadY && value < 0.0 => Some(South),
-            () => None,
-        }
+    let hat_to_dir = |axis: GamepadAxisType, value: f32| match axis {
+        DPadX if value > 0.0 => Some(East),
+        DPadX if value < 0.0 => Some(West),
+        DPadY if value > 0.0 => Some(North),
+        DPadY if value < 0.0 => Some(South),
+        _ => None,
     };
-    let button_to_request = |button: GamepadButtonType| {
-        match () {
-            () if button == Butt::South => Some(Action),
-            () if button == Butt::East => Some(Cancel),
-            () if button == Butt::LeftTrigger => Some(MenuMove(Previous)),
-            () if button == Butt::RightTrigger => Some(MenuMove(Next)),
-            () => None,
-        }
+    let button_to_request = |button: GamepadButtonType| match button {
+        Butt::South => Some(Action),
+        Butt::East => Some(Cancel),
+        Butt::LeftTrigger => Some(MenuMove(Previous)),
+        Butt::RightTrigger => Some(MenuMove(Next)),
+        _ => None,
     };
     for event in events.iter() {
         let maybe_cmd = match &event {
-            GamepadEvent(Gamepad(0), GamepadEventType::AxisChanged(axis, value)) =>
-                hat_to_dir(*axis, *value).map(|dir| Move(dir)),
-            GamepadEvent(Gamepad(0), GamepadEventType::ButtonChanged(button, v)) if v > &0.0 =>
-                button_to_request(*button),
-            _ => None
+            GamepadEvent(Gamepad(0), GamepadEventType::AxisChanged(axis, value)) => {
+                hat_to_dir(*axis, *value).map(Move)
+            }
+            GamepadEvent(Gamepad(0), GamepadEventType::ButtonChanged(button, v)) if *v > 0.0 => {
+                button_to_request(*button)
+            }
+            _ => None,
         };
         if let Some(cmd) = maybe_cmd {
             lapse.0 = time.seconds_since_startup();
@@ -199,39 +193,30 @@ fn setup(
     let gray = materials.add(Color::rgba(0.9, 0.9, 0.9, 0.3).into());
     let black = our_materials.inert.clone();
 
-    let square = FocusableButtonBundle {
-        button_bundle: ButtonBundle {
-            style: style! {
-                size: size!(40 px, 40 px),
-                margin: rect!(2 px),
-            },
-            material: black.clone(),
-            ..Default::default()
+    let square = FocusableButtonBundle::from(ButtonBundle {
+        style: style! {
+            size: size!(40 px, 40 px),
+            margin: rect!(2 px),
         },
+        material: black.clone(),
         ..Default::default()
-    };
-    let select_square = FocusableButtonBundle {
-        button_bundle: ButtonBundle {
-            style: style! {
-                size: size!(100 pct, 40 px),
-                margin: rect!(2 px),
-            },
-            material: black.clone(),
-            ..Default::default()
+    });
+    let select_square = FocusableButtonBundle::from(ButtonBundle {
+        style: style! {
+            size: size!(100 pct, 40 px),
+            margin: rect!(2 px),
         },
+        material: black.clone(),
         ..Default::default()
-    };
-    let tab_square = FocusableButtonBundle {
-        button_bundle: ButtonBundle {
-            style: style! {
-                size: size!(100 px, 40 px),
-                margin: rect!(30 px, 0 px),
-            },
-            material: black,
-            ..Default::default()
+    });
+    let tab_square = FocusableButtonBundle::from(ButtonBundle {
+        style: style! {
+            size: size!(100 px, 40 px),
+            margin: rect!(30 px, 0 px),
         },
+        material: black,
         ..Default::default()
-    };
+    });
     let column_box = NodeBundle {
         style: style! {
             flex_direction: Row,

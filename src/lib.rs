@@ -4,6 +4,7 @@
 // All "helper functions" are defined after `listen_nav_requests`,
 // algorithms are specified over `listen_nav_requests`. While structs and enums
 // are defined before all.
+pub mod components;
 mod events;
 
 use std::cmp::Ordering;
