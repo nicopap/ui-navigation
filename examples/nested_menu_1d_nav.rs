@@ -1,7 +1,7 @@
 use bevy::input::{keyboard::KeyboardInput, ElementState};
 use bevy::prelude::*;
 
-use bevy_ui_navigation::{Direction, Focusable, NavEvent, NavFence, NavRequest, NavigationPlugin};
+use bevy_ui_navigation::{Direction, Focusable, NavEvent, NavMenu, NavRequest, NavigationPlugin};
 
 /// This example demonstrates a more complex menu system where you navigate
 /// through menus and go to submenus using the `Action` and `Cancel`
@@ -50,7 +50,7 @@ impl Gameui {
     }
 }
 
-fn query_bad_stuff(query: Query<(Entity, &NavFence, &Focusable), Changed<Focusable>>) {
+fn query_bad_stuff(query: Query<(Entity, &NavMenu, &Focusable), Changed<Focusable>>) {
     if !query.is_empty() {
         println!("BAD STUFF: {:?}", query.iter().collect::<Vec<_>>());
     }
@@ -131,12 +131,13 @@ fn handle_nav_events(
     mut requests: EventWriter<NavRequest>,
     game: Res<Gameui>,
 ) {
+    use NavRequest::Action;
     for event in events.iter() {
         println!("{:?}", event);
         match event {
-            NavEvent::Caught {
+            NavEvent::NoChanges {
                 from,
-                request: NavRequest::Action,
+                request: Action,
             } if game.from.contains(from.first()) => requests.send(NavRequest::FocusOn(game.to)),
             _ => {}
         }
@@ -193,13 +194,13 @@ fn setup(mut commands: Commands, materials: Res<Materials>, mut game: ResMut<Gam
 
     commands
         .spawn_bundle(bundle)
-        .insert(NavFence::root())
+        .insert(NavMenu::root())
         .with_children(|commands| {
             let mut next_menu_button: Option<Entity> = None;
             for j in 0..5 {
                 commands
                     .spawn_bundle(menu(&materials))
-                    .insert(NavFence::new(next_menu_button).looping())
+                    .insert(NavMenu::new(next_menu_button).cycling())
                     .with_children(|commands| {
                         for i in 0..4 {
                             let mut button = commands.spawn_bundle(button(&materials));

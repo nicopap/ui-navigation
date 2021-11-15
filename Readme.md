@@ -52,10 +52,10 @@ To respond to relevant user input, for example when the player pressed the
 `NavEvent` event queue:
 ```rust
 fn handle_nav_events(mut events: EventReader<NavEvent>, game: Res<Gameui>) {
-    use bevy_ui_navigation::{NavEvent::Caught, NavRequest::Action};
+    use bevy_ui_navigation::{NavEvent::NoChanges, NavRequest::Action};
     for event in events.iter() {
         match event {
-            Caught { from, request: Action } if from.first() == game.start_game_button => {
+            NoChanges { from, request: Action } if from.first() == game.start_game_button => {
                   // Start the game on "A" or "ENTER" button press
             }
             _ => {}
@@ -97,7 +97,7 @@ fn button_system(
 
 ### More complex use cases
 
-### With `NavFence`s
+### With `NavMenu`s
 
 Suppose you have a more complex game with menus sub-menus and sub-sub-menus etc.
 For example, in your everyday 2021 AAA game, to change the antialiasing you
@@ -109,11 +109,11 @@ In this case, you need to be capable of specifying which button in the previous
 menu leads to the next menu (for example, you would press the "Options" button
 in the game menu to access the options menu).
 
-For that, you need to use the `NavFence` component.
-1. First you need a "root" `NavFence`. This is a limit of the navigation
+For that, you need to use the `NavMenu` component.
+1. First you need a "root" `NavMenu`. This is a limit of the navigation
    algorithm (which may be fixed in the future)
 2. You also need the `Entity` value of your "Options" button
-3. You then add a `NavFence::reachable_from(options_button)` to the
+3. You then add a `NavMenu::reachable_from(options_button)` to the
    `NodeBundle` containing all the options menu `Focusable` entities.
 This may look like this:
 ```rust
@@ -131,7 +131,7 @@ let mut spawn_button = |bundle: &FocusableButtonBundle| {
 let options_button = spawn(&button);
 
 // Spawn the game menu                              !!vvvvvv!!
-let game_menu = commands.spawn(menu).insert(NavFence::root()).id();
+let game_menu = commands.spawn(menu).insert(NavMenu::root()).id();
 commads.entity(options_button).insert(Parent(game_menu));
 commads.entity(game_button).insert(Parent(game_menu));
 commads.entity(quit_button).insert(Parent(game_menu));
@@ -141,7 +141,7 @@ commads.entity(load_button).insert(Parent(game_menu));
 let options_menu = commands
       .spawn(menu)
       //              !!vvvvvvvvvvvvvvvvvvvvvvvvvvvvvv!!
-      .insert(NavFence::reachable_from(options_button))
+      .insert(NavMenu::reachable_from(options_button))
       .id();
 commads.entity(graphics_option_button).insert(Parent(options_menu));
 commads.entity(audio_options_button).insert(Parent(options_menu));
@@ -154,7 +154,7 @@ access it by sending the `NavRequest::Action` when `options_button` is focused,
 or by sending a `NavRequest::FocusOn(input_options_button)`. 
 
 Specifically, navigation between `Focusable` entities will be constrained to
-other `Focusable` that are children of the `NavFence`. It creates a
+other `Focusable` that are children of the same `NavMenu`. It creates a
 self-contained menu.
 
 ### `NavRequest::FocusOn`
@@ -164,13 +164,13 @@ track of a lot of thing on the backend to make the navigation work as expected.
 But you can set the focused element to any arbitrary entity with the
 `NavRequest::FocusOn` request.
 
-### `NavFence` settings
+### `NavMenu` settings
 
-A `NavFence` doesn't only define menu-to-menu navigation, but it also gives you
+A `NavMenu` doesn't only define menu-to-menu navigation, but it also gives you
 finner-grained control on how navigation is handled within a menu.
-`NavFence::{looping, closed}` controls whether or not going left from the
-leftmost element goes to the rightmost and vis-versa. `NavFence::sequence`
-sets the menu as a sort of global control menu. It catches `NavRequest::MenuMove`
+`NavMenu::{cycle, closed}` controls whether or not going left from the
+leftmost element goes to the rightmost and vis-versa. `NavMenu::scope`
+sets the menu as a sort of global control menu. It catches `NavRequest::ScopeMove`
 requests even when the focused entity is in another sub-menu reachable from this
 menu. This behaves like you would expect a tabbed menu to behave. See the
 ["ultimate" menu navigation
@@ -198,13 +198,11 @@ for a demonstration.
 - [X] Minor refactor of `resolve` function + Add FocusableButtonBundle to
       examples to simplify them greatly
 - [ ] Replace most calls to `.iter().find(…)` for child non_inert by checking
-      the `NavFence`'s `non_inert_child` rather than `query.nav_fences`. This
+      the `NavMenu`'s `non_inert_child` rather than `query.nav_menus`. This
       fixes the most likely hotspot which is the recursive function
       `children_focusables`.
 - [ ] Descend the hierarchy on Next and Previous (requires non_inert_child
       otherwise it's going to be very difficult to implement)
-- [ ] Add mouse support
-- [ ] Even more lööps (`North`/`South` and `East`/`West` locked)
 
 # License
 

@@ -2,7 +2,7 @@ use bevy::input::{keyboard::KeyboardInput, ElementState};
 use bevy::prelude::*;
 
 use bevy_ui_navigation::{
-    Direction, Focusable, Focused, NavEvent, NavFence, NavRequest, NavigationPlugin,
+    Direction, Focusable, Focused, NavEvent, NavMenu, NavRequest, NavigationPlugin,
 };
 
 /// Shows how navigation is supported even between siblings separated by a
@@ -106,14 +106,14 @@ fn setup(mut commands: Commands, button_materials: Res<ButtonMaterials>) {
         // The `Focusable`s buttons are not direct siblings, we can navigate through
         // them beyond direct hierarchical relationships.
         //
-        // To prevent this, we can add a `NavFence` as a sort of boundary
+        // To prevent this, we can add a `NavMenu` as a sort of boundary
         // between different sets of `Focusable`s. This requires having an
-        // englobing `NavFence` that contains all other `NavFence`s or
+        // englobing `NavMenu` that contains all other `NavMenu`s or
         // `Focusable`s
         //
-        // YOU MUSTE ADD A NavFence enclosing ALL Focusable and ALL NavFence (but
+        // YOU MUSTE ADD A NavMenu enclosing ALL Focusable and ALL NavMenu (but
         // themselves) Subtile broken behavior will ensure otherwise
-        .insert(NavFence::root())
+        .insert(NavMenu::root())
         .with_children(|commands| {
             for i in 0..3 {
                 let style = Style {
@@ -143,8 +143,8 @@ fn setup(mut commands: Commands, button_materials: Res<ButtonMaterials>) {
             commands
                 .spawn_bundle(bundle)
                 // We don't want to be able to access the pink square, so we
-                // add a `NavFence` as boundary
-                .insert(NavFence::root())
+                // add a `NavMenu` as boundary
+                .insert(NavMenu::root())
                 .with_children(|commands| {
                     spawn_button(commands, &button_materials);
                     spawn_button(commands, &button_materials);

@@ -2,20 +2,30 @@ use bevy::ecs::entity::Entity;
 use bevy::math::Vec2;
 use non_empty_vec::NonEmpty;
 
+/// Requests to send to the navigation system to update focus
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum NavRequest {
+    /// Move in 2d in provided direction
     Move(Direction),
-    MenuMove(MenuDirection),
+    /// Move within the encompassing [`NavMenu::scope`](crate::NavMenu::scope)
+    ScopeMove(ScopeDirection),
+    /// Enter submenu if any [`NavMenu::reachable_from`](crate::NavMenu::reachable_from)
+    /// the currently focused entity.
     Action,
+    /// Leave this submenu to enter the one it is [`reachable_from`](crate::NavMenu::reachable_from)
     Cancel,
+    /// Move the focus to any arbitrary [`Focusable`](crate::Focusable) entity
     FocusOn(Entity),
 }
 
+/// Direction for movement in [`NavMenu::scope`](crate::NavMenu::scope) menus.
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub enum MenuDirection {
+pub enum ScopeDirection {
     Next,
     Previous,
 }
+
+/// 2d direction to move in normal menus
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Direction {
     South,
@@ -45,6 +55,11 @@ impl Direction {
     }
 }
 
+/// Events emitted by the navigation system.
+///
+/// Useful if you want to react to [`NavEvent::NoChanges`] event, for example
+/// when a "start game" button is focused and the [`NavRequest::Action`] is
+/// pressed.
 #[derive(Debug, Clone)]
 pub enum NavEvent {
     /// Focus changed
@@ -57,14 +72,15 @@ pub enum NavEvent {
     /// Both lists are ascending, meaning that the focused and newly
     /// focused elements are the first of their respective vectors.
     ///
-    /// [[NonEmpty]] enables you to safely check `to.first()` or `from.first()`
+    /// [`NonEmpty`] enables you to safely check `to.first()` or `from.first()`
     /// without returning an option. It is guaranteed that there is at least
     /// one element.
     FocusChanged {
         to: NonEmpty<Entity>,
         from: NonEmpty<Entity>,
     },
-    Caught {
+    /// The [`NavRequest`] didn't lead to any change in focus.
+    NoChanges {
         from: NonEmpty<Entity>,
         request: NavRequest,
     },

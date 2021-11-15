@@ -3,8 +3,8 @@ use bevy::prelude::*;
 use bevy::input::{keyboard::KeyboardInput, ElementState};
 use bevy_ui_build_macros::{build_ui, rect, size, style, unit};
 use bevy_ui_navigation::{
-    components::FocusableButtonBundle, Direction, Focusable, MenuDirection, NavFence, NavRequest,
-    NavigationPlugin,
+    components::FocusableButtonBundle, Direction, Focusable, NavMenu, NavRequest, NavigationPlugin,
+    ScopeDirection,
 };
 
 /// THE ULTIMATE MENU DEMONSTRATION
@@ -64,8 +64,8 @@ fn gamepad_input(
     use Direction::*;
     use GamepadAxisType::{DPadX, DPadY};
     use GamepadButtonType as Butt;
-    use MenuDirection::{Next, Previous};
-    use NavRequest::{Action, Cancel, MenuMove, Move};
+    use NavRequest::{Action, Cancel, Move, ScopeMove};
+    use ScopeDirection::{Next, Previous};
 
     let hat_to_dir = |axis: GamepadAxisType, value: f32| match axis {
         DPadX if value > 0.0 => Some(East),
@@ -77,8 +77,8 @@ fn gamepad_input(
     let button_to_request = |button: GamepadButtonType| match button {
         Butt::South => Some(Action),
         Butt::East => Some(Cancel),
-        Butt::LeftTrigger => Some(MenuMove(Previous)),
-        Butt::RightTrigger => Some(MenuMove(Next)),
+        Butt::LeftTrigger => Some(ScopeMove(Previous)),
+        Butt::RightTrigger => Some(ScopeMove(Next)),
         _ => None,
     };
     for event in events.iter() {
@@ -113,8 +113,8 @@ fn keyboard_input(
         KeyCode::Down | KeyCode::S => Some(Move(South)),
         KeyCode::Left | KeyCode::A => Some(Move(West)),
         KeyCode::Right | KeyCode::D => Some(Move(East)),
-        KeyCode::Tab | KeyCode::E => Some(MenuMove(MenuDirection::Next)),
-        KeyCode::Q => Some(MenuMove(MenuDirection::Previous)),
+        KeyCode::Tab | KeyCode::E => Some(ScopeMove(ScopeDirection::Next)),
+        KeyCode::Q => Some(ScopeMove(ScopeDirection::Previous)),
         _ => None,
     };
     for event in keyboard.iter() {
@@ -241,8 +241,8 @@ fn setup(
         ..Default::default()
     };
 
-    let fence = |id: Entity| NavFence::reachable_from(id);
-    let loop_fence = |id: Entity| NavFence::reachable_from(id).looping();
+    let menu = |id: Entity| NavMenu::reachable_from(id);
+    let cycle_menu = |id: Entity| NavMenu::reachable_from(id).cycling();
     let mut spawn = |bundle: &FocusableButtonBundle| commands.spawn_bundle(bundle.clone()).id();
 
     let tab_red = spawn(&tab_square);
@@ -264,12 +264,12 @@ fn setup(
     // The macro is a very thin wrapper over the "normal" UI declaration
     // technic. Please look at the doc for `build_ui` for info on what it does.
     //
-    // Pay attention to calls to `focus()`, `fence(id)` and `NavFence::root()`
+    // Pay attention to calls to `menu(id)` and `NavMenu::root()`
     build_ui! {
         #[cmd(commands)]
-        // The tab menu should be navigated with `MenuDirection::{Next, Previous}`
-        // hence the `.sequence()`
-        vertical{size:size!(100 pct, 100 pct)}[NavFence::root().looping().sequence()](
+        // The tab menu should be navigated with `NavRequest::ScopeMove`
+        // hence the `.scope()`
+        vertical{size:size!(100 pct, 100 pct)}[NavMenu::root().cycling().scope()](
             horizontal{justify_content: FlexStart, flex_basis: unit!(10 pct)}(
                 // tab_{red,green,blue} link to their respective columns
                 // vvvvvvv      vvvvvvvvv      vvvvvvvv
@@ -277,30 +277,30 @@ fn setup(
             ),
             column_box(
                 //          vvvvvvvvvvvvvv
-                column[red, fence(tab_red)](
+                column[red, menu(tab_red)](
                     vertical(id(select_1), id(select_2)),
-                    horizontal{flex_wrap: Wrap}[gray, loop_fence(select_1)](
+                    horizontal{flex_wrap: Wrap}[gray, cycle_menu(select_1)](
                         square, square, square, square, square, square, square, square,
                         square, square, square, square, square, square, square, square,
                         square, square, square, square
                     ),
-                    horizontal{flex_wrap: Wrap}[gray, loop_fence(select_2)](
+                    horizontal{flex_wrap: Wrap}[gray, cycle_menu(select_2)](
                         square, square, square, square, square, square, square, square
                     )
                 ),
                 //            vvvvvvvvvvvvvvvv
-                column[green, fence(tab_green)](
-                    horizontal(id(g1), horizontal[gray, fence(g1)](square)),
-                    horizontal(id(g2), horizontal[gray, loop_fence(g2)](square, square)),
-                    horizontal(id(g3), horizontal[gray, fence(g3)](square, square, square)),
-                    horizontal(id(g4), horizontal[gray, loop_fence(g4)](square)),
-                    horizontal(id(g5), horizontal[gray, fence(g5)](square, square, square)),
-                    horizontal(id(g6), horizontal[gray, loop_fence(g6)](square, square)),
-                    horizontal(id(g7), horizontal[gray, fence(g7)](square, square, square, square)),
-                    horizontal(id(g8), horizontal[gray, loop_fence(g8)](square, square, square, square))
+                column[green, menu(tab_green)](
+                    horizontal(id(g1), horizontal[gray, menu(g1)](square)),
+                    horizontal(id(g2), horizontal[gray, cycle_menu(g2)](square, square)),
+                    horizontal(id(g3), horizontal[gray, menu(g3)](square, square, square)),
+                    horizontal(id(g4), horizontal[gray, cycle_menu(g4)](square)),
+                    horizontal(id(g5), horizontal[gray, menu(g5)](square, square, square)),
+                    horizontal(id(g6), horizontal[gray, cycle_menu(g6)](square, square)),
+                    horizontal(id(g7), horizontal[gray, menu(g7)](square, square, square, square)),
+                    horizontal(id(g8), horizontal[gray, cycle_menu(g8)](square, square, square, square))
                 ),
                 //           vvvvvvvvvvvvvvv
-                column[blue, fence(tab_blue)](
+                column[blue, menu(tab_blue)](
                     vertical(
                         vertical(select_square, select_square, select_square, select_square),
                         colored_square
