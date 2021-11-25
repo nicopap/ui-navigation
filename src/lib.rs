@@ -2,6 +2,10 @@
 //!
 //! See [the RFC](https://github.com/nicopap/rfcs/blob/ui-navigation/rfcs/41-ui-navigation.md)
 //! for a deep explanation on how this works.
+// FIXME: When reaching a NavMenu directly through mouse without passing by
+// another menu, we can select a Focusable that is not the "Dormant" one,
+// resulting in multiple non-inert focusables within that menu. How to fix
+// that? Answer: with the child_of_interst!
 // TODO: review all uses of `.unwrap()`!
 // Notes on the structure of this file:
 //
@@ -478,16 +482,16 @@ fn listen_nav_requests(
             let dormant = Focusable::with_state(FocusState::Dormant);
             let active = Focusable::with_state(FocusState::Active);
 
-            let (disable, put_to_sleep) = from.split_last();
-            commands.entity(*disable).insert(inert).remove::<Focused>();
-            for entity in put_to_sleep {
-                commands.entity(*entity).insert(dormant).remove::<Focused>();
+            let (&disable, put_to_sleep) = from.split_last();
+            commands.entity(disable).insert(inert).remove::<Focused>();
+            for &entity in put_to_sleep {
+                commands.entity(entity).insert(dormant).remove::<Focused>();
             }
 
-            let (focus, activate) = to.split_first();
-            commands.entity(*focus).insert(focused).insert(Focused);
-            for entity in activate {
-                commands.entity(*entity).insert(active);
+            let (&focus, activate) = to.split_first();
+            commands.entity(focus).insert(focused).insert(Focused);
+            for &entity in activate {
+                commands.entity(entity).insert(active);
             }
         };
         events.send(event);
@@ -541,7 +545,7 @@ fn non_inert_within<'a, 'b>(siblings: &'a NonEmpty<Entity>, queries: &'b NavQuer
         .unwrap_or_else(|| siblings.first())
 }
 
-/// Remove all but one mutually identical elements at the end of `v1` and `v2`
+/// Remove all mutually identical elements at the end of `v1` and `v2`
 ///
 /// # Example
 ///
@@ -552,16 +556,16 @@ fn non_inert_within<'a, 'b>(siblings: &'a NonEmpty<Entity>, queries: &'b NavQuer
 ///
 /// trim_common_tail(&mut v1, &mut v2);
 ///
-/// assert_eq!(v1, ne_vec![1,2,3,4]);
-/// assert_eq!(v2, ne_vec![3,2,1,4]);
+/// assert_eq!(v1, ne_vec![1,2,3]);
+/// assert_eq!(v2, ne_vec![3,2,1]);
 /// ```
 fn trim_common_tail<T: PartialEq>(v1: &mut NonEmpty<T>, v2: &mut NonEmpty<T>) {
     let mut i1 = v1.len().get() - 1;
     let mut i2 = v2.len().get() - 1;
     loop {
         if v1[i1] != v2[i2] {
-            let l1 = NonZeroUsize::new(i1.saturating_add(2)).unwrap();
-            let l2 = NonZeroUsize::new(i2.saturating_add(2)).unwrap();
+            let l1 = NonZeroUsize::new(i1.saturating_add(1)).unwrap();
+            let l2 = NonZeroUsize::new(i2.saturating_add(1)).unwrap();
             v1.truncate(l1);
             v2.truncate(l2);
             return;
@@ -633,7 +637,7 @@ mod tests {
         let mut v1 = ne_vec![1, 2, 3, 4, 5, 6, 7];
         let mut v2 = ne_vec![3, 2, 1, 4, 5, 6, 7];
         trim_common_tail(&mut v1, &mut v2);
-        assert_eq!(v1, ne_vec![1, 2, 3, 4]);
-        assert_eq!(v2, ne_vec![3, 2, 1, 4]);
+        assert_eq!(v1, ne_vec![1, 2, 3]);
+        assert_eq!(v2, ne_vec![3, 2, 1]);
     }
 }

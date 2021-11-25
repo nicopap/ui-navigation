@@ -1,6 +1,8 @@
 use bevy::prelude::*;
 
-use bevy_ui_navigation::systems::{default_gamepad_input, default_keyboard_input, InputMapping};
+use bevy_ui_navigation::systems::{
+    default_gamepad_input, default_keyboard_input, default_mouse_input, InputMapping,
+};
 use bevy_ui_navigation::{Focusable, NavEvent, NavMenu, NavRequest, NavigationPlugin};
 
 /// This example demonstrates a more complex menu system where you navigate
@@ -35,6 +37,7 @@ fn main() {
         .add_system(button_system)
         .add_system(default_keyboard_input)
         .add_system(default_gamepad_input)
+        .add_system(default_mouse_input)
         .add_system(handle_nav_events)
         .run();
 }
@@ -94,7 +97,6 @@ fn button_system(
     >,
 ) {
     for (focus_state, mut material) in interaction_query.iter_mut() {
-        println!("REDRAW {:?}", focus_state);
         if focus_state.is_focused() {
             *material = materials.focused.clone();
         } else if focus_state.is_active() {
@@ -114,7 +116,9 @@ fn handle_nav_events(
 ) {
     use NavRequest::Action;
     for event in events.iter() {
-        println!("{:?}", event);
+        if let NavEvent::FocusChanged { from, to } = &event {
+            println!("----------\nfrom: {:?}\n  to: {:?}", from, to);
+        }
         match event {
             NavEvent::NoChanges {
                 from,

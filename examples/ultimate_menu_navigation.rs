@@ -2,9 +2,9 @@ use bevy::prelude::*;
 
 use bevy_ui_build_macros::{build_ui, rect, size, style, unit};
 use bevy_ui_navigation::{
-    components::FocusableButtonBundle, systems::default_gamepad_input as gamepad_input,
-    systems::default_keyboard_input as keyboard_input, systems::InputMapping, Focusable, NavMenu,
-    NavigationPlugin,
+    components::FocusableButtonBundle,
+    systems::{default_gamepad_input, default_keyboard_input, default_mouse_input, InputMapping},
+    Focusable, NavMenu, NavigationPlugin,
 };
 
 /// THE ULTIMATE MENU DEMONSTRATION
@@ -30,8 +30,9 @@ fn main() {
         .add_plugin(NavigationPlugin)
         .add_startup_system(setup)
         .add_system(button_system)
-        .add_system(gamepad_input)
-        .add_system(keyboard_input)
+        .add_system(default_gamepad_input)
+        .add_system(default_keyboard_input)
+        .add_system(default_mouse_input)
         .run();
 }
 

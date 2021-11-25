@@ -216,7 +216,7 @@ for a demonstration.
 - [X] Minor refactor of `resolve` function + Add FocusableButtonBundle to
       examples to simplify them greatly
 - [X] Add default input systems to emit NavRequest events
-- [ ] mouse support
+- [X] mouse support
 - [ ] Replace most calls to `.iter().find(…)` for child non_inert by checking
       the `NavMenu`'s `non_inert_child` rather than `query.nav_menus`. This
       fixes the most likely hotspot which is the recursive function

@@ -1,6 +1,6 @@
 //! System for the navigation tree and default input systems to get started
-
-use crate::events::{ Direction, NavRequest, ScopeDirection };
+use crate::events::{Direction, NavRequest, ScopeDirection};
+use crate::{max_by_in_iter, Focusable, Focused};
 use bevy::prelude::*;
 
 /// Control default ui navigation input buttons
@@ -49,6 +49,8 @@ pub struct InputMapping {
     pub key_next_alt: KeyCode,
     /// Keyboard key for [`ScopeDirection::Previous`] [`NavRequest::ScopeMove`]
     pub key_previous: KeyCode,
+    /// Mouse button for [`NavRequest::Action`]
+    pub mouse_action: MouseButton,
 }
 impl Default for InputMapping {
     fn default() -> Self {
@@ -75,6 +77,7 @@ impl Default for InputMapping {
             key_next: KeyCode::E,
             key_next_alt: KeyCode::Tab,
             key_previous: KeyCode::Q,
+            mouse_action: MouseButton::Left,
         }
     }
 }
@@ -83,7 +86,6 @@ impl Default for InputMapping {
 macro_rules! mapping {
     ($($from:expr => $to:expr),* ) => ([$( ( $from, $to ) ),*])
 }
-
 
 /// A system to send gamepad control events to the focus system
 ///
@@ -178,6 +180,58 @@ pub fn default_keyboard_input(
     for (key, request) in command_mapping {
         if keyboard.just_pressed(key) {
             nav_cmds.send(request)
+        }
+    }
+}
+
+pub type NodePosQuery<'s, 'w, 'a, 'b> =
+    Query<'s, 'w, (Entity, &'a Node, &'b GlobalTransform), With<Focusable>>;
+
+fn ui_focusable_at(at: Vec2, query: &NodePosQuery) -> Option<Entity> {
+    let under_mouse = query.iter().filter(|(_, node, trans)| {
+        let ui_pos = trans.translation.truncate();
+        let node_half_size = node.size / 2.0;
+        let min = ui_pos - node_half_size;
+        let max = ui_pos + node_half_size;
+        (min.x..max.x).contains(&at.x) && (min.y..max.y).contains(&at.y)
+    });
+    max_by_in_iter(under_mouse, |elem| elem.2.translation.z).map(|elem| elem.0)
+}
+fn cursor_pos(windows: &Windows) -> Option<Vec2> {
+    windows.get_primary().and_then(|w| w.cursor_position())
+}
+pub fn default_mouse_input(
+    input_mapping: Res<InputMapping>,
+    windows: Res<Windows>,
+    mouse: Res<Input<MouseButton>>,
+    touch: Res<Touches>,
+    focusables: NodePosQuery,
+    focused: Query<Entity, With<Focused>>,
+    mut nav_cmds: EventWriter<NavRequest>,
+) {
+    let pressed = mouse.just_pressed(input_mapping.mouse_action) || touch.just_pressed(0);
+    let released = mouse.just_released(input_mapping.mouse_action) || touch.just_released(0);
+    if !pressed && !released {
+        return; // nothing to do here
+    }
+    let cursor_pos = match cursor_pos(&windows) {
+        Some(c) => c,
+        None => return,
+    };
+    let to_target = match ui_focusable_at(cursor_pos, &focusables) {
+        Some(c) => c,
+        None => return,
+    };
+    if pressed {
+        nav_cmds.send(NavRequest::FocusOn(to_target));
+    }
+    if released {
+        let currently_focused = match focused.get_single() {
+            Ok(ent) => ent,
+            Err(_) => panic!("Literally imposibruuu"),
+        };
+        if currently_focused == to_target {
+            nav_cmds.send(NavRequest::Action);
         }
     }
 }
