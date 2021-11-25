@@ -43,9 +43,27 @@ player to be able to select between them with their controller? Simply use the
 the 2D position of each focusable element.
 
 This won't work out of the box though, you must wire the UI to the control
-scheme, by sending requests to the `NavRequest` event queue. Check the examples
-for a way to send `NavRequest`s based on input. [Here is the basic
-implementation for controller support](https://github.com/nicopap/ui-navigation/blob/caa90579429f4948e505c9e81cbd6a972f4a30b3/examples/ultimate_menu_navigation.rs#L62).
+scheme, by sending requests to the `NavRequest` event queue. We do not provide
+out of the box a way to do this, but we provide default input handling systems.
+Try this:
+```rust
+use bevy_ui_navigation::systems::{default_gamepad_input, default_keyboard_input, InputMapping};
+fn main() {
+    App::new()
+        .add_plugins(DefaultPlugins)
+        .add_plugin(NavigationPlugin)
+        .init_resource::<InputMapping>()
+        .add_system(default_keyboard_input)
+        .add_system(default_gamepad_input)
+        .run();
+}
+```
+The default button mapping may not be what you want, or you may want to change it
+in-game (for example when the user is in an input mapping menu) The controls
+are modifiable with the `InputMapping` resource. Check out the doc for it for
+more details.
+
+Check the `examples` directory for more example code.
 
 To respond to relevant user input, for example when the player pressed the
 "Action" button when focusing `start_game_button`, you should read the
@@ -197,6 +215,8 @@ for a demonstration.
 - [X] Remove "generic" crate
 - [X] Minor refactor of `resolve` function + Add FocusableButtonBundle to
       examples to simplify them greatly
+- [X] Add default input systems to emit NavRequest events
+- [ ] mouse support
 - [ ] Replace most calls to `.iter().find(…)` for child non_inert by checking
       the `NavMenu`'s `non_inert_child` rather than `query.nav_menus`. This
       fixes the most likely hotspot which is the recursive function

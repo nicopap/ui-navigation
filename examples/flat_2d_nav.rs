@@ -1,7 +1,7 @@
-use bevy::input::{keyboard::KeyboardInput, ElementState};
 use bevy::prelude::*;
 
-use bevy_ui_navigation::{Direction, Focusable, NavEvent, NavRequest, NavigationPlugin};
+use bevy_ui_navigation::systems::{default_gamepad_input, default_keyboard_input, InputMapping};
+use bevy_ui_navigation::{Focusable, NavEvent, NavigationPlugin};
 
 /// This example illustrates how to mark buttons as focusable and let
 /// NavigationPlugin figure out how to go from one to another.
@@ -11,9 +11,11 @@ fn main() {
         // 1: Add the NavigationPlugin
         .add_plugin(NavigationPlugin)
         .init_resource::<ButtonMaterials>()
+        .init_resource::<InputMapping>()
         .add_startup_system(setup)
         .add_system(button_system)
-        .add_system(keyboard_input)
+        .add_system(default_keyboard_input)
+        .add_system(default_gamepad_input)
         .add_system(print_nav_events)
         .run();
 }
@@ -31,27 +33,6 @@ impl FromWorld for ButtonMaterials {
             normal: materials.add(Color::DARK_GRAY.into()),
             focused: materials.add(Color::ORANGE_RED.into()),
             active: materials.add(Color::GOLD.into()),
-        }
-    }
-}
-
-fn keyboard_input(mut keyboard: EventReader<KeyboardInput>, mut nav_cmds: EventWriter<NavRequest>) {
-    use Direction::*;
-    use NavRequest::*;
-    let command_mapping = |code| match code {
-        KeyCode::Return => Some(Action),
-        KeyCode::Back => Some(Cancel),
-        KeyCode::Up => Some(Move(North)),
-        KeyCode::Down => Some(Move(South)),
-        KeyCode::Left => Some(Move(West)),
-        KeyCode::Right => Some(Move(East)),
-        _ => None,
-    };
-    for event in keyboard.iter() {
-        if event.state == ElementState::Released {
-            if let Some(cmd) = event.key_code.and_then(command_mapping) {
-                nav_cmds.send(cmd)
-            }
         }
     }
 }

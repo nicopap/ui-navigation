@@ -5,11 +5,12 @@
 // TODO: review all uses of `.unwrap()`!
 // Notes on the structure of this file:
 //
-// All "helper functions" are defined after `listen_nav_requests`,
-// algorithms are specified over `listen_nav_requests`. While structs and enums
-// are defined before all.
+// All "helper functions" are defined after `resolve`,
+// The algorithm is the `resolve` function and all other functions that
+// preceeds it in this file.
 pub mod components;
 mod events;
+pub mod systems;
 
 use std::cmp::Ordering;
 use std::fmt;

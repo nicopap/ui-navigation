@@ -1,8 +1,8 @@
-use bevy::input::{keyboard::KeyboardInput, ElementState};
 use bevy::prelude::*;
 
 use bevy_ui_navigation::{
-    Direction, Focusable, Focused, NavEvent, NavMenu, NavRequest, NavigationPlugin,
+    systems::{default_gamepad_input, default_keyboard_input, InputMapping},
+    Focusable, Focused, NavEvent, NavMenu, NavigationPlugin,
 };
 
 /// Shows how navigation is supported even between siblings separated by a
@@ -13,10 +13,12 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugin(NavigationPlugin)
         .init_resource::<ButtonMaterials>()
+        .init_resource::<InputMapping>()
         .add_startup_system(setup)
         .add_system(button_system)
         .add_system(print_nav_events)
-        .add_system(keyboard_input)
+        .add_system(default_keyboard_input)
+        .add_system(default_gamepad_input)
         .run();
 }
 
@@ -46,27 +48,6 @@ impl FromWorld for ButtonMaterials {
 fn print_nav_events(mut events: EventReader<NavEvent>) {
     for event in events.iter() {
         println!("{:?}", event);
-    }
-}
-
-fn keyboard_input(mut keyboard: EventReader<KeyboardInput>, mut nav_cmds: EventWriter<NavRequest>) {
-    use Direction::*;
-    use NavRequest::*;
-    let command_mapping = |code| match code {
-        KeyCode::Return => Some(Action),
-        KeyCode::Back => Some(Cancel),
-        KeyCode::Up => Some(Move(North)),
-        KeyCode::Down => Some(Move(South)),
-        KeyCode::Left => Some(Move(West)),
-        KeyCode::Right => Some(Move(East)),
-        _ => None,
-    };
-    for event in keyboard.iter() {
-        if event.state == ElementState::Released {
-            if let Some(cmd) = event.key_code.and_then(command_mapping) {
-                nav_cmds.send(cmd)
-            }
-        }
     }
 }
 

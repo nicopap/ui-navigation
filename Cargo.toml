@@ -9,7 +9,7 @@ categories = ["game-development", "accessibility", "gui"]
 repository = "https://github.com/nicopap/ui-navigation"
 homepage = "https://github.com/nicopap/ui-navigation"
 exclude = ["assets"]
-version = "0.3.0"
+version = "0.4.0"
 edition = "2021"
 
 [dependencies]

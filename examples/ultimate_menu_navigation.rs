@@ -1,10 +1,10 @@
 use bevy::prelude::*;
 
-use bevy::input::{keyboard::KeyboardInput, ElementState};
 use bevy_ui_build_macros::{build_ui, rect, size, style, unit};
 use bevy_ui_navigation::{
-    components::FocusableButtonBundle, Direction, Focusable, NavMenu, NavRequest, NavigationPlugin,
-    ScopeDirection,
+    components::FocusableButtonBundle, systems::default_gamepad_input as gamepad_input,
+    systems::default_keyboard_input as keyboard_input, systems::InputMapping, Focusable, NavMenu,
+    NavigationPlugin,
 };
 
 /// THE ULTIMATE MENU DEMONSTRATION
@@ -26,7 +26,7 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .init_resource::<Materials>()
-        .insert_resource(Lapse(0.0))
+        .init_resource::<InputMapping>()
         .add_plugin(NavigationPlugin)
         .add_startup_system(setup)
         .add_system(button_system)
@@ -34,8 +34,6 @@ fn main() {
         .add_system(keyboard_input)
         .run();
 }
-
-struct Lapse(f64);
 
 struct Materials {
     inert: Handle<ColorMaterial>,
@@ -55,96 +53,14 @@ impl FromWorld for Materials {
     }
 }
 
-fn gamepad_input(
-    mut events: EventReader<GamepadEvent>,
-    mut nav_cmds: EventWriter<NavRequest>,
-    mut lapse: ResMut<Lapse>,
-    time: Res<Time>,
-) {
-    use Direction::*;
-    use GamepadAxisType::{DPadX, DPadY};
-    use GamepadButtonType as Butt;
-    use NavRequest::{Action, Cancel, Move, ScopeMove};
-    use ScopeDirection::{Next, Previous};
-
-    let hat_to_dir = |axis: GamepadAxisType, value: f32| match axis {
-        DPadX if value > 0.0 => Some(East),
-        DPadX if value < 0.0 => Some(West),
-        DPadY if value > 0.0 => Some(North),
-        DPadY if value < 0.0 => Some(South),
-        _ => None,
-    };
-    let button_to_request = |button: GamepadButtonType| match button {
-        Butt::South => Some(Action),
-        Butt::East => Some(Cancel),
-        Butt::LeftTrigger => Some(ScopeMove(Previous)),
-        Butt::RightTrigger => Some(ScopeMove(Next)),
-        _ => None,
-    };
-    for event in events.iter() {
-        let maybe_cmd = match &event {
-            GamepadEvent(Gamepad(0), GamepadEventType::AxisChanged(axis, value)) => {
-                hat_to_dir(*axis, *value).map(Move)
-            }
-            GamepadEvent(Gamepad(0), GamepadEventType::ButtonChanged(button, v)) if *v > 0.0 => {
-                button_to_request(*button)
-            }
-            _ => None,
-        };
-        if let Some(cmd) = maybe_cmd {
-            lapse.0 = time.seconds_since_startup();
-            nav_cmds.send(cmd)
-        }
-    }
-}
-
-fn keyboard_input(
-    mut keyboard: EventReader<KeyboardInput>,
-    mut nav_cmds: EventWriter<NavRequest>,
-    mut lapse: ResMut<Lapse>,
-    time: Res<Time>,
-) {
-    use Direction::*;
-    use NavRequest::*;
-    let command_mapping = |code| match code {
-        KeyCode::Return => Some(Action),
-        KeyCode::Back => Some(Cancel),
-        KeyCode::Up | KeyCode::W => Some(Move(North)),
-        KeyCode::Down | KeyCode::S => Some(Move(South)),
-        KeyCode::Left | KeyCode::A => Some(Move(West)),
-        KeyCode::Right | KeyCode::D => Some(Move(East)),
-        KeyCode::Tab | KeyCode::E => Some(ScopeMove(ScopeDirection::Next)),
-        KeyCode::Q => Some(ScopeMove(ScopeDirection::Previous)),
-        _ => None,
-    };
-    for event in keyboard.iter() {
-        if event.state == ElementState::Released {
-            if let Some(cmd) = event.key_code.and_then(command_mapping) {
-                lapse.0 = time.seconds_since_startup();
-                nav_cmds.send(cmd)
-            }
-        }
-    }
-}
-
 fn button_system(
     materials: Res<Materials>,
-    lapse: Res<Lapse>,
-    time: Res<Time>,
     mut interaction_query: Query<
         (&Focusable, &mut Handle<ColorMaterial>),
         (Changed<Focusable>, With<Button>),
     >,
 ) {
-    let mut already_displayed = false;
     for (focus_state, mut material) in interaction_query.iter_mut() {
-        if !already_displayed {
-            println!(
-                "request handling time: {:.3}",
-                time.seconds_since_startup() - lapse.0
-            );
-            already_displayed = true;
-        }
         if focus_state.is_focused() {
             *material = materials.focused.clone();
         } else if focus_state.is_active() {
