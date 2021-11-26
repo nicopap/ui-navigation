@@ -187,7 +187,8 @@ pub fn default_keyboard_input(
 pub type NodePosQuery<'s, 'w, 'a, 'b> =
     Query<'s, 'w, (Entity, &'a Node, &'b GlobalTransform), With<Focusable>>;
 
-fn ui_focusable_at(at: Vec2, query: &NodePosQuery) -> Option<Entity> {
+/// Check which [`Focusable`] displays below `at` if any
+pub fn ui_focusable_at(at: Vec2, query: &NodePosQuery) -> Option<Entity> {
     let under_mouse = query.iter().filter(|(_, node, trans)| {
         let ui_pos = trans.translation.truncate();
         let node_half_size = node.size / 2.0;
@@ -197,9 +198,20 @@ fn ui_focusable_at(at: Vec2, query: &NodePosQuery) -> Option<Entity> {
     });
     max_by_in_iter(under_mouse, |elem| elem.2.translation.z).map(|elem| elem.0)
 }
+
 fn cursor_pos(windows: &Windows) -> Option<Vec2> {
     windows.get_primary().and_then(|w| w.cursor_position())
 }
+
+/// A system to send mouse control events to the focus system
+///
+/// Which button to press to cause an action event is specified in the
+/// [`InputMapping`] resource.
+///
+/// You may however need to customize the behavior of this system (typically
+/// when integrating in the game) in this case, you should write your own
+/// system that sends [`NavRequest`](crate::NavRequest) events. You may use
+/// [`ui_focusable_at`] to tell which focusable is currently being hovered.
 pub fn default_mouse_input(
     input_mapping: Res<InputMapping>,
     windows: Res<Windows>,
@@ -209,11 +221,7 @@ pub fn default_mouse_input(
     focused: Query<Entity, With<Focused>>,
     mut nav_cmds: EventWriter<NavRequest>,
 ) {
-    let pressed = mouse.just_pressed(input_mapping.mouse_action) || touch.just_pressed(0);
     let released = mouse.just_released(input_mapping.mouse_action) || touch.just_released(0);
-    if !pressed && !released {
-        return; // nothing to do here
-    }
     let cursor_pos = match cursor_pos(&windows) {
         Some(c) => c,
         None => return,
@@ -222,9 +230,7 @@ pub fn default_mouse_input(
         Some(c) => c,
         None => return,
     };
-    if pressed {
-        nav_cmds.send(NavRequest::FocusOn(to_target));
-    }
+    nav_cmds.send(NavRequest::FocusOn(to_target));
     if released {
         let currently_focused = match focused.get_single() {
             Ok(ent) => ent,
