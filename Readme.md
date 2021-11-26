@@ -225,7 +225,7 @@ for a demonstration.
       hovering the currently focused entity)
 - [X] Descend the hierarchy on Next and Previous (requires non_inert_child
       otherwise it's going to be very difficult to implement)
-- [ ] Fix wrap behavior for 2d navigation
+- [X] Fix wrap behavior for 2d navigation
 
 # License
 

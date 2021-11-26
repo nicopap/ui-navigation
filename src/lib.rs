@@ -2,7 +2,6 @@
 //!
 //! See [the RFC](https://github.com/nicopap/rfcs/blob/ui-navigation/rfcs/41-ui-navigation.md)
 //! for a deep explanation on how this works.
-// FIXME: when hovering over a dormant entity, no focus created
 // TODO: review all uses of `.unwrap()`!
 // Notes on the structure of this file:
 //
@@ -328,39 +327,28 @@ fn resolve_2d<'a, 'b, 'c>(
 ) -> Option<&'a Entity> {
     use Direction::*;
 
-    let pos_of = |entity: Entity| transform.get(entity).unwrap().translation;
-    let focused_pos = transform.get(focused).unwrap().translation.xy();
+    let pos_of = |entity: Entity| {
+        transform
+            .get(entity)
+            .expect("Focusable entities must have a GlobalTransform component")
+            .translation
+    };
+    let focused_pos = pos_of(focused).xy();
     let closest = siblings.iter().filter(|sibling| {
         direction.is_in(focused_pos, pos_of(**sibling).xy()) && **sibling != focused
     });
     let closest = max_by_in_iter(closest, |s| -focused_pos.distance_squared(pos_of(**s).xy()));
     match closest {
+        // Cycle if we do not find an entity in the requested direction
         None if cycles => {
-            let direction = direction.opposite();
-
-            let furthest = siblings.iter().filter(|sibling| {
-                direction.is_in(focused_pos, pos_of(**sibling).xy()) && **sibling != focused
-            });
-            max_by_in_iter(furthest, |s| {
-                let pos = pos_of(**s);
-
-                // In a grid, ideally if we are at the leftmost tile and press
-                // left, we cycle back ON THE SAME ROW to rightmost tile. To do
-                // this, we minimize first `axial_diff` then we care about
-                // `focused_pos`.
-                //
-                // FIXME: this is unoptimal because a very tinny pixel missalignment
-                // will cause the cycle to favor a different entity than
-                // probably expected.
-                // Solution is to look at closest focusable in same direction,
-                // but with the X/Y coordinate (corresponding to the direction)
-                // set to very low or very high.
-                let axial_diff = if matches!(direction, South | North) {
-                    (pos.x - focused_pos.x).abs()
-                } else {
-                    (pos.y - focused_pos.y).abs()
-                };
-                (-axial_diff, focused_pos.distance_squared(pos.xy()))
+            let focused_pos = match direction {
+                South => Vec2::new(focused_pos.x, 3000.0),
+                North => Vec2::new(focused_pos.x, 0.0),
+                East => Vec2::new(0.0, focused_pos.y),
+                West => Vec2::new(3000.0, focused_pos.y),
+            };
+            max_by_in_iter(siblings.iter(), |s| {
+                -focused_pos.distance_squared(pos_of(**s).xy())
             })
         }
         anyelse => anyelse,
@@ -528,6 +516,9 @@ fn listen_nav_requests(
         let event = resolve(focused_id, *request, &queries, Vec::new());
         // Change focus state of relevant entities
         if let NavEvent::FocusChanged { to, from } = &event {
+            if to == from {
+                continue;
+            }
             let focused = Focusable::with_state(FocusState::Focused);
             let inert = Focusable::with_state(FocusState::Inert);
             let dormant = Focusable::with_state(FocusState::Dormant);
