@@ -471,9 +471,8 @@ fn resolve(
             } else {
                 let cycles = menu.setting.cycles();
                 let to = or_none!(resolve_scope(focused, scope_dir, cycles, &siblings));
-                let focus_depth = from.len().get() - 1;
                 let extra = match child_menu(*to, queries) {
-                    Some((_, menu)) => focus_deep(menu.clone(), focus_depth, queries),
+                    Some((_, menu)) => focus_deep(menu.clone(), queries),
                     None => Vec::new(),
                 };
                 let to = (extra, *to).into();
@@ -661,14 +660,9 @@ fn root_path(mut from: Entity, queries: &NavQueries) -> NonEmpty<Entity> {
 
 /// Navigate downward the menu hierarchy N steps, and return the path to the
 /// last level reached
-fn focus_deep(mut menu: NavMenu, mut depth: usize, queries: &NavQueries) -> Vec<Entity> {
-    let mut ret = Vec::with_capacity(depth);
+fn focus_deep(mut menu: NavMenu, queries: &NavQueries) -> Vec<Entity> {
+    let mut ret = Vec::with_capacity(4);
     loop {
-        if depth == 0 {
-            return ret;
-        } else {
-            depth -= 1;
-        }
         let last = match menu.non_inert_child() {
             Some(additional) => {
                 ret.insert(0, additional);
