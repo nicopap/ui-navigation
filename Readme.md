@@ -223,7 +223,7 @@ for a demonstration.
       `children_focusables`.
 - [X] Improve performance of default_mouse_input (by checking first if we are
       hovering the currently focused entity)
-- [ ] Descend the hierarchy on Next and Previous (requires non_inert_child
+- [X] Descend the hierarchy on Next and Previous (requires non_inert_child
       otherwise it's going to be very difficult to implement)
 - [ ] Fix wrap behavior for 2d navigation
 
