@@ -217,12 +217,15 @@ for a demonstration.
       examples to simplify them greatly
 - [X] Add default input systems to emit NavRequest events
 - [X] mouse support
-- [ ] Replace most calls to `.iter().find(…)` for child non_inert by checking
+- [X] Replace most calls to `.iter().find(…)` for child non_inert by checking
       the `NavMenu`'s `non_inert_child` rather than `query.nav_menus`. This
       fixes the most likely hotspot which is the recursive function
       `children_focusables`.
+- [ ] Improve performance of default_mouse_input (by checking first if we are
+      hovering the currently focused entity)
 - [ ] Descend the hierarchy on Next and Previous (requires non_inert_child
       otherwise it's going to be very difficult to implement)
+- [ ] Fix wrap behavior for 2d navigation
 
 # License
 

@@ -1,6 +1,8 @@
 use bevy::prelude::*;
 
-use bevy_ui_navigation::systems::{default_gamepad_input, default_keyboard_input, InputMapping};
+use bevy_ui_navigation::systems::{
+    default_gamepad_input, default_keyboard_input, default_mouse_input, InputMapping,
+};
 use bevy_ui_navigation::{Focusable, NavEvent, NavigationPlugin};
 
 /// This example illustrates how to mark buttons as focusable and let
@@ -16,6 +18,7 @@ fn main() {
         .add_system(button_system)
         .add_system(default_keyboard_input)
         .add_system(default_gamepad_input)
+        .add_system(default_mouse_input)
         .add_system(print_nav_events)
         .run();
 }

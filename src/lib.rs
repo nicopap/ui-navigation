@@ -2,10 +2,7 @@
 //!
 //! See [the RFC](https://github.com/nicopap/rfcs/blob/ui-navigation/rfcs/41-ui-navigation.md)
 //! for a deep explanation on how this works.
-// FIXME: When reaching a NavMenu directly through mouse without passing by
-// another menu, we can select a Focusable that is not the "Dormant" one,
-// resulting in multiple non-inert focusables within that menu. How to fix
-// that? Answer: with the child_of_interst!
+// FIXME: when hovering over a dormant entity, no focus created
 // TODO: review all uses of `.unwrap()`!
 // Notes on the structure of this file:
 //
@@ -36,6 +33,7 @@ struct NavQueries<'w, 's> {
     transform: Query<'w, 's, &'static GlobalTransform>,
 }
 
+/// State of a [`Focusable`]
 #[derive(Clone, Debug, Copy, PartialEq)]
 pub enum FocusState {
     /// An entity that was previously [`Active`](FocusState::Active) from a branch of
@@ -108,6 +106,28 @@ impl MenuSetting {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+enum CacheOption<T> {
+    NotYetCached,
+    Cached(T),
+}
+impl<T> From<Option<T>> for CacheOption<T> {
+    fn from(value: Option<T>) -> Self {
+        match value {
+            Some(value) => CacheOption::Cached(value),
+            None => CacheOption::NotYetCached,
+        }
+    }
+}
+impl<T> From<CacheOption<T>> for Option<T> {
+    fn from(value: CacheOption<T>) -> Self {
+        match value {
+            CacheOption::NotYetCached => None,
+            CacheOption::Cached(value) => Some(value),
+        }
+    }
+}
+
 /// A menu that isolate children [`Focusable`]s from other focusables and
 /// specify navigation method within itself.
 ///
@@ -138,13 +158,10 @@ pub struct NavMenu {
 
     /// How we want the user to move between [`Focusable`]s within this menu
     setting: MenuSetting,
-    // TODO: (for caching and not having to discover all contained focusables
-    // just to find the one we are interested in)
-    // The child of interest
-    //
-    // This is a sort of cache to not have to walk down the ECS hierarchy
-    // every time we need to find the relevant child.
-    // non_inert_child: CacheOption<Entity>,
+
+    /// This is a sort of cache to not have to walk down the ECS hierarchy
+    /// every time we need to find the relevant child.
+    non_inert_child: CacheOption<Entity>,
 }
 impl NavMenu {
     /// Prefer [`NavMenu::reachable_from`] and [`NavMenu::root`] to this
@@ -155,6 +172,7 @@ impl NavMenu {
         NavMenu {
             focus_parent,
             setting: MenuSetting::ClosedXY,
+            non_inert_child: CacheOption::NotYetCached,
         }
     }
 
@@ -163,6 +181,7 @@ impl NavMenu {
         NavMenu {
             focus_parent: None,
             setting: MenuSetting::ClosedXY,
+            non_inert_child: CacheOption::NotYetCached,
         }
     }
 
@@ -204,7 +223,18 @@ impl NavMenu {
         NavMenu {
             focus_parent: Some(focusable),
             setting: MenuSetting::ClosedXY,
+            non_inert_child: CacheOption::NotYetCached,
         }
+    }
+
+    fn with_non_inert_child(self, child: Option<Entity>) -> Self {
+        NavMenu {
+            non_inert_child: child.into(),
+            ..self
+        }
+    }
+    fn non_inert_child(&self) -> Option<Entity> {
+        self.non_inert_child.into()
     }
 }
 
@@ -427,17 +457,19 @@ fn resolve(
                 .menus
                 .iter()
                 .find(|e| e.1.focus_parent == Some(focused));
-            let (child_menu, _) = or_none!(child_menu);
-            let to = children_focusables(child_menu, queries);
-            let to = non_inert_within(&to, queries);
-            let to = (*to, from.clone().into()).into();
+            let (child_menu, menu) = or_none!(child_menu);
+            let to = menu.non_inert_child().unwrap_or_else(|| {
+                let ret = children_focusables(child_menu, queries);
+                *non_inert_within(&ret, queries)
+            });
+            let to = (to, from.clone().into()).into();
             NavEvent::FocusChanged { to, from }
         }
         ScopeMove(scope_dir) => {
             let (parent, menu) = or_none!(parent_menu(focused, queries));
             let siblings = children_focusables(parent, queries);
             if !menu.setting.is_scope() {
-                let focused = menu.focus_parent.unwrap();
+                let focused = or_none!(menu.focus_parent);
                 resolve(focused, request, queries, from.into())
             } else {
                 let cycles = menu.setting.cycles();
@@ -449,8 +481,25 @@ fn resolve(
             let mut from = root_path(focused, queries);
             let mut to = root_path(new_to_focus, queries);
             trim_common_tail(&mut from, &mut to);
-            NavEvent::FocusChanged { from, to }
+            if from == to {
+                NavEvent::NoChanges { from, request }
+            } else {
+                NavEvent::FocusChanged { from, to }
+            }
         }
+    }
+}
+
+/// Set the [`non_inert_child`](NavMenu::non_inert_child) field of the enclosing [`NavMenu`]
+/// and disables the previous one
+fn cache_non_inert(child: Entity, queries: &NavQueries, cmds: &mut Commands) {
+    let inert = Focusable::with_state(FocusState::Inert);
+    if let Some((menu, nav_menu)) = parent_menu(child, queries) {
+        if let Some(entity) = nav_menu.non_inert_child() {
+            cmds.entity(entity).insert(inert).remove::<Focused>();
+        }
+        let updated_menu = nav_menu.with_non_inert_child(Some(child));
+        cmds.entity(menu).insert(updated_menu);
     }
 }
 
@@ -463,11 +512,10 @@ fn listen_nav_requests(
     mut events: EventWriter<NavEvent>,
     mut commands: Commands,
 ) {
-    // TODO: this most likely breaks when there is more than a single event
-    // When no `Focused` found, should take a direct child of a
-    // `NavMenu.focus_parent == None`
+    // TODO: this most likely breaks when there is more than a single event,
+    // since we use the `commands` interface to mutate the `Focused` element
+    // and change component values.
     for request in requests.iter() {
-        // TODO: This code needs cleanup
         let focused_id = focused.get_single().unwrap_or_else(|err| {
             assert!(
                 !matches!(err, QuerySingleError::MultipleEntities(_)),
@@ -476,6 +524,7 @@ fn listen_nav_requests(
             queries.focusables.iter().next().unwrap().0
         });
         let event = resolve(focused_id, *request, &queries, Vec::new());
+        // Change focus state of relevant entities
         if let NavEvent::FocusChanged { to, from } = &event {
             let focused = Focusable::with_state(FocusState::Focused);
             let inert = Focusable::with_state(FocusState::Inert);
@@ -485,12 +534,15 @@ fn listen_nav_requests(
             let (&disable, put_to_sleep) = from.split_last();
             commands.entity(disable).insert(inert).remove::<Focused>();
             for &entity in put_to_sleep {
+                cache_non_inert(entity, &queries, &mut commands);
                 commands.entity(entity).insert(dormant).remove::<Focused>();
             }
 
             let (&focus, activate) = to.split_first();
+            cache_non_inert(focus, &queries, &mut commands);
             commands.entity(focus).insert(focused).insert(Focused);
             for &entity in activate {
+                cache_non_inert(entity, &queries, &mut commands);
                 commands.entity(entity).insert(active);
             }
         };
@@ -596,6 +648,11 @@ fn root_path(mut from: Entity, queries: &NavQueries) -> NonEmpty<Entity> {
     }
 }
 
+/// Cycle through a [scoped menu](MenuSetting::CycleScope) according to menu settings
+///
+/// Returns the index of the element to focus according to `direction`. Cycles
+/// if `cycles` and goes over `max_value` or goes bellow 0. `None` if the
+/// direction is a dead end.
 fn resolve_index(
     from: usize,
     cycles: bool,

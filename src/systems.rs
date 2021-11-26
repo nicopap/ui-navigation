@@ -230,14 +230,10 @@ pub fn default_mouse_input(
         Some(c) => c,
         None => return,
     };
-    nav_cmds.send(NavRequest::FocusOn(to_target));
-    if released {
-        let currently_focused = match focused.get_single() {
-            Ok(ent) => ent,
-            Err(_) => panic!("Literally imposibruuu"),
-        };
-        if currently_focused == to_target {
-            nav_cmds.send(NavRequest::Action);
-        }
+    let currently_focused = focused.get_single().ok();
+    if currently_focused != Some(to_target) {
+        nav_cmds.send(NavRequest::FocusOn(to_target));
+    } else if released {
+        nav_cmds.send(NavRequest::Action);
     }
 }
