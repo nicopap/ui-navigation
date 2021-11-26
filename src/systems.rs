@@ -187,15 +187,17 @@ pub fn default_keyboard_input(
 pub type NodePosQuery<'s, 'w, 'a, 'b> =
     Query<'s, 'w, (Entity, &'a Node, &'b GlobalTransform), With<Focusable>>;
 
+fn is_in_node(at: Vec2, (_, node, trans): &(Entity, &Node, &GlobalTransform)) -> bool {
+    let ui_pos = trans.translation.truncate();
+    let node_half_size = node.size / 2.0;
+    let min = ui_pos - node_half_size;
+    let max = ui_pos + node_half_size;
+    (min.x..max.x).contains(&at.x) && (min.y..max.y).contains(&at.y)
+}
+
 /// Check which [`Focusable`] displays below `at` if any
 pub fn ui_focusable_at(at: Vec2, query: &NodePosQuery) -> Option<Entity> {
-    let under_mouse = query.iter().filter(|(_, node, trans)| {
-        let ui_pos = trans.translation.truncate();
-        let node_half_size = node.size / 2.0;
-        let min = ui_pos - node_half_size;
-        let max = ui_pos + node_half_size;
-        (min.x..max.x).contains(&at.x) && (min.y..max.y).contains(&at.y)
-    });
+    let under_mouse = query.iter().filter(|query_elem| is_in_node(at, query_elem));
     max_by_in_iter(under_mouse, |elem| elem.2.translation.z).map(|elem| elem.0)
 }
 
@@ -212,6 +214,7 @@ fn cursor_pos(windows: &Windows) -> Option<Vec2> {
 /// when integrating in the game) in this case, you should write your own
 /// system that sends [`NavRequest`](crate::NavRequest) events. You may use
 /// [`ui_focusable_at`] to tell which focusable is currently being hovered.
+#[allow(clippy::too_many_arguments)]
 pub fn default_mouse_input(
     input_mapping: Res<InputMapping>,
     windows: Res<Windows>,
@@ -220,18 +223,36 @@ pub fn default_mouse_input(
     focusables: NodePosQuery,
     focused: Query<Entity, With<Focused>>,
     mut nav_cmds: EventWriter<NavRequest>,
+    mut last_pos: Local<Vec2>,
 ) {
-    let released = mouse.just_released(input_mapping.mouse_action) || touch.just_released(0);
     let cursor_pos = match cursor_pos(&windows) {
         Some(c) => c,
         None => return,
     };
-    let to_target = match ui_focusable_at(cursor_pos, &focusables) {
-        Some(c) => c,
-        None => return,
+    let released = mouse.just_released(input_mapping.mouse_action) || touch.just_released(0);
+    let focused = focused.get_single();
+
+    // Return early if cursor didn't move since last call
+    if !released && *last_pos == cursor_pos {
+        return;
+    } else {
+        *last_pos = cursor_pos;
+    }
+    let not_hovering_focused = |focused: &Entity| {
+        let focused = focusables
+            .get(*focused)
+            .expect("Entity with `Focused` component must also have a `Focusable` component");
+        !is_in_node(cursor_pos, &focused)
     };
-    let currently_focused = focused.get_single().ok();
-    if currently_focused != Some(to_target) {
+    // If the currently hovered node is the focused one, there is no need to
+    // find which node we are hovering and to switch focus to it (since we are
+    // already focused on it)
+    if focused.iter().all(not_hovering_focused) {
+        // `ui_focusable_at` is computationally heavy
+        let to_target = match ui_focusable_at(cursor_pos, &focusables) {
+            Some(c) => c,
+            None => return,
+        };
         nav_cmds.send(NavRequest::FocusOn(to_target));
     } else if released {
         nav_cmds.send(NavRequest::Action);

@@ -54,6 +54,7 @@ impl FromWorld for Materials {
     }
 }
 
+#[allow(clippy::type_complexity)]
 fn button_system(
     materials: Res<Materials>,
     mut interaction_query: Query<

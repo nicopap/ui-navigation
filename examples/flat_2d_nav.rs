@@ -40,6 +40,7 @@ impl FromWorld for ButtonMaterials {
     }
 }
 
+#[allow(clippy::type_complexity)]
 fn button_system(
     button_materials: Res<ButtonMaterials>,
     mut interaction_query: Query<

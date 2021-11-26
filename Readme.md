@@ -221,7 +221,7 @@ for a demonstration.
       the `NavMenu`'s `non_inert_child` rather than `query.nav_menus`. This
       fixes the most likely hotspot which is the recursive function
       `children_focusables`.
-- [ ] Improve performance of default_mouse_input (by checking first if we are
+- [X] Improve performance of default_mouse_input (by checking first if we are
       hovering the currently focused entity)
 - [ ] Descend the hierarchy on Next and Previous (requires non_inert_child
       otherwise it's going to be very difficult to implement)
