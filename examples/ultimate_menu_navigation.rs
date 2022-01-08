@@ -37,19 +37,18 @@ fn main() {
 }
 
 struct Materials {
-    inert: Handle<ColorMaterial>,
-    focused: Handle<ColorMaterial>,
-    active: Handle<ColorMaterial>,
-    dormant: Handle<ColorMaterial>,
+    inert: Color,
+    focused: Color,
+    active: Color,
+    dormant: Color,
 }
-impl FromWorld for Materials {
-    fn from_world(world: &mut World) -> Self {
-        let mut materials = world.get_resource_mut::<Assets<ColorMaterial>>().unwrap();
+impl Default for Materials {
+    fn default() -> Self {
         Materials {
-            inert: materials.add(Color::DARK_GRAY.into()),
-            focused: materials.add(Color::ORANGE_RED.into()),
-            active: materials.add(Color::GOLD.into()),
-            dormant: materials.add(Color::GRAY.into()),
+            inert: Color::DARK_GRAY,
+            focused: Color::ORANGE_RED,
+            active: Color::GOLD,
+            dormant: Color::GRAY,
         }
     }
 }
@@ -58,26 +57,25 @@ impl FromWorld for Materials {
 fn button_system(
     materials: Res<Materials>,
     mut interaction_query: Query<
-        (&Focusable, &mut Handle<ColorMaterial>),
+        (&Focusable, &mut UiColor),
         (Changed<Focusable>, With<Button>),
     >,
 ) {
     for (focus_state, mut material) in interaction_query.iter_mut() {
         if focus_state.is_focused() {
-            *material = materials.focused.clone();
+            *material = materials.focused.into();
         } else if focus_state.is_active() {
-            *material = materials.active.clone();
+            *material = materials.active.into();
         } else if focus_state.is_dormant() {
-            *material = materials.dormant.clone();
+            *material = materials.dormant.into();
         } else {
-            *material = materials.inert.clone();
+            *material = materials.inert.into();
         }
     }
 }
 
 fn setup(
     mut commands: Commands,
-    mut materials: ResMut<Assets<ColorMaterial>>,
     our_materials: Res<Materials>,
 ) {
     use FlexDirection::{ColumnReverse, Row};
@@ -86,13 +84,20 @@ fn setup(
     // ui camera
     commands.spawn_bundle(UiCameraBundle::default());
 
+    let red: UiColor = Color::RED.into();
+    let blue: UiColor = Color::BLUE.into();
+    let green: UiColor = Color::GREEN.into();
+    let gray: UiColor = Color::rgba(0.9, 0.9, 0.9, 0.3).into();
+    let black: UiColor = our_materials.inert.into();
+    let transparent: UiColor = Color::NONE.into();
+
     let vertical = NodeBundle {
         style: style! {
             flex_direction: ColumnReverse,
             size: size!(100 pct, 100 pct),
             margin: rect!(2 px),
         },
-        material: materials.add(Color::NONE.into()),
+        color: transparent,
         ..Default::default()
     };
     let horizontal = NodeBundle {
@@ -102,21 +107,15 @@ fn setup(
             justify_content: SpaceBetween,
             margin: rect!(2 px),
         },
-        material: materials.add(Color::NONE.into()),
+        color: transparent,
         ..Default::default()
     };
-    let red = materials.add(Color::RED.into());
-    let blue = materials.add(Color::BLUE.into());
-    let green = materials.add(Color::GREEN.into());
-    let gray = materials.add(Color::rgba(0.9, 0.9, 0.9, 0.3).into());
-    let black = our_materials.inert.clone();
-
     let square = FocusableButtonBundle::from(ButtonBundle {
         style: style! {
             size: size!(40 px, 40 px),
             margin: rect!(2 px),
         },
-        material: black.clone(),
+        color: black,
         ..Default::default()
     });
     let select_square = FocusableButtonBundle::from(ButtonBundle {
@@ -124,7 +123,7 @@ fn setup(
             size: size!(100 pct, 40 px),
             margin: rect!(2 px),
         },
-        material: black.clone(),
+        color: black,
         ..Default::default()
     });
     let tab_square = FocusableButtonBundle::from(ButtonBundle {
@@ -132,7 +131,7 @@ fn setup(
             size: size!(100 px, 40 px),
             margin: rect!(30 px, 0 px),
         },
-        material: black,
+        color: black,
         ..Default::default()
     });
     let column_box = NodeBundle {
@@ -155,7 +154,7 @@ fn setup(
     };
     let colored_square = NodeBundle {
         style: style! { size: size!(100 pct, 100 pct), },
-        material: materials.add(Color::rgb(1.0, 0.3, 0.9).into()),
+        color: Color::rgb(1.0, 0.3, 0.9).into(),
         ..Default::default()
     };
 

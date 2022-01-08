@@ -24,18 +24,17 @@ fn main() {
 }
 
 struct ButtonMaterials {
-    normal: Handle<ColorMaterial>,
-    focused: Handle<ColorMaterial>,
-    active: Handle<ColorMaterial>,
+    normal: Color,
+    focused: Color,
+    active: Color,
 }
 
-impl FromWorld for ButtonMaterials {
-    fn from_world(world: &mut World) -> Self {
-        let mut materials = world.get_resource_mut::<Assets<ColorMaterial>>().unwrap();
+impl Default for ButtonMaterials {
+    fn default() -> Self {
         ButtonMaterials {
-            normal: materials.add(Color::DARK_GRAY.into()),
-            focused: materials.add(Color::ORANGE_RED.into()),
-            active: materials.add(Color::GOLD.into()),
+            normal: Color::DARK_GRAY,
+            focused: Color::ORANGE_RED,
+            active: Color::GOLD,
         }
     }
 }
@@ -44,17 +43,17 @@ impl FromWorld for ButtonMaterials {
 fn button_system(
     button_materials: Res<ButtonMaterials>,
     mut interaction_query: Query<
-        (&Focusable, &mut Handle<ColorMaterial>),
+        (&Focusable, &mut UiColor),
         (Changed<Focusable>, With<Button>),
     >,
 ) {
     for (focus_state, mut material) in interaction_query.iter_mut() {
         if focus_state.is_focused() {
-            *material = button_materials.focused.clone();
+            *material = button_materials.focused.into();
         } else if focus_state.is_active() {
-            *material = button_materials.active.clone();
+            *material = button_materials.active.into();
         } else {
-            *material = button_materials.normal.clone();
+            *material = button_materials.normal.into();
         }
     }
 }
@@ -112,7 +111,7 @@ fn spawn_button(position: Vec2, commands: &mut ChildBuilder, button_materials: &
                 position_type: PositionType::Absolute,
                 ..Default::default()
             },
-            material: button_materials.normal.clone(),
+            color: button_materials.normal.into(),
             ..Default::default()
         })
         // 2. Add the `Focusable` component to the navigable Entity

@@ -1,23 +1,17 @@
 # Bevy UI navigation
 
-[![Bevy tracking](https://img.shields.io/badge/Bevy%20tracking-main-lightblue)](https://github.com/bevyengine/bevy/blob/main/docs/plugins_guidelines.md#main-branch-tracking)
-<!--[![Latest version](https://img.shields.io/crates/v/bevy_ui_navigation.svg)](https://crates.io/crates/bevy_ui_navigation)-->
+[![Bevy tracking](https://img.shields.io/badge/Bevy%20tracking-released%20version-lightblue)](https://github.com/bevyengine/bevy/blob/main/docs/plugins_guidelines.md#main-branch-tracking)
+[![Latest version](https://img.shields.io/crates/v/bevy_ui_navigation.svg)](https://crates.io/crates/bevy_ui_navigation)
 [![MIT/Apache 2.0](https://img.shields.io/badge/license-MIT%2FApache-blue.svg)](./LICENSE)
-<!--[![Documentation](https://docs.rs/bevy_ui_navigation/badge.svg)](https://docs.rs/bevy_ui_navigation)-->
+[![Documentation](https://docs.rs/bevy_ui_navigation/badge.svg)](https://docs.rs/bevy_ui_navigation)
 
 A generic UI navigation algorithm meant to be adaptable to any UI library, but
 currently limiting itself to targeting the Bevy engine default UI library.
 
-This crate tracks bevy-main. I do not intend to backport it to bevy 0.5. 
-
-Therefore you cannot get it from [crates.io](https://crates.io). You
-must specify it as a git dependency in your `Cargo.toml`:
 ```toml
 [dependencies]
-bevy-ui-navigation = { git = "https://github.com/nicopap/ui-navigation" } 
+bevy-ui-navigation = "0.8.1"
 ```
-
-It will be available in crates.io when bevy 0.6 comes out.
 
 The in-depth design specification is [available here](https://github.com/nicopap/rfcs/blob/ui-navigation/rfcs/41-ui-navigation.md).
 
@@ -140,7 +134,7 @@ let menu = NodeBundle {
     ..Default::default()
 };
 let button = FocusableButtonBundle::from(ButtonBundle {
-    material: materials.add(Color::rgb(1.0, 0.3, 1.0).into()),
+    material: Color::rgb(1.0, 0.3, 1.0).into(),
     ..Default::default()
 });
 let mut spawn_button = |bundle: &FocusableButtonBundle| {

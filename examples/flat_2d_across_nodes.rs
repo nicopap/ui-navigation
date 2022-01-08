@@ -23,23 +23,21 @@ fn main() {
 }
 
 struct ButtonMaterials {
-    normal: Handle<ColorMaterial>,
-    focused: Handle<ColorMaterial>,
-    pink: Handle<ColorMaterial>,
-    backgrounds: [Handle<ColorMaterial>; 3],
+    normal: Color,
+    focused: Color,
+    pink: Color,
+    backgrounds: [Color; 3],
 }
-
-impl FromWorld for ButtonMaterials {
-    fn from_world(world: &mut World) -> Self {
-        let mut materials = world.get_resource_mut::<Assets<ColorMaterial>>().unwrap();
+impl Default for ButtonMaterials {
+    fn default() -> Self {
         ButtonMaterials {
-            normal: materials.add(Color::rgb(0.15, 0.15, 0.15).into()),
-            focused: materials.add(Color::rgb(0.35, 0.75, 0.35).into()),
-            pink: materials.add(Color::rgba(1.00, 0.35, 1.0, 0.5).into()),
+            normal: Color::rgb(0.15, 0.15, 0.15),
+            focused: Color::rgb(0.35, 0.75, 0.35),
+            pink: Color::rgba(1.00, 0.35, 1.0, 0.5),
             backgrounds: [
-                materials.add(Color::rgba(1.0, 0.35, 0.35, 0.5).into()),
-                materials.add(Color::rgba(0.35, 1.0, 0.35, 0.5).into()),
-                materials.add(Color::rgba(0.35, 0.35, 1.0, 0.5).into()),
+                Color::rgba(1.0, 0.35, 0.35, 0.5),
+                Color::rgba(0.35, 1.0, 0.35, 0.5),
+                Color::rgba(0.35, 0.35, 1.0, 0.5),
             ],
         }
     }
@@ -53,15 +51,15 @@ fn print_nav_events(mut events: EventReader<NavEvent>) {
 
 fn button_system(
     button_materials: Res<ButtonMaterials>,
-    mut interaction_query: Query<(Option<&Focused>, &mut Handle<ColorMaterial>), With<Button>>,
+    mut interaction_query: Query<(Option<&Focused>, &mut UiColor), With<Button>>,
 ) {
     for (interaction, mut material) in interaction_query.iter_mut() {
         match interaction {
             Some(_) => {
-                *material = button_materials.focused.clone();
+                *material = button_materials.focused.into();
             }
             None => {
-                *material = button_materials.normal.clone();
+                *material = button_materials.normal.into();
             }
         }
     }
@@ -103,7 +101,7 @@ fn setup(mut commands: Commands, button_materials: Res<ButtonMaterials>) {
                 };
                 let bundle = NodeBundle {
                     style,
-                    material: button_materials.backgrounds[i].clone(),
+                    color: button_materials.backgrounds[i].into(),
                     ..Default::default()
                 };
                 commands.spawn_bundle(bundle).with_children(|commands| {
@@ -118,7 +116,7 @@ fn setup(mut commands: Commands, button_materials: Res<ButtonMaterials>) {
             };
             let bundle = NodeBundle {
                 style,
-                material: button_materials.pink.clone(),
+                color: button_materials.pink.into(),
                 ..Default::default()
             };
             commands
@@ -142,7 +140,7 @@ fn spawn_button(commands: &mut ChildBuilder, button_materials: &ButtonMaterials)
                 margin: Rect::all(Val::Percent(4.0)),
                 ..Default::default()
             },
-            material: button_materials.normal.clone(),
+            color: button_materials.normal.into(),
             ..Default::default()
         })
         // The `Focusable`s are not direct siblings, we can navigate through

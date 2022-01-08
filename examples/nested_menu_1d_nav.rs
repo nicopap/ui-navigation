@@ -50,7 +50,7 @@ impl Gameui {
     pub fn new() -> Self {
         Self {
             from: Vec::new(),
-            to: Entity::new(1),
+            to: Entity::from_raw(1),
         }
     }
 }
@@ -62,13 +62,13 @@ fn query_bad_stuff(query: Query<(Entity, &NavMenu, &Focusable), Changed<Focusabl
 }
 
 struct Materials {
-    inert: Handle<ColorMaterial>,
-    focused: Handle<ColorMaterial>,
-    active: Handle<ColorMaterial>,
-    dormant: Handle<ColorMaterial>,
-    background: Handle<ColorMaterial>,
-    rarrow: Handle<ColorMaterial>,
-    circle: Handle<ColorMaterial>,
+    inert: Color,
+    focused: Color,
+    active: Color,
+    dormant: Color,
+    background: Color,
+    rarrow: UiImage,
+    circle: UiImage,
 }
 
 impl FromWorld for Materials {
@@ -76,15 +76,14 @@ impl FromWorld for Materials {
         let assets = world.get_resource::<AssetServer>().unwrap();
         let rarrow = assets.load("rarrow.png").into();
         let circle = assets.load("green_circle.png").into();
-        let mut materials = world.get_resource_mut::<Assets<ColorMaterial>>().unwrap();
         Materials {
-            inert: materials.add(Color::DARK_GRAY.into()),
-            focused: materials.add(Color::ORANGE_RED.into()),
-            active: materials.add(Color::GOLD.into()),
-            dormant: materials.add(Color::GRAY.into()),
-            background: materials.add(Color::BLACK.into()),
-            rarrow: materials.add(rarrow),
-            circle: materials.add(circle),
+            inert: Color::DARK_GRAY,
+            focused: Color::ORANGE_RED,
+            active: Color::GOLD,
+            dormant: Color::GRAY,
+            background: Color::BLACK,
+            rarrow,
+            circle,
         }
     }
 }
@@ -93,19 +92,19 @@ impl FromWorld for Materials {
 fn button_system(
     materials: Res<Materials>,
     mut interaction_query: Query<
-        (&Focusable, &mut Handle<ColorMaterial>),
+        (&Focusable, &mut UiColor),
         (Changed<Focusable>, With<Button>),
     >,
 ) {
     for (focus_state, mut material) in interaction_query.iter_mut() {
         if focus_state.is_focused() {
-            *material = materials.focused.clone();
+            *material = materials.focused.into();
         } else if focus_state.is_active() {
-            *material = materials.active.clone();
+            *material = materials.active.into();
         } else if focus_state.is_dormant() {
-            *material = materials.dormant.clone();
+            *material = materials.dormant.into();
         } else {
-            *material = materials.inert.clone();
+            *material = materials.inert.into();
         }
     }
 }
@@ -141,10 +140,9 @@ fn menu(materials: &Materials) -> NodeBundle {
         align_content: AlignContent::Stretch,
         ..Default::default()
     };
-    let material = materials.background.clone();
     NodeBundle {
         style,
-        material,
+        color: materials.background.into(),
         ..Default::default()
     }
 }
@@ -169,12 +167,12 @@ fn setup(mut commands: Commands, materials: Res<Materials>, mut game: ResMut<Gam
     };
     let rarrow = ImageBundle {
         style: image_style.clone(),
-        material: materials.rarrow.clone(),
+        image: materials.rarrow.clone(),
         ..Default::default()
     };
     let circle = ImageBundle {
         style: image_style,
-        material: materials.circle.clone(),
+        image: materials.circle.clone(),
         ..Default::default()
     };
 
@@ -221,10 +219,9 @@ fn button(materials: &Materials) -> ButtonBundle {
         margin: Rect::all(Val::Percent(3.0)),
         ..Default::default()
     };
-    let material = materials.inert.clone();
     ButtonBundle {
         style,
-        material,
+        color: materials.inert.into(),
         ..Default::default()
     }
 }
