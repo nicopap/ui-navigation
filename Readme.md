@@ -3,7 +3,7 @@
 [![Bevy tracking](https://img.shields.io/badge/Bevy%20tracking-released%20version-lightblue)](https://github.com/bevyengine/bevy/blob/main/docs/plugins_guidelines.md#main-branch-tracking)
 [![Latest version](https://img.shields.io/crates/v/bevy_ui_navigation.svg)](https://crates.io/crates/bevy_ui_navigation)
 [![MIT/Apache 2.0](https://img.shields.io/badge/license-MIT%2FApache-blue.svg)](./LICENSE)
-[![Documentation](https://docs.rs/bevy_ui_navigation/badge.svg)](https://docs.rs/bevy_ui_navigation)
+[![Documentation](https://docs.rs/bevy-ui-navigation/badge.svg)](https://docs.rs/bevy-ui-navigation/)
 
 A generic UI navigation algorithm meant to be adaptable to any UI library, but
 currently limiting itself to targeting the Bevy engine default UI library.
