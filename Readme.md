@@ -10,7 +10,7 @@ currently limiting itself to targeting the Bevy engine default UI library.
 
 ```toml
 [dependencies]
-bevy-ui-navigation = "0.8.1"
+bevy-ui-navigation = "0.8.2"
 ```
 
 The in-depth design specification is [available here](https://github.com/nicopap/rfcs/blob/ui-navigation/rfcs/41-ui-navigation.md).
@@ -189,37 +189,10 @@ menu. This behaves like you would expect a tabbed menu to behave. See the
 example](https://github.com/nicopap/ui-navigation/blob/master/examples/ultimate_menu_navigation.rs)
 for a demonstration.
 
-## Roadmap
+## Changelog
 
-- [X] Basic flat hierarchy 2D navigation (requires element location deduction)
-- [X] 2D navigation jumping through nested node bounds
-- [X] Cleanup noisy `Component`s. I think instead of having a `Focused`,
-      `Focusable`, `NavNode` and `Active`, we can just have all of those as
-      fields of `Focusable`. This probably also reduces massively the number of
-      arguments I pass around in the functions I call…
-- [X] Hierarchical navigation with Action/Cancel (requires tree layer without
-      an active trail)
-- [X] Hierarchical navigation with Action/Cancel **with downward focus memory**
-- [X] `NavRequest::FocusOn` support
-- [X] Do not climb the navigation tree on failed `NavRequest::Move`.
-- [X] Remove distinction between `Uncaught` and `Caught` events.
-- [X] Tabbed navigation demo (requires Forward/Backward commands support)
-- [X] Complex hierarchy with focus memory (requires tree)
-- [X] Add more lööps, brother
-- [X] Remove "generic" crate
-- [X] Minor refactor of `resolve` function + Add FocusableButtonBundle to
-      examples to simplify them greatly
-- [X] Add default input systems to emit NavRequest events
-- [X] mouse support
-- [X] Replace most calls to `.iter().find(…)` for child non_inert by checking
-      the `NavMenu`'s `non_inert_child` rather than `query.nav_menus`. This
-      fixes the most likely hotspot which is the recursive function
-      `children_focusables`.
-- [X] Improve performance of default_mouse_input (by checking first if we are
-      hovering the currently focused entity)
-- [X] Descend the hierarchy on Next and Previous (requires non_inert_child
-      otherwise it's going to be very difficult to implement)
-- [X] Fix wrap behavior for 2d navigation
+* `0.8.2`: Fix offsetting of mouse focus with `UiCamera`s with a transform set
+  to anything else than zero.
 
 # License
 

@@ -56,10 +56,7 @@ impl Default for Materials {
 #[allow(clippy::type_complexity)]
 fn button_system(
     materials: Res<Materials>,
-    mut interaction_query: Query<
-        (&Focusable, &mut UiColor),
-        (Changed<Focusable>, With<Button>),
-    >,
+    mut interaction_query: Query<(&Focusable, &mut UiColor), (Changed<Focusable>, With<Button>)>,
 ) {
     for (focus_state, mut material) in interaction_query.iter_mut() {
         if focus_state.is_focused() {
@@ -74,15 +71,14 @@ fn button_system(
     }
 }
 
-fn setup(
-    mut commands: Commands,
-    our_materials: Res<Materials>,
-) {
+fn setup(mut commands: Commands, our_materials: Res<Materials>) {
     use FlexDirection::{ColumnReverse, Row};
     use FlexWrap::Wrap;
     use JustifyContent::{FlexStart, SpaceBetween};
     // ui camera
-    commands.spawn_bundle(UiCameraBundle::default());
+    commands
+        .spawn_bundle(UiCameraBundle::default())
+        .insert(Transform::from_xyz(40.0, -60.0, 1000.0 - 0.1));
 
     let red: UiColor = Color::RED.into();
     let blue: UiColor = Color::BLUE.into();

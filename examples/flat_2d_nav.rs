@@ -42,10 +42,7 @@ impl Default for ButtonMaterials {
 #[allow(clippy::type_complexity)]
 fn button_system(
     button_materials: Res<ButtonMaterials>,
-    mut interaction_query: Query<
-        (&Focusable, &mut UiColor),
-        (Changed<Focusable>, With<Button>),
-    >,
+    mut interaction_query: Query<(&Focusable, &mut UiColor), (Changed<Focusable>, With<Button>)>,
 ) {
     for (focus_state, mut material) in interaction_query.iter_mut() {
         if focus_state.is_focused() {

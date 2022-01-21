@@ -1,7 +1,10 @@
 //! System for the navigation tree and default input systems to get started
 use crate::events::{Direction, NavRequest, ScopeDirection};
 use crate::{max_by_in_iter, Focusable, Focused};
+use bevy::ecs::system::SystemParam;
+use bevy::math::Vec3Swizzles;
 use bevy::prelude::*;
+use bevy::ui::CAMERA_UI;
 
 /// Control default ui navigation input buttons
 pub struct InputMapping {
@@ -184,8 +187,11 @@ pub fn default_keyboard_input(
     }
 }
 
-pub type NodePosQuery<'s, 'w, 'a, 'b> =
-    Query<'s, 'w, (Entity, &'a Node, &'b GlobalTransform), With<Focusable>>;
+#[derive(SystemParam)]
+pub struct NodePosQuery<'w, 's> {
+    entities: Query<'w, 's, (Entity, &'static Node, &'static GlobalTransform), With<Focusable>>,
+    cam_names: Query<'w, 's, (&'static Camera, &'static GlobalTransform)>,
+}
 
 fn is_in_node(at: Vec2, (_, node, trans): &(Entity, &Node, &GlobalTransform)) -> bool {
     let ui_pos = trans.translation.truncate();
@@ -197,7 +203,19 @@ fn is_in_node(at: Vec2, (_, node, trans): &(Entity, &Node, &GlobalTransform)) ->
 
 /// Check which [`Focusable`] displays below `at` if any
 pub fn ui_focusable_at(at: Vec2, query: &NodePosQuery) -> Option<Entity> {
-    let under_mouse = query.iter().filter(|query_elem| is_in_node(at, query_elem));
+    let ui_cam_name = query
+        .cam_names
+        .iter()
+        .find(|cam| cam.0.name.as_deref() == Some(CAMERA_UI));
+    let ui_camera_position = if let Some((_, trans)) = ui_cam_name {
+        trans.translation.xy()
+    } else {
+        Vec2::ZERO
+    };
+    let under_mouse = query
+        .entities
+        .iter()
+        .filter(|query_elem| is_in_node(at + ui_camera_position, query_elem));
     max_by_in_iter(under_mouse, |elem| elem.2.translation.z).map(|elem| elem.0)
 }
 
@@ -225,13 +243,21 @@ pub fn default_mouse_input(
     mut nav_cmds: EventWriter<NavRequest>,
     mut last_pos: Local<Vec2>,
 ) {
+    let ui_cam_name = focusables
+        .cam_names
+        .iter()
+        .find(|cam| cam.0.name.as_deref() == Some(CAMERA_UI));
+    let ui_camera_position = if let Some((_, trans)) = ui_cam_name {
+        trans.translation.xy()
+    } else {
+        Vec2::ZERO
+    };
     let cursor_pos = match cursor_pos(&windows) {
         Some(c) => c,
         None => return,
     };
     let released = mouse.just_released(input_mapping.mouse_action) || touch.just_released(0);
     let focused = focused.get_single();
-
     // Return early if cursor didn't move since last call
     if !released && *last_pos == cursor_pos {
         return;
@@ -240,9 +266,10 @@ pub fn default_mouse_input(
     }
     let not_hovering_focused = |focused: &Entity| {
         let focused = focusables
+            .entities
             .get(*focused)
             .expect("Entity with `Focused` component must also have a `Focusable` component");
-        !is_in_node(cursor_pos, &focused)
+        !is_in_node(cursor_pos + ui_camera_position, &focused)
     };
     // If the currently hovered node is the focused one, there is no need to
     // find which node we are hovering and to switch focus to it (since we are
