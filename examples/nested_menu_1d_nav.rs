@@ -195,6 +195,11 @@ fn setup(mut commands: Commands, materials: Res<Materials>, mut game: ResMut<Gam
                                 });
                                 next_menu_button = Some(button.id());
                             }
+                            if j == 3 && i == 1 {
+                                button.insert(Focusable::cancel()).with_children(|cmds| {
+                                    cmds.spawn_bundle(circle.clone());
+                                });
+                            }
                             if j == 4 {
                                 let to_add = button
                                     .with_children(|commands| {

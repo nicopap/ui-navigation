@@ -239,14 +239,26 @@ impl NavMenu {
 }
 
 /// An [`Entity`] that can be navigated to using the ui navigation system.
+///
+/// It is in one of multiple [`FocusState`], you can check its state with
+/// the [`Focusable::state`] method or any of the `is_*` `Focusable` methods.
+///
+/// A `Focusable` can also be *cancel*. Meaning: when you send the
+/// [`NavRequest::Action`] request while a *cancel* `Focusable` is focused,
+/// it will act as if the [`NavRequest::Cancel`] request was received.
+///
+/// To declare a `Focusable` as *cancel*, use the [`Focusable::cancel`]
+/// constructor.
 #[derive(Component, Clone, Copy)]
 pub struct Focusable {
     focus_state: FocusState,
+    cancel: bool,
 }
 impl Default for Focusable {
     fn default() -> Self {
         Focusable {
             focus_state: FocusState::Inert,
+            cancel: false,
         }
     }
 }
@@ -293,6 +305,21 @@ impl Focusable {
     /// This `Focusable` is neither _active_, _focused_ or _dormant_
     pub fn is_inert(&self) -> bool {
         self.focus_state == FocusState::Inert
+    }
+
+    /// This `Focusable` is a cancel button, see [`Focusable::cancel`]
+    pub fn is_cancel(&self) -> bool {
+        self.cancel
+    }
+
+    /// This is a "Cancel" button, whenever a [`NavRequest::Action`] is sent
+    /// while this [`Focusable`] is _focused_, act as if the request was a
+    /// [`NavRequest::Cancel`]
+    pub fn cancel() -> Self {
+        Focusable {
+            focus_state: FocusState::Inert,
+            cancel: true,
+        }
     }
 }
 
@@ -438,6 +465,13 @@ fn resolve(
             NavEvent::focus_changed(to, from)
         }
         Action => {
+            if let Ok((_, focusable)) = queries.focusables.get(focused) {
+                if focusable.cancel {
+                    let mut from = from.to_vec();
+                    from.truncate(from.len() - 1);
+                    return resolve(focused, NavRequest::Cancel, queries, from);
+                }
+            }
             let child_menu = child_menu(focused, queries);
             let (child_menu, menu) = or_none!(child_menu);
             let to = menu.non_inert_child().unwrap_or_else(|| {
