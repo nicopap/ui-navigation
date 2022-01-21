@@ -8,6 +8,7 @@
 // All "helper functions" are defined after `resolve`,
 // The algorithm is the `resolve` function and all other functions that
 // preceeds it in this file.
+mod commands;
 pub mod components;
 mod events;
 pub mod systems;
@@ -293,11 +294,6 @@ impl Focusable {
     pub fn is_inert(&self) -> bool {
         self.focus_state == FocusState::Inert
     }
-
-    /// Programmatically create a `Focusable` with the given state.
-    const fn with_state(focus_state: FocusState) -> Self {
-        Focusable { focus_state }
-    }
 }
 
 /// The currently _focused_ [`Focusable`]
@@ -332,12 +328,13 @@ fn resolve_2d<'a, 'b, 'c>(
             .get(entity)
             .expect("Focusable entities must have a GlobalTransform component")
             .translation
+            .xy()
     };
-    let focused_pos = pos_of(focused).xy();
-    let closest = siblings.iter().filter(|sibling| {
-        direction.is_in(focused_pos, pos_of(**sibling).xy()) && **sibling != focused
-    });
-    let closest = max_by_in_iter(closest, |s| -focused_pos.distance_squared(pos_of(**s).xy()));
+    let focused_pos = pos_of(focused);
+    let closest = siblings
+        .iter()
+        .filter(|sibling| direction.is_in(focused_pos, pos_of(**sibling)) && **sibling != focused);
+    let closest = max_by_in_iter(closest, |s| -focused_pos.distance_squared(pos_of(**s)));
     match closest {
         // Cycle if we do not find an entity in the requested direction
         None if cycles => {
@@ -348,7 +345,7 @@ fn resolve_2d<'a, 'b, 'c>(
                 West => Vec2::new(3000.0, focused_pos.y),
             };
             max_by_in_iter(siblings.iter(), |s| {
-                -focused_pos.distance_squared(pos_of(**s).xy())
+                -focused_pos.distance_squared(pos_of(**s))
             })
         }
         anyelse => anyelse,
@@ -483,10 +480,9 @@ fn resolve(
 /// Set the [`non_inert_child`](NavMenu::non_inert_child) field of the enclosing [`NavMenu`]
 /// and disables the previous one
 fn cache_non_inert(child: Entity, queries: &NavQueries, cmds: &mut Commands) {
-    let inert = Focusable::with_state(FocusState::Inert);
     if let Some((menu, nav_menu)) = parent_menu(child, queries) {
         if let Some(entity) = nav_menu.non_inert_child() {
-            cmds.entity(entity).insert(inert).remove::<Focused>();
+            cmds.add(commands::set_focus_state(entity, FocusState::Inert));
         }
         let updated_menu = nav_menu.with_non_inert_child(Some(child));
         cmds.entity(menu).insert(updated_menu);
@@ -502,6 +498,7 @@ fn listen_nav_requests(
     mut events: EventWriter<NavEvent>,
     mut commands: Commands,
 ) {
+    use FocusState as Fs;
     // TODO: this most likely breaks when there is more than a single event,
     // since we use the `commands` interface to mutate the `Focused` element
     // and change component values.
@@ -519,24 +516,19 @@ fn listen_nav_requests(
             if to == from {
                 continue;
             }
-            let focused = Focusable::with_state(FocusState::Focused);
-            let inert = Focusable::with_state(FocusState::Inert);
-            let dormant = Focusable::with_state(FocusState::Dormant);
-            let active = Focusable::with_state(FocusState::Active);
-
             let (&disable, put_to_sleep) = from.split_last();
-            commands.entity(disable).insert(inert).remove::<Focused>();
+            commands.add(commands::set_focus_state(disable, Fs::Inert));
             for &entity in put_to_sleep {
                 cache_non_inert(entity, &queries, &mut commands);
-                commands.entity(entity).insert(dormant).remove::<Focused>();
+                commands.add(commands::set_focus_state(entity, Fs::Dormant));
             }
 
             let (&focus, activate) = to.split_first();
             cache_non_inert(focus, &queries, &mut commands);
-            commands.entity(focus).insert(focused).insert(Focused);
+            commands.add(commands::set_focus_state(focus, Fs::Focused));
             for &entity in activate {
                 cache_non_inert(entity, &queries, &mut commands);
-                commands.entity(entity).insert(active);
+                commands.add(commands::set_focus_state(entity, Fs::Active));
             }
         };
         events.send(event);
@@ -565,8 +557,7 @@ fn children_focusables(menu: Entity, queries: &NavQueries) -> NonEmpty<Entity> {
     let ret = children_focusables_helper(menu, queries);
     assert!(
         !ret.is_empty(),
-        "A NavMenu MUST AT LEAST HAVE ONE Focusable child, {:?} has none",
-        menu
+        "A NavMenu MUST AT LEAST HAVE ONE Focusable child, {menu:?} has none",
     );
     NonEmpty::try_from(ret).unwrap()
 }
