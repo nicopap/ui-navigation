@@ -533,10 +533,8 @@ fn listen_nav_requests(
     mut commands: Commands,
 ) {
     use FocusState as Fs;
-    // TODO: this most likely breaks when there is more than a single event,
-    // since we use the `commands` interface to mutate the `Focused` element
-    // and change component values.
-    for request in requests.iter() {
+    let mut requests = requests.iter();
+    if let Some(request) = requests.next() {
         let focused_id = focused.get_single().unwrap_or_else(|err| {
             assert!(
                 !matches!(err, QuerySingleError::MultipleEntities(_)),
@@ -548,7 +546,7 @@ fn listen_nav_requests(
         // Change focus state of relevant entities
         if let NavEvent::FocusChanged { to, from } = &event {
             if to == from {
-                continue;
+                return;
             }
             let (&disable, put_to_sleep) = from.split_last();
             commands.add(commands::set_focus_state(disable, Fs::Inert));
@@ -566,6 +564,9 @@ fn listen_nav_requests(
             }
         };
         events.send(event);
+    }
+    if requests.next().is_some() {
+        bevy::log::warn!("Unhandled additional NavRequests, can only handle one per frame, sorry!")
     }
 }
 

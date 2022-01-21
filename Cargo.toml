@@ -9,7 +9,7 @@ categories = ["game-development", "accessibility", "gui"]
 repository = "https://github.com/nicopap/ui-navigation"
 homepage = "https://github.com/nicopap/ui-navigation"
 exclude = ["assets"]
-version = "0.8.2"
+version = "0.9.0"
 edition = "2021"
 
 [dependencies]
@@ -18,5 +18,5 @@ non-empty-vec = { version = "0.2.2", default-features = false }
 
 [dev-dependencies]
 bevy = { version = "0.6.0", default-features = false, features = ["render", "x11", "png", "bevy_gilrs" ] }
-bevy-ui-build-macros = "0.1"
+bevy-ui-build-macros = "0.2.1"
 

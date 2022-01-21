@@ -182,7 +182,7 @@ fn setup(mut commands: Commands, our_materials: Res<Materials>) {
         #[cmd(commands)]
         // The tab menu should be navigated with `NavRequest::ScopeMove`
         // hence the `.scope()`
-        vertical{size:size!(100 pct, 100 pct)}[NavMenu::root().cycling().scope()](
+        vertical{size:size!(100 pct, 100 pct)}[;NavMenu::root().cycling().scope()](
             horizontal{justify_content: FlexStart, flex_basis: unit!(10 pct)}(
                 // tab_{red,green,blue} link to their respective columns
                 // vvvvvvv      vvvvvvvvv      vvvvvvvv
@@ -190,30 +190,30 @@ fn setup(mut commands: Commands, our_materials: Res<Materials>) {
             ),
             column_box(
                 //          vvvvvvvvvvvvvv
-                column[red, menu(tab_red)](
+                column[;red, menu(tab_red)](
                     vertical(id(select_1), id(select_2)),
-                    horizontal{flex_wrap: Wrap}[gray, cycle_menu(select_1)](
+                    horizontal{flex_wrap: Wrap}[;gray, cycle_menu(select_1)](
                         square, square, square, square, square, square, square, square,
                         square, square, square, square, square, square, square, square,
                         square, square, square, square
                     ),
-                    horizontal{flex_wrap: Wrap}[gray, cycle_menu(select_2)](
+                    horizontal{flex_wrap: Wrap}[;gray, cycle_menu(select_2)](
                         square, square, square, square, square, square, square, square
                     )
                 ),
                 //            vvvvvvvvvvvvvvvv
-                column[green, menu(tab_green)](
-                    horizontal(id(g1), horizontal[gray, menu(g1)](square)),
-                    horizontal(id(g2), horizontal[gray, cycle_menu(g2)](square, square)),
-                    horizontal(id(g3), horizontal[gray, menu(g3)](square, square, square)),
-                    horizontal(id(g4), horizontal[gray, cycle_menu(g4)](square)),
-                    horizontal(id(g5), horizontal[gray, menu(g5)](square, square, square)),
-                    horizontal(id(g6), horizontal[gray, cycle_menu(g6)](square, square)),
-                    horizontal(id(g7), horizontal[gray, menu(g7)](square, square, square, square)),
-                    horizontal(id(g8), horizontal[gray, cycle_menu(g8)](square, square, square, square))
+                column[;green, menu(tab_green)](
+                    horizontal(id(g1), horizontal[;gray, menu(g1)](square)),
+                    horizontal(id(g2), horizontal[;gray, cycle_menu(g2)](square, square)),
+                    horizontal(id(g3), horizontal[;gray, menu(g3)](square, square, square)),
+                    horizontal(id(g4), horizontal[;gray, cycle_menu(g4)](square)),
+                    horizontal(id(g5), horizontal[;gray, menu(g5)](square, square, square)),
+                    horizontal(id(g6), horizontal[;gray, cycle_menu(g6)](square, square)),
+                    horizontal(id(g7), horizontal[;gray, menu(g7)](square, square, square, square)),
+                    horizontal(id(g8), horizontal[;gray, cycle_menu(g8)](square, square, square, square))
                 ),
                 //           vvvvvvvvvvvvvvv
-                column[blue, menu(tab_blue)](
+                column[;blue, menu(tab_blue)](
                     vertical(
                         vertical(select_square, select_square, select_square, select_square),
                         colored_square
