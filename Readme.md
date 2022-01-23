@@ -10,7 +10,7 @@ currently limiting itself to targeting the Bevy engine default UI library.
 
 ```toml
 [dependencies]
-bevy-ui-navigation = "0.9.0"
+bevy-ui-navigation = "0.9.1"
 ```
 
 The in-depth design specification is [available here](https://github.com/nicopap/rfcs/blob/ui-navigation/rfcs/41-ui-navigation.md).
@@ -196,6 +196,7 @@ for a demonstration.
 * `0.9.0`: Add `Focusable::cancel` (see documentation for details); Add warning
   message rather than do dumb things when there is more than a single `NavRequest`
   per frame
+* `0.9.1`: Fix #8
 
 # License
 

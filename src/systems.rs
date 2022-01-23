@@ -124,10 +124,9 @@ pub fn default_gamepad_input(
     if delta.length_squared() > input_mapping.joystick_ui_deadzone && !*ui_input_status {
         let direction = match () {
             () if delta.y < delta.x && delta.y < -delta.x => South,
-            () if delta.y > delta.x && delta.y > -delta.x => North,
-            () if delta.y < delta.x && delta.y > -delta.x => East,
-            () if delta.y > delta.x && delta.y < -delta.x => West,
-            () => unreachable!(),
+            () if delta.y < delta.x => East,
+            () if delta.y >= delta.x && delta.y > -delta.x => North,
+            () => West,
         };
         nav_cmds.send(Move(direction));
         *ui_input_status = true;
