@@ -10,7 +10,7 @@ currently limiting itself to targeting the Bevy engine default UI library.
 
 ```toml
 [dependencies]
-bevy-ui-navigation = "0.9.1"
+bevy-ui-navigation = "0.10.0"
 ```
 
 The in-depth design specification is [available here](https://github.com/nicopap/rfcs/blob/ui-navigation/rfcs/41-ui-navigation.md).
@@ -23,10 +23,21 @@ Ultimate navigation example demo
 ![Demonstration of "Ultimate navigation"
 example](https://user-images.githubusercontent.com/26321040/141612751-ba0e62b2-23d6-429a-b5d1-48b09c10d526.gif)
 
+
+## Cargo Features
+
+This crate exposes the `bevy-ui` feature. It is enabled by default. Toggling
+off this feature let you compile this crate without requiring the bevy `render`
+feature. But you won't be able to use `FocusableButtonBundle`, and you'll have
+to use `generic_default_mouse_input` for mouse input and define special spacial
+components to get it working.
+
+
 ## Usage
 
 See [this example](https://github.com/nicopap/ui-navigation/blob/master/examples/flat_2d_nav.rs)
 for a quick start guide.
+
 
 ### Simple case
 
@@ -196,7 +207,13 @@ for a demonstration.
 * `0.9.0`: Add `Focusable::cancel` (see documentation for details); Add warning
   message rather than do dumb things when there is more than a single `NavRequest`
   per frame
-* `0.9.1`: Fix #8
+* `0.9.1`: Fix #8, Panic on diagonal gamepad input
+* `0.10.0`: Add the `bevy-ui` feature, technically this includes breaking
+  changes, but it is very unlikely you need to change your code to get it
+  working 
+  * Breaking: if you were manually calling `default_mouse_input`, it now has 
+    additional parameters
+  * Breaking: `ui_focusable_at` and `NodePosQuery` now have type parameters
 
 # License
 

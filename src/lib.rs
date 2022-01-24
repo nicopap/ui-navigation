@@ -9,6 +9,7 @@
 // The algorithm is the `resolve` function and all other functions that
 // preceeds it in this file.
 mod commands;
+#[cfg(feature = "bevy-ui")]
 pub mod components;
 mod events;
 pub mod systems;

@@ -154,7 +154,7 @@ fn setup(mut commands: Commands, our_materials: Res<Materials>) {
         ..Default::default()
     };
 
-    let menu = |id: Entity| NavMenu::reachable_from(id);
+    let menu = NavMenu::reachable_from;
     let cycle_menu = |id: Entity| NavMenu::reachable_from(id).cycling();
     let mut spawn = |bundle: &FocusableButtonBundle| commands.spawn_bundle(bundle.clone()).id();
 
