@@ -25,6 +25,8 @@ pub struct InputMapping {
     pub previous_button: GamepadButtonType,
     /// Gamepad button for [`ScopeDirection::Next`] [`NavRequest::ScopeMove`]
     pub next_button: GamepadButtonType,
+    /// Gamepad button for [`NavRequest::Free`]
+    pub free_button: GamepadButtonType,
     /// Keyboard key for [`Direction::West`] [`NavRequest::Move`]
     pub key_left: KeyCode,
     /// Keyboard key for [`Direction::East`] [`NavRequest::Move`]
@@ -51,6 +53,8 @@ pub struct InputMapping {
     pub key_next_alt: KeyCode,
     /// Keyboard key for [`ScopeDirection::Previous`] [`NavRequest::ScopeMove`]
     pub key_previous: KeyCode,
+    /// Keyboard key for [`NavRequest::Free`]
+    pub key_free: KeyCode,
     /// Mouse button for [`NavRequest::Action`]
     pub mouse_action: MouseButton,
 }
@@ -66,6 +70,7 @@ impl Default for InputMapping {
             cancel_button: GamepadButtonType::East,
             previous_button: GamepadButtonType::LeftTrigger,
             next_button: GamepadButtonType::RightTrigger,
+            free_button: GamepadButtonType::Start,
             key_left: KeyCode::A,
             key_right: KeyCode::D,
             key_up: KeyCode::W,
@@ -79,6 +84,7 @@ impl Default for InputMapping {
             key_next: KeyCode::E,
             key_next_alt: KeyCode::Tab,
             key_previous: KeyCode::Q,
+            key_free: KeyCode::Escape,
             mouse_action: MouseButton::Left,
         }
     }
@@ -106,7 +112,7 @@ pub fn default_gamepad_input(
     mut ui_input_status: Local<bool>,
 ) {
     use Direction::*;
-    use NavRequest::{Action, Cancel, Move, ScopeMove};
+    use NavRequest::{Action, Cancel, Free, Move, ScopeMove};
 
     let pad = Gamepad(0);
     macro_rules! axis_delta {
@@ -137,6 +143,7 @@ pub fn default_gamepad_input(
         input_mapping.action_button => Action,
         input_mapping.cancel_button => Cancel,
         input_mapping.next_button => ScopeMove(ScopeDirection::Next),
+        input_mapping.free_button => Free,
         input_mapping.previous_button => ScopeMove(ScopeDirection::Previous)
     };
     for (key, request) in command_mapping {
@@ -176,6 +183,7 @@ pub fn default_keyboard_input(
         input_mapping.key_right_alt => Move(East),
         input_mapping.key_next => ScopeMove(ScopeDirection::Next),
         input_mapping.key_next_alt => ScopeMove(ScopeDirection::Next),
+        input_mapping.key_free => Free,
         input_mapping.key_previous => ScopeMove(ScopeDirection::Previous)
     };
     for (key, request) in command_mapping {

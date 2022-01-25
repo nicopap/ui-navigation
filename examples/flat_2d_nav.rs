@@ -12,7 +12,6 @@ fn main() {
         .add_plugins(DefaultPlugins)
         // 1: Add the NavigationPlugin
         .add_plugin(NavigationPlugin)
-        .init_resource::<ButtonMaterials>()
         .init_resource::<InputMapping>()
         .add_startup_system(setup)
         .add_system(button_system)
@@ -23,34 +22,15 @@ fn main() {
         .run();
 }
 
-struct ButtonMaterials {
-    normal: Color,
-    focused: Color,
-    active: Color,
-}
-
-impl Default for ButtonMaterials {
-    fn default() -> Self {
-        ButtonMaterials {
-            normal: Color::DARK_GRAY,
-            focused: Color::ORANGE_RED,
-            active: Color::GOLD,
-        }
-    }
-}
-
 #[allow(clippy::type_complexity)]
 fn button_system(
-    button_materials: Res<ButtonMaterials>,
     mut interaction_query: Query<(&Focusable, &mut UiColor), (Changed<Focusable>, With<Button>)>,
 ) {
     for (focus_state, mut material) in interaction_query.iter_mut() {
         if focus_state.is_focused() {
-            *material = button_materials.focused.into();
-        } else if focus_state.is_active() {
-            *material = button_materials.active.into();
+            *material = Color::ORANGE_RED.into();
         } else {
-            *material = button_materials.normal.into();
+            *material = Color::DARK_GRAY.into();
         }
     }
 }
@@ -60,24 +40,19 @@ fn print_nav_events(mut events: EventReader<NavEvent>) {
     }
 }
 
-macro_rules! xy {
-    ($x:expr, $y:expr) => {
-        Vec2::new($x as f32, $y as f32)
-    };
-}
-fn setup(mut commands: Commands, button_materials: Res<ButtonMaterials>) {
+fn setup(mut commands: Commands) {
     // ui camera
     commands.spawn_bundle(UiCameraBundle::default());
     let positions = [
-        xy!(10, 10),
-        xy!(15, 50),
-        xy!(20, 90),
-        xy!(30, 10),
-        xy!(35, 50),
-        xy!(40, 90),
-        xy!(60, 10),
-        xy!(55, 50),
-        xy!(50, 90),
+        Vec2::new(10.0, 10.0),
+        Vec2::new(15.0, 50.0),
+        Vec2::new(20.0, 90.0),
+        Vec2::new(30.0, 10.0),
+        Vec2::new(35.0, 50.0),
+        Vec2::new(40.0, 90.0),
+        Vec2::new(60.0, 10.0),
+        Vec2::new(55.0, 50.0),
+        Vec2::new(50.0, 90.0),
     ];
     commands
         .spawn_bundle(NodeBundle {
@@ -90,11 +65,11 @@ fn setup(mut commands: Commands, button_materials: Res<ButtonMaterials>) {
         })
         .with_children(|commands| {
             for pos in positions {
-                spawn_button(pos, commands, &button_materials);
+                spawn_button(pos, commands);
             }
         });
 }
-fn spawn_button(position: Vec2, commands: &mut ChildBuilder, button_materials: &ButtonMaterials) {
+fn spawn_button(position: Vec2, commands: &mut ChildBuilder) {
     let position = Rect {
         left: Val::Percent(position.x),
         top: Val::Percent(position.y),
@@ -108,7 +83,7 @@ fn spawn_button(position: Vec2, commands: &mut ChildBuilder, button_materials: &
                 position_type: PositionType::Absolute,
                 ..Default::default()
             },
-            color: button_materials.normal.into(),
+            color: Color::DARK_GRAY.into(),
             ..Default::default()
         })
         // 2. Add the `Focusable` component to the navigable Entity

@@ -34,7 +34,7 @@ struct NavQueries<'w, 's> {
     transform: Query<'w, 's, &'static GlobalTransform>,
 }
 
-/// State of a [`Focusable`]
+/// State of a [`Focusable`].
 #[derive(Clone, Debug, Copy, PartialEq)]
 pub enum FocusState {
     /// An entity that was previously [`Active`](FocusState::Active) from a branch of
@@ -53,6 +53,26 @@ pub enum FocusState {
     /// None of the above: This [`Focusable`] is neither `Dormant`, `Focused`
     /// or `Active`.
     Inert,
+}
+
+/// The navigation system's lock.
+///
+/// When locked, the navigation system doesn't process any [`NavRequest`].
+/// It only waits on a [`NavRequest::Free`] event. It will then continue
+/// processing new requests.
+#[derive(Default)]
+pub struct NavLock {
+    entity: Option<Entity>,
+}
+impl NavLock {
+    /// The `Entity` that triggered the lock.
+    pub fn entity(&self) -> Option<Entity> {
+        self.entity
+    }
+    /// Whether the navigation system is locked.
+    pub fn is_locked(&self) -> bool {
+        self.entity.is_some()
+    }
 }
 
 #[derive(Clone, Debug, Copy, PartialEq)]
@@ -239,27 +259,40 @@ impl NavMenu {
     }
 }
 
+#[derive(Clone)]
+enum ActionType {
+    Normal,
+    Cancel,
+    Lock,
+}
+
 /// An [`Entity`] that can be navigated to using the ui navigation system.
 ///
 /// It is in one of multiple [`FocusState`], you can check its state with
 /// the [`Focusable::state`] method or any of the `is_*` `Focusable` methods.
 ///
-/// A `Focusable` can also be *cancel*. Meaning: when you send the
+/// A `Focusable` can be [`Focusable::cancel`]. Meaning: when you send the
 /// [`NavRequest::Action`] request while a *cancel* `Focusable` is focused,
 /// it will act as if the [`NavRequest::Cancel`] request was received.
 ///
-/// To declare a `Focusable` as *cancel*, use the [`Focusable::cancel`]
-/// constructor.
-#[derive(Component, Clone, Copy)]
+/// A `Focusable` can also be [`Focusable::lock`]. Meaning: when you send the
+/// [`NavRequest::Action`] request while a *lock* `Focusable` is focused,
+/// it will prevent all further processing of [`NavRequest`]s and emit a
+/// [`NavEvent::Locked`].
+///
+/// Only by sending a [`NavRequest::Free`] will the navigation system resume
+/// processing new [`NavRequest`]s. It will send a [`NavEvent::Unlocked`] just
+/// before.
+#[derive(Component, Clone)]
 pub struct Focusable {
     focus_state: FocusState,
-    cancel: bool,
+    action: ActionType,
 }
 impl Default for Focusable {
     fn default() -> Self {
         Focusable {
             focus_state: FocusState::Inert,
-            cancel: false,
+            action: ActionType::Normal,
         }
     }
 }
@@ -308,18 +341,40 @@ impl Focusable {
         self.focus_state == FocusState::Inert
     }
 
-    /// This `Focusable` is a cancel button, see [`Focusable::cancel`]
+    /// This `Focusable` is a cancel focusable, see [`Focusable::cancel`]
     pub fn is_cancel(&self) -> bool {
-        self.cancel
+        matches!(self.action, ActionType::Cancel)
     }
 
-    /// This is a "Cancel" button, whenever a [`NavRequest::Action`] is sent
-    /// while this [`Focusable`] is _focused_, act as if the request was a
-    /// [`NavRequest::Cancel`]
+    /// This `Focusable` is a locking focusable, see [`Focusable::lock`]
+    pub fn is_lock(&self) -> bool {
+        matches!(self.action, ActionType::Lock)
+    }
+
+    /// This is a "Cancel" focusable
+    ///
+    /// Whenever a [`NavRequest::Action`] is sent while this [`Focusable`]
+    /// is _focused_, act as if the request was a [`NavRequest::Cancel`]
     pub fn cancel() -> Self {
         Focusable {
             focus_state: FocusState::Inert,
-            cancel: true,
+            action: ActionType::Cancel,
+        }
+    }
+
+    /// This is a "Lock" focusable
+    ///
+    /// Whenever a [`NavRequest::Action`] is sent while this [`Focusable`]
+    /// is _focused_, the navigation system stops processing new
+    /// [`NavRequest`]s until it receives [`NavRequest::Free`].
+    ///
+    /// This is useful to implement widgets with complex controls you don't
+    /// want to accidentally unfocus, or suspending the navigation system while
+    /// in-game.
+    pub fn lock() -> Self {
+        Focusable {
+            focus_state: FocusState::Inert,
+            action: ActionType::Lock,
         }
     }
 }
@@ -412,6 +467,7 @@ fn resolve(
     focused: Entity,
     request: NavRequest,
     queries: &NavQueries,
+    lock: &mut NavLock,
     from: Vec<Entity>,
 ) -> NavEvent {
     use NavRequest::*;
@@ -467,10 +523,17 @@ fn resolve(
         }
         Action => {
             if let Ok((_, focusable)) = queries.focusables.get(focused) {
-                if focusable.cancel {
-                    let mut from = from.to_vec();
-                    from.truncate(from.len() - 1);
-                    return resolve(focused, NavRequest::Cancel, queries, from);
+                match focusable.action {
+                    ActionType::Cancel => {
+                        let mut from = from.to_vec();
+                        from.truncate(from.len() - 1);
+                        return resolve(focused, NavRequest::Cancel, queries, lock, from);
+                    }
+                    ActionType::Lock => {
+                        lock.entity = Some(focused);
+                        return NavEvent::Locked(focused);
+                    }
+                    ActionType::Normal => {}
                 }
             }
             let child_menu = child_menu(focused, queries);
@@ -487,7 +550,7 @@ fn resolve(
             let siblings = children_focusables(parent, queries);
             if !menu.setting.is_scope() {
                 let focused = or_none!(menu.focus_parent);
-                resolve(focused, request, queries, from.into())
+                resolve(focused, request, queries, lock, from.into())
             } else {
                 let cycles = menu.setting.cycles();
                 let to = or_none!(resolve_scope(focused, scope_dir, cycles, &siblings));
@@ -509,6 +572,14 @@ fn resolve(
                 NavEvent::FocusChanged { from, to }
             }
         }
+        Free => {
+            if let Some(lock_entity) = lock.entity.take() {
+                NavEvent::Unlocked(lock_entity)
+            } else {
+                bevy::log::warn!("Received a NavRequest::Free while not locked");
+                NavEvent::NoChanges { from, request }
+            }
+        }
     }
 }
 
@@ -528,14 +599,23 @@ fn cache_non_inert(child: Entity, queries: &NavQueries, cmds: &mut Commands) {
 /// relevant.
 fn listen_nav_requests(
     focused: Query<Entity, With<Focused>>,
-    mut requests: EventReader<NavRequest>,
     queries: NavQueries,
+    mut lock: ResMut<NavLock>,
+    mut requests: EventReader<NavRequest>,
     mut events: EventWriter<NavEvent>,
     mut commands: Commands,
 ) {
     use FocusState as Fs;
     let mut requests = requests.iter();
     if let Some(request) = requests.next() {
+        if requests.next().is_some() {
+            bevy::log::warn!(
+                "Unhandled additional NavRequests, can only handle one per frame, sorry!"
+            )
+        }
+        if lock.is_locked() && *request != NavRequest::Free {
+            return;
+        }
         let focused_id = focused.get_single().unwrap_or_else(|err| {
             assert!(
                 !matches!(err, QuerySingleError::MultipleEntities(_)),
@@ -543,7 +623,7 @@ fn listen_nav_requests(
             );
             queries.focusables.iter().next().unwrap().0
         });
-        let event = resolve(focused_id, *request, &queries, Vec::new());
+        let event = resolve(focused_id, *request, &queries, &mut lock, Vec::new());
         // Change focus state of relevant entities
         if let NavEvent::FocusChanged { to, from } = &event {
             if to == from {
@@ -565,9 +645,6 @@ fn listen_nav_requests(
             }
         };
         events.send(event);
-    }
-    if requests.next().is_some() {
-        bevy::log::warn!("Unhandled additional NavRequests, can only handle one per frame, sorry!")
     }
 }
 
@@ -727,6 +804,7 @@ impl Plugin for NavigationPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<NavRequest>()
             .add_event::<NavEvent>()
+            .init_resource::<NavLock>()
             // TODO: add label to system so that it can be sorted
             .add_system(listen_nav_requests);
     }

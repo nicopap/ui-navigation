@@ -10,7 +10,7 @@ currently limiting itself to targeting the Bevy engine default UI library.
 
 ```toml
 [dependencies]
-bevy-ui-navigation = "0.10.0"
+bevy-ui-navigation = "0.11.0"
 ```
 
 The in-depth design specification is [available here](https://github.com/nicopap/rfcs/blob/ui-navigation/rfcs/41-ui-navigation.md).
@@ -214,6 +214,10 @@ for a demonstration.
   * Breaking: if you were manually calling `default_mouse_input`, it now has 
     additional parameters
   * Breaking: `ui_focusable_at` and `NodePosQuery` now have type parameters
+* `0.11.0`: Add the `Focusable::lock` feature. A focusable now can be declared
+  as "lock" and block the ui navigation systems until the user sends a
+  `NavRequest::Free`. See the `locking.rs` example for illustration.
+  * Breaking: New enum variants on `NavRequest` and `NavEvent`
 
 # License
 
