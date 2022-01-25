@@ -785,14 +785,11 @@ fn resolve_index(
     max_value: usize,
 ) -> Option<usize> {
     use ScopeDirection::*;
-    match (direction, cycles, from) {
-        (Previous, true, 0) => Some(max_value),
-        (Previous, true, from) => Some(from - 1),
-        (Previous, false, 0) => None,
-        (Previous, false, from) => Some(from - 1),
-        (Next, true, from) => Some((from + 1) % (max_value + 1)),
-        (Next, false, from) if from == max_value => None,
-        (Next, false, from) => Some(from + 1),
+    match (direction, from) {
+        (Previous, 0) => cycles.then(|| max_value),
+        (Previous, from) => Some(from - 1),
+        (Next, from) if from == max_value => cycles.then(|| 0),
+        (Next, from) => Some(from + 1),
     }
 }
 
