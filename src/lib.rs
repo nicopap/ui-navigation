@@ -2,7 +2,6 @@
 //!
 //! See [the RFC](https://github.com/nicopap/rfcs/blob/ui-navigation/rfcs/41-ui-navigation.md)
 //! for a deep explanation on how this works.
-// TODO: review all uses of `.unwrap()`!
 // Notes on the structure of this file:
 //
 // All "helper functions" are defined after `resolve`,
@@ -503,12 +502,11 @@ fn resolve(
             };
             let siblings = match parent {
                 Some(parent) => children_focusables(parent, queries),
-                None if !queries.focusables.is_empty() => {
-                    let focusables: Vec<_> = queries.focusables.iter().map(|tpl| tpl.0).collect();
-                    NonEmpty::try_from(focusables).unwrap()
-                }
                 None => {
-                    panic!("There must be at least one `Focusable` when sending a `NavRequest`!")
+                    let focusables: Vec<_> = queries.focusables.iter().map(|tpl| tpl.0).collect();
+                    NonEmpty::try_from(focusables).expect(
+                        "There must be at least one `Focusable` when sending a `NavRequest`!",
+                    )
                 }
             };
             let to = resolve_2d(focused, direction, cycles, &siblings, &queries.transform);
@@ -621,7 +619,12 @@ fn listen_nav_requests(
                 !matches!(err, QuerySingleError::MultipleEntities(_)),
                 "Multiple entities with Focused component, this should not happen"
             );
-            queries.focusables.iter().next().unwrap().0
+            queries
+                .focusables
+                .iter()
+                .next()
+                .expect("Before sending a NavRequest, AT LEAST ONE `Focusable` should exist")
+                .0
         });
         let event = resolve(focused_id, *request, &queries, &mut lock, Vec::new());
         // Change focus state of relevant entities
@@ -668,11 +671,8 @@ fn parent_menu(focusable: Entity, queries: &NavQueries) -> Option<(Entity, NavMe
 /// All sibling [`Focusable`]s within a single [`NavMenu`]
 fn children_focusables(menu: Entity, queries: &NavQueries) -> NonEmpty<Entity> {
     let ret = children_focusables_helper(menu, queries);
-    assert!(
-        !ret.is_empty(),
-        "A NavMenu MUST AT LEAST HAVE ONE Focusable child, {menu:?} has none",
-    );
-    NonEmpty::try_from(ret).unwrap()
+    NonEmpty::try_from(ret)
+        .expect("A NavMenu MUST AT LEAST HAVE ONE Focusable child, {menu:?} has none")
 }
 
 fn children_focusables_helper(menu: Entity, queries: &NavQueries) -> Vec<Entity> {
@@ -721,6 +721,7 @@ fn trim_common_tail<T: PartialEq>(v1: &mut NonEmpty<T>, v2: &mut NonEmpty<T>) {
     let mut i2 = v2.len().get() - 1;
     loop {
         if v1[i1] != v2[i2] {
+            // unwraps: any usize + 1 (saturating) is NonZero
             let l1 = NonZeroUsize::new(i1.saturating_add(1)).unwrap();
             let l2 = NonZeroUsize::new(i2.saturating_add(1)).unwrap();
             v1.truncate(l1);
