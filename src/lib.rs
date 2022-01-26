@@ -1,7 +1,4 @@
-//! A navigation system. Use [`NavigationPlugin`] to get it working
-//!
-//! See [the RFC](https://github.com/nicopap/rfcs/blob/ui-navigation/rfcs/41-ui-navigation.md)
-//! for a deep explanation on how this works.
+#![doc = include_str!("../Readme.md")]
 // Notes on the structure of this file:
 //
 // All "helper functions" are defined after `resolve`,
@@ -11,6 +8,7 @@ mod commands;
 #[cfg(feature = "bevy-ui")]
 pub mod components;
 mod events;
+pub mod marker;
 pub mod systems;
 
 use std::cmp::Ordering;
@@ -64,7 +62,8 @@ pub struct NavLock {
     entity: Option<Entity>,
 }
 impl NavLock {
-    /// The `Entity` that triggered the lock.
+    /// The [`Entity`](https://docs.rs/bevy/latest/bevy/ecs/entity/struct.Entity.html)
+    /// that triggered the lock.
     pub fn entity(&self) -> Option<Entity> {
         self.entity
     }
@@ -198,11 +197,7 @@ impl NavMenu {
 
     /// Set this menu as having no parents
     pub fn root() -> Self {
-        NavMenu {
-            focus_parent: None,
-            setting: MenuSetting::ClosedXY,
-            non_inert_child: CacheOption::NotYetCached,
-        }
+        Self::new(None)
     }
 
     /// Set this menu as closed (no cycling)
@@ -240,11 +235,7 @@ impl NavMenu {
     /// to reach `NavMenu` X from `Focusable` Y if there is a path from
     /// `NavMenu` X to `Focusable` Y.
     pub fn reachable_from(focusable: Entity) -> Self {
-        NavMenu {
-            focus_parent: Some(focusable),
-            setting: MenuSetting::ClosedXY,
-            non_inert_child: CacheOption::NotYetCached,
-        }
+        Self::new(Some(focusable))
     }
 
     fn with_non_inert_child(self, child: Option<Entity>) -> Self {
@@ -265,7 +256,8 @@ enum ActionType {
     Lock,
 }
 
-/// An [`Entity`] that can be navigated to using the ui navigation system.
+/// An [`Entity`](https://docs.rs/bevy/latest/bevy/ecs/entity/struct.Entity.html)
+/// that can be navigated to using the ui navigation system.
 ///
 /// It is in one of multiple [`FocusState`], you can check its state with
 /// the [`Focusable::state`] method or any of the `is_*` `Focusable` methods.
@@ -661,10 +653,10 @@ fn child_menu<'a>(focusable: Entity, queries: &'a NavQueries) -> Option<(Entity,
 
 /// The [`NavMenu`] containing `focusable`, if any
 fn parent_menu(focusable: Entity, queries: &NavQueries) -> Option<(Entity, NavMenu)> {
-    let Parent(parent) = queries.parents.get(focusable).ok()?;
-    match queries.menus.get(*parent) {
-        Ok(menu) => Some((*parent, menu.1.clone())),
-        Err(_) => parent_menu(*parent, queries),
+    let &Parent(parent) = queries.parents.get(focusable).ok()?;
+    match queries.menus.get(parent) {
+        Ok(menu) => Some((parent, menu.1.clone())),
+        Err(_) => parent_menu(parent, queries),
     }
 }
 

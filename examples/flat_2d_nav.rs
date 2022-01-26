@@ -22,10 +22,7 @@ fn main() {
         .run();
 }
 
-#[allow(clippy::type_complexity)]
-fn button_system(
-    mut interaction_query: Query<(&Focusable, &mut UiColor), (Changed<Focusable>, With<Button>)>,
-) {
+fn button_system(mut interaction_query: Query<(&Focusable, &mut UiColor), Changed<Focusable>>) {
     for (focus_state, mut material) in interaction_query.iter_mut() {
         if focus_state.is_focused() {
             *material = Color::ORANGE_RED.into();

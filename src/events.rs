@@ -86,12 +86,12 @@ pub enum NavEvent {
     /// A [lock focusable](crate::Focusable::lock) has been triggered
     ///
     /// Once the navigation plugin enters a locked state, the only way to exit
-    /// it is to send a [`NavRequest::Unlock`].
+    /// it is to send a [`NavRequest::Free`].
     Locked(Entity),
     /// A [lock focusable](crate::Focusable::lock) has been triggered
     ///
     /// Once the navigation plugin enters a locked state, the only way to exit
-    /// it is to send a [`NavRequest::Unlock`].
+    /// it is to send a [`NavRequest::Free`].
     Unlocked(Entity),
 }
 impl NavEvent {
