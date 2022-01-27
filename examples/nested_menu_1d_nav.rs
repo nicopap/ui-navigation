@@ -128,9 +128,8 @@ fn handle_nav_events(
 
 fn menu(materials: &Materials) -> NodeBundle {
     let size_fn = |width, height| Size::new(Val::Percent(width), Val::Percent(height));
-    let size = size_fn(20.0, 95.0);
     let style = Style {
-        size,
+        size: size_fn(20.0, 95.0),
         flex_direction: FlexDirection::Column,
         flex_wrap: FlexWrap::Wrap,
         justify_content: JustifyContent::Center,

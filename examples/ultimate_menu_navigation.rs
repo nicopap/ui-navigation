@@ -114,7 +114,7 @@ fn setup(mut commands: Commands, our_materials: Res<Materials>) {
         color: black,
         ..Default::default()
     });
-    let select_square = FocusableButtonBundle::from(ButtonBundle {
+    let long = FocusableButtonBundle::from(ButtonBundle {
         style: style! {
             size: size!(100 pct, 40 px),
             margin: rect!(2 px),
@@ -154,68 +154,57 @@ fn setup(mut commands: Commands, our_materials: Res<Materials>) {
         ..Default::default()
     };
 
-    let menu = NavMenu::reachable_from;
-    let cycle_menu = |id: Entity| NavMenu::reachable_from(id).cycling();
-    let mut spawn = |bundle: &FocusableButtonBundle| commands.spawn_bundle(bundle.clone()).id();
-
-    let tab_red = spawn(&tab_square);
-    let tab_green = spawn(&tab_square);
-    let tab_blue = spawn(&tab_square);
-
-    let select_1 = spawn(&select_square);
-    let select_2 = spawn(&select_square);
-
-    let g1 = spawn(&select_square);
-    let g2 = spawn(&select_square);
-    let g3 = spawn(&select_square);
-    let g4 = spawn(&select_square);
-    let g5 = spawn(&select_square);
-    let g6 = spawn(&select_square);
-    let g7 = spawn(&select_square);
-    let g8 = spawn(&select_square);
+    let menu = |name| NavMenu::root().reachable_from_named(name);
+    let cycle_menu = |name| NavMenu::root().cycling().reachable_from_named(name);
+    let named = Name::new;
 
     // The macro is a very thin wrapper over the "normal" UI declaration
     // technic. Please look at the doc for `build_ui` for info on what it does.
     //
-    // Pay attention to calls to `menu(id)` and `NavMenu::root()`
+    // Pay attention to calls to `menu("id")`, `cycle_menu("id"), `named`, and
+    // `NavMenu::root()`. You'll notice we use `Name` to give a sort of
+    // identifier to our focusables so that they are refereable by `NavMenu`s
+    // afterward.
     build_ui! {
         #[cmd(commands)]
         // The tab menu should be navigated with `NavRequest::ScopeMove`
-        // hence the `.scope()`
+        // hence the `.scope()`                 vvvvvvvvvvvvvvv          vvvvvvvv
         vertical{size:size!(100 pct, 100 pct)}[;NavMenu::root().cycling().scope()](
             horizontal{justify_content: FlexStart, flex_basis: unit!(10 pct)}(
-                // tab_{red,green,blue} link to their respective columns
-                // vvvvvvv      vvvvvvvvv      vvvvvvvv
-                id(tab_red), id(tab_green), id(tab_blue)
+                // adding a `Name` component let us refer to those entities
+                // later without having to store their `Entity` ids anywhere.
+                tab_square[;named("red")],
+                tab_square[;named("green")],
+                tab_square[;named("blue")]
             ),
             column_box(
-                //          vvvvvvvvvvvvvv
-                column[;red, menu(tab_red)](
-                    vertical(id(select_1), id(select_2)),
-                    horizontal{flex_wrap: Wrap}[;gray, cycle_menu(select_1)](
+                //           vvvvvvvvvvv
+                column[;red, menu("red")](
+                    vertical(long[;named("select1")], long[;named("select2")]),
+                    horizontal{flex_wrap: Wrap}[;gray, cycle_menu("select1")](
                         square, square, square, square, square, square, square, square,
                         square, square, square, square, square, square, square, square,
                         square, square, square, square
                     ),
-                    horizontal{flex_wrap: Wrap}[;gray, cycle_menu(select_2)](
+                    horizontal{flex_wrap: Wrap}[;gray, cycle_menu("select2")](
                         square, square, square, square, square, square, square, square
                     )
                 ),
-                //            vvvvvvvvvvvvvvvv
-                column[;green, menu(tab_green)](
-                    horizontal(id(g1), horizontal[;gray, menu(g1)](square)),
-                    horizontal(id(g2), horizontal[;gray, cycle_menu(g2)](square, square)),
-                    horizontal(id(g3), horizontal[;gray, menu(g3)](square, square, square)),
-                    horizontal(id(g4), horizontal[;gray, cycle_menu(g4)](square)),
-                    horizontal(id(g5), horizontal[;gray, menu(g5)](square, square, square)),
-                    horizontal(id(g6), horizontal[;gray, cycle_menu(g6)](square, square)),
-                    horizontal(id(g7), horizontal[;gray, menu(g7)](square, square, square, square)),
-                    horizontal(id(g8), horizontal[;gray, cycle_menu(g8)](square, square, square, square))
+                //             vvvvvvvvvvvvv
+                column[;green, menu("green")](
+                    horizontal(long[;named("g1")], horizontal[;gray, cycle_menu("g1")](square, square)),
+                    horizontal(long[;named("g2")], horizontal[;gray, menu("g2")](square)),
+                    horizontal(long[;named("g3")], horizontal[;gray, cycle_menu("g3")](square, square, square)),
+                    horizontal(long[;named("g4")], horizontal[;gray, menu("g4")](square, square, square)),
+                    horizontal(long[;named("g5")], horizontal[;gray, cycle_menu("g5")](square, square)),
+                    horizontal(long[;named("g6")], horizontal[;gray, menu("g6")](square, square, square)),
+                    horizontal(long[;named("g7")], horizontal[;gray, cycle_menu("g7")](square, square, square)),
+                    horizontal(long[;named("g8")], horizontal[;gray, menu("g8")](square, square))
                 ),
-                //           vvvvvvvvvvvvvvv
-                column[;blue, menu(tab_blue)](
+                //            vvvvvvvvvvvv
+                column[;blue, menu("blue")](
                     vertical(
-                        vertical(select_square, select_square, select_square, select_square),
+                        vertical(long, long, long, long),
                         colored_square
                     )
                 )

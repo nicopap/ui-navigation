@@ -13,7 +13,7 @@ use crate::{Focusable, NavMenu};
 ///
 /// See the [`MarkingMenu`] constructor to create a `NavMarker`.
 #[derive(Component)]
-struct NavMarker<T>(T);
+pub(crate) struct NavMarker<T>(pub(crate) T);
 
 /// A [`NavMenu`] with automatic `T` marker propagation
 ///
@@ -28,7 +28,7 @@ struct NavMarker<T>(T);
 /// to add the [`NavMarkerPropagationPlugin<T>`] to your bevy app.
 #[derive(Bundle)]
 pub struct MarkingMenu<T: Send + Sync + 'static> {
-    pub menu: NavMenu,
+    menu: NavMenu,
     marker: NavMarker<T>,
 }
 impl<T: Component + Clone + Send + Sync + 'static> MarkingMenu<T> {

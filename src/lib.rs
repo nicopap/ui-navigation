@@ -9,8 +9,10 @@ mod commands;
 pub mod components;
 mod events;
 pub mod marker;
+pub mod named;
 pub mod systems;
 
+use std::borrow::Cow;
 use std::cmp::Ordering;
 use std::fmt;
 use std::num::NonZeroUsize;
@@ -222,6 +224,24 @@ impl NavMenu {
     pub fn scope(mut self) -> Self {
         self.setting = self.setting.scope();
         self
+    }
+
+    /// Set this menu as reachable from a [`Focusable`] with a
+    /// [`Name`](https://docs.rs/bevy/latest/bevy/core/struct.Name.html)
+    /// component.
+    ///
+    /// This is useful if, for example, you just want to spawn your UI without
+    /// keeping track of entity ids of your UI widgets.
+    ///
+    /// Note: this should be the last builder method to call, as it returns a
+    /// [`named::NamedParentNavMenu`]. The specified focusable will overwrite
+    /// the one specified with [`NavMenu::root`] or
+    /// [`NavMenu::reachable_from`].
+    pub fn reachable_from_named(
+        self,
+        parent_label: impl Into<Cow<'static, str>>,
+    ) -> named::NamedParentNavMenu {
+        named::NamedParentNavMenu::new(self, parent_label)
     }
 
     /// Set this menu as reachable from a given [`Focusable`]
@@ -796,7 +816,8 @@ impl Plugin for NavigationPlugin {
             .add_event::<NavEvent>()
             .init_resource::<NavLock>()
             // TODO: add label to system so that it can be sorted
-            .add_system(listen_nav_requests);
+            .add_system(listen_nav_requests)
+            .add_system(named::resolve_navmenu_label);
     }
 }
 

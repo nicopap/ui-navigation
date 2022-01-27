@@ -10,7 +10,7 @@ currently limiting itself to targeting the Bevy engine default UI library.
 
 ```toml
 [dependencies]
-bevy-ui-navigation = "0.12.0"
+bevy-ui-navigation = "0.12.1"
 ```
 
 The in-depth design specification is [available here](https://github.com/nicopap/rfcs/blob/ui-navigation/rfcs/41-ui-navigation.md).
@@ -252,6 +252,28 @@ own controls, or if you want to disable menu navigation while in game. To
 resume the navigation system, you'll need to send a
 [`NavRequest::Free`](https://docs.rs/bevy-ui-navigation/latest/bevy_ui_navigation/enum.NavRequest.html#variant.Free).
 
+### By-name tree declaration
+
+The most difficult part of the API to deal with is giving
+[`NavMenu::reachable_from(focusable)`](https://docs.rs/bevy-ui-navigation/latest/bevy_ui_navigation/struct.NavMenu.html#method.reachable_from) the `Entity` for of the button used to reach
+it.
+
+This forces you to divide the whole menu construction in multiple
+parts and keep track of intermediary values if you want to make multiple menus.
+
+*By-name declaration* let you simply add a label to your [`Focusable`](https://docs.rs/bevy-ui-navigation/latest/bevy_ui_navigation/struct.Focusable.html) and refer
+to it in [`NavMenu::reachable_from_named(label)`](https://docs.rs/bevy-ui-navigation/latest/bevy_ui_navigation/struct.NavMenu.html#method.reachable_from_named). The runtime then detects
+labelled stuff and replace the partial [`NamedParentNavMenu`](https://docs.rs/bevy-ui-navigation/latest/bevy_ui_navigation/named/struct.NamedParentNavMenu.html) with the full
+[`NavMenu`](https://docs.rs/bevy-ui-navigation/latest/bevy_ui_navigation/struct.NavMenu.html) with the proper entity id reference. This saves you from
+pre-spawning your buttons so that you can associate their `id` with
+the proper submenu. See the [ultimate_menu_navigation
+example](https://github.com/nicopap/ui-navigation/blob/master/examples/ultimate_menu_navigation.rs)
+for details.
+
+It is also possible to combine `marker` menus with `by-name` menus, but the API
+is currently a bit tought, and will change in the future.
+
+
 ## Changelog
 
 * `0.8.2`: Fix offsetting of mouse focus with `UiCamera`s with a transform set
@@ -274,6 +296,8 @@ resume the navigation system, you'll need to send a
   components to `Focusable` children of a `NavMenu`.
 * `0.12.0`: Remove `NavMenu` methods from `MarkingMenu` and make the `menu`
   field public instead. Internally, this represented too much duplicate code.
+* `0.12.1`: Add the [`named` module](https://docs.rs/bevy-ui-navigation/latest/bevy_ui_navigation/named/index.html), making declaring complex menus in one go much easier.
+
 
 # License
 
