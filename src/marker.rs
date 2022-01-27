@@ -28,72 +28,20 @@ struct NavMarker<T>(T);
 /// to add the [`NavMarkerPropagationPlugin<T>`] to your bevy app.
 #[derive(Bundle)]
 pub struct MarkingMenu<T: Send + Sync + 'static> {
-    menu: NavMenu,
+    pub menu: NavMenu,
     marker: NavMarker<T>,
 }
 impl<T: Component + Clone + Send + Sync + 'static> MarkingMenu<T> {
-    /// Prefer [`MarkingMenu::reachable_from`] and [`MarkingMenu::root`] to this
-    ///
-    /// `new` is useful to programmatically set the parent if you have an
-    /// optional value. This saves you from a `match focus_parent`.
+    /// Create a [`NavMenu`] that will automatically mark all it's contained
+    /// [`Focusable`]s with `T`.
     ///
     /// `marker` is the component that will be added to all [`Focusable`]
     /// entities contained within this menu.
-    pub fn new(focus_parent: Option<Entity>, marker: T) -> Self {
+    pub fn new(menu: NavMenu, marker: T) -> Self {
         MarkingMenu {
-            menu: NavMenu::new(focus_parent),
             marker: NavMarker(marker),
+            menu,
         }
-    }
-
-    /// Set this menu as having no parents
-    ///
-    /// `marker` is the component that will be added to all [`Focusable`]
-    /// entities contained within this menu.
-    pub fn root(marker: T) -> Self {
-        Self::new(None, marker)
-    }
-
-    /// Set this menu as closed (no cycling)
-    pub fn closed(mut self) -> Self {
-        self.menu = self.menu.closed();
-        self
-    }
-
-    /// Set this menu as cycling
-    ///
-    /// ie: going left from the leftmost element goes to the rightmost element
-    pub fn cycling(mut self) -> Self {
-        self.menu = self.menu.cycling();
-        self
-    }
-
-    /// Set this menu as a scope menu
-    ///
-    /// Meaning: controlled with [`NavRequest::ScopeMove`](crate::NavRequest::ScopeMove) even when the
-    /// focused element is not in this menu, but in a submenu reachable from
-    /// this one.
-    pub fn scope(mut self) -> Self {
-        self.menu = self.menu.scope();
-        self
-    }
-
-    /// Set this menu as reachable from a given [`Focusable`]
-    ///
-    /// When requesting [`NavRequest::Action`](crate::NavRequest::Action)
-    /// when `focusable` is focused, the focus will be changed to a
-    /// focusable within this menu.
-    ///
-    /// `marker` is the component that will be added to all [`Focusable`]
-    /// entities contained within this menu.
-    ///
-    /// # Important
-    ///
-    /// You must ensure this doesn't create a cycle. Eg: you shouldn't be able
-    /// to reach `NavMenu` X from `Focusable` Y if there is a path from
-    /// `NavMenu` X to `Focusable` Y.
-    pub fn reachable_from(focusable: Entity, marker: T) -> Self {
-        Self::new(Some(focusable), marker)
     }
 }
 
@@ -103,7 +51,7 @@ fn mark_menu_entries<T: Component + Clone>(
     new_markers: Query<(Entity, &NavMarker<T>), (Added<NavMarker<T>>, With<NavMenu>)>,
     queries: crate::NavQueries,
 ) {
-    let mut to_insert = Vec::with_capacity(32);
+    let mut to_insert = Vec::new();
     for (new_menu, marker) in new_markers.iter() {
         let repeat_marker = iter::repeat((marker.0.clone(),));
         let menu_children = crate::children_focusables(new_menu, &queries);
@@ -117,7 +65,7 @@ fn mark_new_focusable<T: Component + Clone>(
     markers: Query<&NavMarker<T>>,
     queries: crate::NavQueries,
 ) {
-    let mut to_insert = Vec::with_capacity(32);
+    let mut to_insert = Vec::new();
     for new_focusable in new_focusables.iter() {
         let containing_menu = match crate::parent_menu(new_focusable, &queries) {
             Some((c, _)) => c,

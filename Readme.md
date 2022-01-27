@@ -10,7 +10,7 @@ currently limiting itself to targeting the Bevy engine default UI library.
 
 ```toml
 [dependencies]
-bevy-ui-navigation = "0.11.1"
+bevy-ui-navigation = "0.12.0"
 ```
 
 The in-depth design specification is [available here](https://github.com/nicopap/rfcs/blob/ui-navigation/rfcs/41-ui-navigation.md).
@@ -272,6 +272,8 @@ resume the navigation system, you'll need to send a
   * Breaking: New enum variants on `NavRequest` and `NavEvent`
 * `0.11.1`: Add the [`marker` module](https://docs.rs/bevy-ui-navigation/latest/bevy_ui_navigation/marker/index.html), enabling propagation of user-specified
   components to `Focusable` children of a `NavMenu`.
+* `0.12.0`: Remove `NavMenu` methods from `MarkingMenu` and make the `menu`
+  field public instead. Internally, this represented too much duplicate code.
 
 # License
 

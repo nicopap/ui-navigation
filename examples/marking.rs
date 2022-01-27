@@ -165,6 +165,7 @@ fn setup(mut commands: Commands) {
             })
         }};
     }
+    let (red, green, blue) = (Color::RED, Color::GREEN, Color::BLUE);
     // spawn the whole UI tree
     commands.spawn_bundle(root).with_children(|cmds| {
         cmds.spawn_bundle(keyboard)
@@ -173,36 +174,32 @@ fn setup(mut commands: Commands) {
             .push_children(&buttons);
 
         cmds.spawn_bundle(billboard).with_children(|cmds| {
-            cmds.spawn_bundle(column(Color::RED)).with_children(|cmds| {
-                let marking_menu =
-                    |row: LeftColumnMenus| MarkingMenu::reachable_from(buttons[row.index()], row);
-                // Note: each colored column has a different type, but
-                // within each column there are three menus (Top, Center, Bottom)
-                //
-                // in `print_menus`, we detect the menu in which we are
-                // using the `Query<&LeftColumnMenus>` query.
+            // Note: each colored column has a different type, but
+            // within each column there are three menus (Top, Middle, Bottom)
+            //
+            // in `print_menus`, we detect the menu in which we are
+            // using the `Query<&LeftColumnMenus>` query.
+            cmds.spawn_bundle(column(red)).with_children(|cmds| {
+                let menu = |row: &LeftColumnMenus| NavMenu::reachable_from(buttons[row.index()]);
+                let marking_menu = |row| MarkingMenu::new(menu(&row), row);
                 spawn_cell!(cmds).insert_bundle(marking_menu(LeftColumnMenus::Top));
                 spawn_cell!(cmds).insert_bundle(marking_menu(LeftColumnMenus::Middle));
                 spawn_cell!(cmds).insert_bundle(marking_menu(LeftColumnMenus::Bottom));
             });
-            cmds.spawn_bundle(column(Color::GREEN))
-                .with_children(|cmds| {
-                    let marking_menu = |row: CenterColumnMenus| {
-                        MarkingMenu::reachable_from(buttons[row.index()], row)
-                    };
-                    spawn_cell!(cmds).insert_bundle(marking_menu(CenterColumnMenus::Top));
-                    spawn_cell!(cmds).insert_bundle(marking_menu(CenterColumnMenus::Middle));
-                    spawn_cell!(cmds).insert_bundle(marking_menu(CenterColumnMenus::Bottom));
-                });
-            cmds.spawn_bundle(column(Color::BLUE))
-                .with_children(|cmds| {
-                    let marking_menu = |row: RightColumnMenus| {
-                        MarkingMenu::reachable_from(buttons[row.index()], row)
-                    };
-                    spawn_cell!(cmds).insert_bundle(marking_menu(RightColumnMenus::Top));
-                    spawn_cell!(cmds).insert_bundle(marking_menu(RightColumnMenus::Middle));
-                    spawn_cell!(cmds).insert_bundle(marking_menu(RightColumnMenus::Bottom));
-                });
+            cmds.spawn_bundle(column(green)).with_children(|cmds| {
+                let menu = |row: &CenterColumnMenus| NavMenu::reachable_from(buttons[row.index()]);
+                let marking_menu = |row| MarkingMenu::new(menu(&row), row);
+                spawn_cell!(cmds).insert_bundle(marking_menu(CenterColumnMenus::Top));
+                spawn_cell!(cmds).insert_bundle(marking_menu(CenterColumnMenus::Middle));
+                spawn_cell!(cmds).insert_bundle(marking_menu(CenterColumnMenus::Bottom));
+            });
+            cmds.spawn_bundle(column(blue)).with_children(|cmds| {
+                let menu = |row: &RightColumnMenus| NavMenu::reachable_from(buttons[row.index()]);
+                let marking_menu = |row| MarkingMenu::new(menu(&row), row);
+                spawn_cell!(cmds).insert_bundle(marking_menu(RightColumnMenus::Top));
+                spawn_cell!(cmds).insert_bundle(marking_menu(RightColumnMenus::Middle));
+                spawn_cell!(cmds).insert_bundle(marking_menu(RightColumnMenus::Bottom));
+            });
         });
     });
 }
