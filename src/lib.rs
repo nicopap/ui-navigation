@@ -18,6 +18,7 @@ use std::fmt;
 use std::num::NonZeroUsize;
 
 use bevy::ecs::system::{QuerySingleError, SystemParam};
+use bevy::log::warn;
 use bevy::math::Vec3Swizzles;
 use bevy::prelude::*;
 pub use non_empty_vec::NonEmpty;
@@ -127,28 +128,6 @@ impl MenuSetting {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-enum CacheOption<T> {
-    NotYetCached,
-    Cached(T),
-}
-impl<T> From<Option<T>> for CacheOption<T> {
-    fn from(value: Option<T>) -> Self {
-        match value {
-            Some(value) => CacheOption::Cached(value),
-            None => CacheOption::NotYetCached,
-        }
-    }
-}
-impl<T> From<CacheOption<T>> for Option<T> {
-    fn from(value: CacheOption<T>) -> Self {
-        match value {
-            CacheOption::NotYetCached => None,
-            CacheOption::Cached(value) => Some(value),
-        }
-    }
-}
-
 /// A menu that isolate children [`Focusable`]s from other focusables and
 /// specify navigation method within itself.
 ///
@@ -180,9 +159,8 @@ pub struct NavMenu {
     /// How we want the user to move between [`Focusable`]s within this menu
     setting: MenuSetting,
 
-    /// This is a sort of cache to not have to walk down the ECS hierarchy
-    /// every time we need to find the relevant child.
-    non_inert_child: CacheOption<Entity>,
+    /// The currently dormant or active focusable in this menu
+    non_inert_child: Option<Entity>,
 }
 impl NavMenu {
     /// Prefer [`NavMenu::reachable_from`] and [`NavMenu::root`] to this
@@ -193,7 +171,7 @@ impl NavMenu {
         NavMenu {
             focus_parent,
             setting: MenuSetting::ClosedXY,
-            non_inert_child: CacheOption::NotYetCached,
+            non_inert_child: None,
         }
     }
 
@@ -258,14 +236,11 @@ impl NavMenu {
         Self::new(Some(focusable))
     }
 
-    fn with_non_inert_child(self, child: Option<Entity>) -> Self {
+    fn with_non_inert_child(self, child: Entity) -> Self {
         NavMenu {
-            non_inert_child: child.into(),
+            non_inert_child: Some(child),
             ..self
         }
-    }
-    fn non_inert_child(&self) -> Option<Entity> {
-        self.non_inert_child.into()
     }
 }
 
@@ -464,11 +439,7 @@ fn resolve_scope(
     cycles: bool,
     siblings: &NonEmpty<Entity>,
 ) -> Option<&Entity> {
-    let focused_index = siblings
-        .iter()
-        .enumerate()
-        .find(|e| *e.1 == focused)
-        .map(|e| e.0)?;
+    let focused_index = index_of(&focused, siblings.iter())?;
     let new_index = resolve_index(focused_index, cycles, direction, siblings.len().get() - 1);
     new_index.and_then(|i| siblings.get(i))
 }
@@ -548,7 +519,7 @@ fn resolve(
             }
             let child_menu = child_menu(focused, queries);
             let (child_menu, menu) = or_none!(child_menu);
-            let to = menu.non_inert_child().unwrap_or_else(|| {
+            let to = menu.non_inert_child.unwrap_or_else(|| {
                 let ret = children_focusables(child_menu, queries);
                 *non_inert_within(&ret, queries)
             });
@@ -586,7 +557,7 @@ fn resolve(
             if let Some(lock_entity) = lock.entity.take() {
                 NavEvent::Unlocked(lock_entity)
             } else {
-                bevy::log::warn!("Received a NavRequest::Free while not locked");
+                warn!("Received a NavRequest::Free while not locked");
                 NavEvent::NoChanges { from, request }
             }
         }
@@ -597,10 +568,10 @@ fn resolve(
 /// and disables the previous one
 fn cache_non_inert(child: Entity, queries: &NavQueries, cmds: &mut Commands) {
     if let Some((menu, nav_menu)) = parent_menu(child, queries) {
-        if let Some(entity) = nav_menu.non_inert_child() {
+        if let Some(entity) = nav_menu.non_inert_child {
             cmds.add(commands::set_focus_state(entity, FocusState::Inert));
         }
-        let updated_menu = nav_menu.with_non_inert_child(Some(child));
+        let updated_menu = nav_menu.with_non_inert_child(child);
         cmds.entity(menu).insert(updated_menu);
     }
 }
@@ -619,9 +590,7 @@ fn listen_nav_requests(
     let mut requests = requests.iter();
     if let Some(request) = requests.next() {
         if requests.next().is_some() {
-            bevy::log::warn!(
-                "Unhandled additional NavRequests, can only handle one per frame, sorry!"
-            )
+            warn!("Unhandled additional NavRequests, can only handle one per frame, sorry!");
         }
         if lock.is_locked() && *request != NavRequest::Free {
             return;
@@ -631,12 +600,8 @@ fn listen_nav_requests(
                 !matches!(err, QuerySingleError::MultipleEntities(_)),
                 "Multiple entities with Focused component, this should not happen"
             );
-            queries
-                .focusables
-                .iter()
-                .next()
-                .expect("Before sending a NavRequest, AT LEAST ONE `Focusable` should exist")
-                .0
+            let none_msg = "Before sending a NavRequest, AT LEAST ONE `Focusable` should exist";
+            queries.focusables.iter().next().expect(none_msg).0
         });
         let event = resolve(focused_id, *request, &queries, &mut lock, Vec::new());
         // Change focus state of relevant entities
@@ -684,7 +649,7 @@ fn parent_menu(focusable: Entity, queries: &NavQueries) -> Option<(Entity, NavMe
 fn children_focusables(menu: Entity, queries: &NavQueries) -> NonEmpty<Entity> {
     let ret = children_focusables_helper(menu, queries);
     NonEmpty::try_from(ret)
-        .expect("A NavMenu MUST AT LEAST HAVE ONE Focusable child, {menu:?} has none")
+        .expect("A NavMenu MUST AT LEAST HAVE ONE Focusable child, found one without")
 }
 
 fn children_focusables_helper(menu: Entity, queries: &NavQueries) -> Vec<Entity> {
@@ -766,12 +731,11 @@ fn root_path(mut from: Entity, queries: &NavQueries) -> NonEmpty<Entity> {
     }
 }
 
-/// Navigate downward the menu hierarchy N steps, and return the path to the
-/// last level reached
+/// Navigate downward the menu hierarchy, traversing all dormant children
 fn focus_deep<'a>(mut menu: &'a NavMenu, queries: &'a NavQueries) -> Vec<Entity> {
     let mut ret = Vec::with_capacity(4);
     loop {
-        let last = match menu.non_inert_child() {
+        let last = match menu.non_inert_child {
             Some(additional) => {
                 ret.insert(0, additional);
                 additional
@@ -803,6 +767,10 @@ fn resolve_index(
         (Next, from) if from == max_value => cycles.then(|| 0),
         (Next, from) => Some(from + 1),
     }
+}
+
+fn index_of<'a, T: 'a + PartialEq>(elem: &T, iter: impl Iterator<Item = &'a T>) -> Option<usize> {
+    iter.enumerate().find(|ie| ie.1 == elem).map(|ie| ie.0)
 }
 
 /// The navigation plugin
