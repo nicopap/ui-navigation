@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use bevy_ui_navigation::systems::{
     default_gamepad_input, default_keyboard_input, default_mouse_input, InputMapping,
 };
-use bevy_ui_navigation::{Focusable, NavEvent, NavMenu, NavRequest, NavigationPlugin};
+use bevy_ui_navigation::{FocusState, Focusable, NavEvent, NavMenu, NavRequest, NavigationPlugin};
 
 /// This example demonstrates a more complex menu system where you navigate
 /// through menus and go to submenus using the `Action` and `Cancel`
@@ -33,7 +33,6 @@ fn main() {
         .init_resource::<InputMapping>()
         .insert_resource(Gameui::new())
         .add_startup_system(setup)
-        .add_system(query_bad_stuff)
         .add_system(button_system)
         .add_system(default_keyboard_input)
         .add_system(default_gamepad_input)
@@ -55,17 +54,7 @@ impl Gameui {
     }
 }
 
-fn query_bad_stuff(query: Query<(Entity, &NavMenu, &Focusable), Changed<Focusable>>) {
-    if !query.is_empty() {
-        println!("BAD STUFF: {:?}", query.iter().collect::<Vec<_>>());
-    }
-}
-
 struct Materials {
-    inert: Color,
-    focused: Color,
-    active: Color,
-    dormant: Color,
     background: Color,
     rarrow: UiImage,
     circle: UiImage,
@@ -77,10 +66,6 @@ impl FromWorld for Materials {
         let rarrow = assets.load("rarrow.png").into();
         let circle = assets.load("green_circle.png").into();
         Materials {
-            inert: Color::DARK_GRAY,
-            focused: Color::ORANGE_RED,
-            active: Color::GOLD,
-            dormant: Color::GRAY,
             background: Color::BLACK,
             rarrow,
             circle,
@@ -88,21 +73,15 @@ impl FromWorld for Materials {
     }
 }
 
-#[allow(clippy::type_complexity)]
-fn button_system(
-    materials: Res<Materials>,
-    mut interaction_query: Query<(&Focusable, &mut UiColor), (Changed<Focusable>, With<Button>)>,
-) {
-    for (focus_state, mut material) in interaction_query.iter_mut() {
-        if focus_state.is_focused() {
-            *material = materials.focused.into();
-        } else if focus_state.is_active() {
-            *material = materials.active.into();
-        } else if focus_state.is_dormant() {
-            *material = materials.dormant.into();
-        } else {
-            *material = materials.inert.into();
-        }
+fn button_system(mut interaction_query: Query<(&Focusable, &mut UiColor), Changed<Focusable>>) {
+    for (focus, mut material) in interaction_query.iter_mut() {
+        let color = match focus.state() {
+            FocusState::Focused => Color::ORANGE_RED,
+            FocusState::Active => Color::GOLD,
+            FocusState::Dormant => Color::GRAY,
+            FocusState::Inert => Color::DARK_GRAY,
+        };
+        *material = color.into();
     }
 }
 
@@ -172,47 +151,46 @@ fn setup(mut commands: Commands, materials: Res<Materials>, mut game: ResMut<Gam
         ..Default::default()
     };
 
-    commands
-        .spawn_bundle(bundle)
-        .insert(NavMenu::root())
-        .with_children(|commands| {
-            let mut next_menu_button: Option<Entity> = None;
-            for j in 0..5 {
-                commands
-                    .spawn_bundle(menu(&materials))
-                    .insert(NavMenu::new(next_menu_button).cycling())
-                    .with_children(|commands| {
-                        for i in 0..4 {
-                            let mut button = commands.spawn_bundle(button(&materials));
-                            button.insert(Focusable::default());
-                            if j == 0 && i == 3 {
-                                game.to = button.id();
-                            }
-                            if j == i {
-                                button.with_children(|commands| {
-                                    commands.spawn_bundle(rarrow.clone());
-                                });
-                                next_menu_button = Some(button.id());
-                            }
-                            if j == 3 && i == 1 {
-                                button.insert(Focusable::cancel()).with_children(|cmds| {
-                                    cmds.spawn_bundle(circle.clone());
-                                });
-                            }
-                            if j == 4 {
-                                let to_add = button
-                                    .with_children(|commands| {
-                                        commands.spawn_bundle(circle.clone());
-                                    })
-                                    .id();
-                                game.from.push(to_add);
-                            }
+    commands.spawn_bundle(bundle).with_children(|commands| {
+        let mut next_menu_button: Option<Entity> = None;
+        for j in 0..5 {
+            commands
+                .spawn_bundle(menu(&materials))
+                // Note: when next_menu_button is None,
+                // `with_parent(next_menu_button)` represents the root menu
+                .insert_bundle(NavMenu::Wrapping2d.with_parent(next_menu_button))
+                .with_children(|commands| {
+                    for i in 0..4 {
+                        let mut button = commands.spawn_bundle(button());
+                        button.insert(Focusable::default());
+                        if j == 0 && i == 3 {
+                            game.to = button.id();
                         }
-                    });
-            }
-        });
+                        if j == i {
+                            button.with_children(|commands| {
+                                commands.spawn_bundle(rarrow.clone());
+                            });
+                            next_menu_button = Some(button.id());
+                        }
+                        if j == 3 && i == 1 {
+                            button.insert(Focusable::cancel()).with_children(|cmds| {
+                                cmds.spawn_bundle(circle.clone());
+                            });
+                        }
+                        if j == 4 {
+                            let to_add = button
+                                .with_children(|commands| {
+                                    commands.spawn_bundle(circle.clone());
+                                })
+                                .id();
+                            game.from.push(to_add);
+                        }
+                    }
+                });
+        }
+    });
 }
-fn button(materials: &Materials) -> ButtonBundle {
+fn button() -> ButtonBundle {
     let size_fn = |width, height| Size::new(Val::Percent(width), Val::Percent(height));
     let size = size_fn(95.0, 12.0);
     let style = Style {
@@ -222,7 +200,6 @@ fn button(materials: &Materials) -> ButtonBundle {
     };
     ButtonBundle {
         style,
-        color: materials.inert.into(),
         ..Default::default()
     }
 }

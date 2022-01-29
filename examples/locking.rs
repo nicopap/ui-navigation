@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use bevy_ui_navigation::systems::{
     default_gamepad_input, default_keyboard_input, default_mouse_input, InputMapping,
 };
-use bevy_ui_navigation::{Focusable, NavEvent, NavigationPlugin};
+use bevy_ui_navigation::{FocusState, Focusable, NavEvent, NavigationPlugin};
 
 /// This example illustrates how to make a button "lock". To lock the UI, press
 /// 'A' on controller or 'left click' on mouse when the button with the lock is
@@ -38,8 +38,8 @@ fn print_nav_events(mut events: EventReader<NavEvent>) {
 fn button_system(
     mut interaction_query: Query<(&Focusable, &mut UiColor), (Changed<Focusable>, With<Button>)>,
 ) {
-    for (focus_state, mut material) in interaction_query.iter_mut() {
-        if focus_state.is_focused() {
+    for (focus, mut material) in interaction_query.iter_mut() {
+        if let FocusState::Focused = focus.state() {
             *material = Color::ORANGE_RED.into();
         } else {
             *material = Color::DARK_GRAY.into();

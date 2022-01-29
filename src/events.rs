@@ -1,3 +1,19 @@
+//! Navigation events and requests
+//!
+//! The navigation system works through bevy's `Events` system. Basically, it is
+//! a system with one input and two outputs:
+//! * Input [`Events<NavRequst>`](https://docs.rs/bevy/0.6.0/bevy/app/struct.Events.html),
+//!   tells the navigation system what to do. Your app should have a system
+//!   that writes to a [`EventWriter<NavRequest>`](https://docs.rs/bevy/0.6.0/bevy/app/struct.EventWriter.html)
+//!   based on inputs or internal game state. Usually, the default input systems specified
+//!   in [`crate::systems`] do that for you. But you can add your own requests
+//!   on top of the ones the default systems send. For example to unlock the UI with
+//!   [`NavRequest::Free`].
+//! * Output [`Focusable`](crate::Focusable) components. The navigation system
+//!   updates the focusables component according to the focus state of the
+//!   navigation system. See examples directory for how to read those
+//! * Output [`EventReader<NavEvent>`](https://docs.rs/bevy/0.6.0/bevy/app/struct.EventReader.html),
+//!   contains specific information about what the navigation system is doing.
 use bevy::ecs::entity::Entity;
 use bevy::math::Vec2;
 use non_empty_vec::NonEmpty;
@@ -7,7 +23,7 @@ use non_empty_vec::NonEmpty;
 pub enum NavRequest {
     /// Move in 2d in provided direction
     Move(Direction),
-    /// Move within the encompassing [`NavMenu::scope`](crate::NavMenu::scope)
+    /// Move within the encompassing [`NavMenu::BoundScope`](crate::NavMenu::BoundScope)
     ScopeMove(ScopeDirection),
     /// Enter submenu if any [`NavMenu::reachable_from`](crate::NavMenu::reachable_from)
     /// the currently focused entity.
@@ -18,11 +34,12 @@ pub enum NavRequest {
     FocusOn(Entity),
     /// Unlocks the navigation system.
     ///
-    /// A [`NavEvent::Unlocked`] will be emitted
+    /// A [`NavEvent::Unlocked`] will be emitted as a response if the
+    /// navigation system was indeed locked.
     Free,
 }
 
-/// Direction for movement in [`NavMenu::scope`](crate::NavMenu::scope) menus.
+/// Direction for movement in [`NavMenu::BoundScope`](crate::NavMenu::BoundScope) menus.
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum ScopeDirection {
     Next,

@@ -4,12 +4,11 @@ use bevy_ui_navigation::systems::{
     default_gamepad_input, default_keyboard_input, default_mouse_input, InputMapping,
 };
 use bevy_ui_navigation::{
-    marker::{MarkingMenu, NavMarkerPropagationPlugin},
-    Focusable, Focused, NavMenu, NavigationPlugin,
+    FocusState, Focusable, Focused, NavMarkerPropagationPlugin, NavMenu, NavigationPlugin,
 };
 
 macro_rules! column_type {
-    ($type_name:ident, $index_base:expr) => {
+    (enum $type_name:ident , $i_base:expr) => {
         #[derive(Component, Clone, Debug)]
         enum $type_name {
             Top,
@@ -17,19 +16,19 @@ macro_rules! column_type {
             Bottom,
         }
         impl $type_name {
-            fn index(&self) -> usize {
+            fn i(&self) -> usize {
                 match *self {
-                    $type_name::Top => $index_base + 0,
-                    $type_name::Middle => $index_base + 1,
-                    $type_name::Bottom => $index_base + 2,
+                    $type_name::Top => $i_base + 0,
+                    $type_name::Middle => $i_base + 1,
+                    $type_name::Bottom => $i_base + 2,
                 }
             }
         }
     };
 }
-column_type!(LeftColumnMenus, 0);
-column_type!(CenterColumnMenus, 3);
-column_type!(RightColumnMenus, 6);
+column_type!(enum LeftColMenu, 0);
+column_type!(enum CenterColMenu, 3);
+column_type!(enum RightColMenu, 6);
 
 /// This example demonstrates the `marker` module features.
 ///
@@ -46,9 +45,9 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         // We must add the NavMarker plugin for each menu marker types we want
-        .add_plugin(NavMarkerPropagationPlugin::<LeftColumnMenus>::new())
-        .add_plugin(NavMarkerPropagationPlugin::<CenterColumnMenus>::new())
-        .add_plugin(NavMarkerPropagationPlugin::<RightColumnMenus>::new())
+        .add_plugin(NavMarkerPropagationPlugin::<LeftColMenu>::new())
+        .add_plugin(NavMarkerPropagationPlugin::<CenterColMenu>::new())
+        .add_plugin(NavMarkerPropagationPlugin::<RightColMenu>::new())
         .add_plugin(NavigationPlugin)
         .init_resource::<InputMapping>()
         .add_startup_system(setup)
@@ -61,9 +60,9 @@ fn main() {
 }
 
 fn print_menus(
-    left_menus: Query<&LeftColumnMenus, Added<Focused>>,
-    center_menus: Query<&CenterColumnMenus, Added<Focused>>,
-    right_menus: Query<&RightColumnMenus, Added<Focused>>,
+    left_menus: Query<&LeftColMenu, Added<Focused>>,
+    center_menus: Query<&CenterColMenu, Added<Focused>>,
+    right_menus: Query<&RightColMenu, Added<Focused>>,
 ) {
     // To do something when entering a menu, you use a `Query` on a
     // component specified in the `NavMarkerPropagationPlugin`
@@ -83,21 +82,20 @@ fn print_menus(
 }
 
 fn button_system(mut interaction_query: Query<(&Focusable, &mut UiColor), Changed<Focusable>>) {
-    for (focus_state, mut material) in interaction_query.iter_mut() {
-        if focus_state.is_focused() {
-            *material = Color::ORANGE.into()
-        } else if focus_state.is_active() {
-            *material = Color::GOLD.into()
-        } else if focus_state.is_dormant() {
-            *material = Color::GRAY.into()
-        } else {
-            *material = Color::BLACK.into()
-        }
+    for (focus, mut material) in interaction_query.iter_mut() {
+        let color = match focus.state() {
+            FocusState::Focused => Color::ORANGE,
+            FocusState::Active => Color::GOLD,
+            FocusState::Dormant => Color::GRAY,
+            FocusState::Inert => Color::BLACK,
+        };
+        *material = color.into();
     }
 }
 
 fn setup(mut commands: Commands) {
     use FlexDirection::{ColumnReverse, Row};
+    use NavMenu::Wrapping2d as WrapMenu;
     use Val::{Percent as Pct, Px};
     // ui camera
     commands.spawn_bundle(UiCameraBundle::default());
@@ -150,7 +148,7 @@ fn setup(mut commands: Commands) {
             [$k, $k, $k, $k, $k, $k, $k, $k, $k]
         };
     }
-    let buttons: [Entity; 9] = nine![commands
+    let bts: [Entity; 9] = nine![commands
         .spawn_bundle(button.clone())
         .insert(Focusable::default())
         .id()];
@@ -169,9 +167,9 @@ fn setup(mut commands: Commands) {
     // spawn the whole UI tree
     commands.spawn_bundle(root).with_children(|cmds| {
         cmds.spawn_bundle(keyboard)
-            // Add root menu vvvvvv
-            .insert(NavMenu::root().scope().cycling())
-            .push_children(&buttons);
+            // Add root menu        vvvvvvvvvvvvvvvvvvvv
+            .insert_bundle(NavMenu::WrappingScope.root())
+            .push_children(&bts);
 
         cmds.spawn_bundle(billboard).with_children(|cmds| {
             // Note: each colored column has a different type, but
@@ -179,26 +177,26 @@ fn setup(mut commands: Commands) {
             //
             // in `print_menus`, we detect the menu in which we are
             // using the `Query<&LeftColumnMenus>` query.
+            //
+            // `WrapMenu` = `NavMenu::Wrapping2d`, see type alias on top of this
+            // function.
             cmds.spawn_bundle(column(red)).with_children(|cmds| {
-                let menu = |row: &LeftColumnMenus| NavMenu::reachable_from(buttons[row.index()]);
-                let marking_menu = |row| MarkingMenu::new(menu(&row), row);
-                spawn_cell!(cmds).insert_bundle(marking_menu(LeftColumnMenus::Top));
-                spawn_cell!(cmds).insert_bundle(marking_menu(LeftColumnMenus::Middle));
-                spawn_cell!(cmds).insert_bundle(marking_menu(LeftColumnMenus::Bottom));
+                let menu = |row: LeftColMenu| WrapMenu.reachable_from(bts[row.i()]).marking(row);
+                spawn_cell!(cmds).insert_bundle(menu(LeftColMenu::Top));
+                spawn_cell!(cmds).insert_bundle(menu(LeftColMenu::Middle));
+                spawn_cell!(cmds).insert_bundle(menu(LeftColMenu::Bottom));
             });
             cmds.spawn_bundle(column(green)).with_children(|cmds| {
-                let menu = |row: &CenterColumnMenus| NavMenu::reachable_from(buttons[row.index()]);
-                let marking_menu = |row| MarkingMenu::new(menu(&row), row);
-                spawn_cell!(cmds).insert_bundle(marking_menu(CenterColumnMenus::Top));
-                spawn_cell!(cmds).insert_bundle(marking_menu(CenterColumnMenus::Middle));
-                spawn_cell!(cmds).insert_bundle(marking_menu(CenterColumnMenus::Bottom));
+                let menu = |row: CenterColMenu| WrapMenu.reachable_from(bts[row.i()]).marking(row);
+                spawn_cell!(cmds).insert_bundle(menu(CenterColMenu::Top));
+                spawn_cell!(cmds).insert_bundle(menu(CenterColMenu::Middle));
+                spawn_cell!(cmds).insert_bundle(menu(CenterColMenu::Bottom));
             });
             cmds.spawn_bundle(column(blue)).with_children(|cmds| {
-                let menu = |row: &RightColumnMenus| NavMenu::reachable_from(buttons[row.index()]);
-                let marking_menu = |row| MarkingMenu::new(menu(&row), row);
-                spawn_cell!(cmds).insert_bundle(marking_menu(RightColumnMenus::Top));
-                spawn_cell!(cmds).insert_bundle(marking_menu(RightColumnMenus::Middle));
-                spawn_cell!(cmds).insert_bundle(marking_menu(RightColumnMenus::Bottom));
+                let menu = |row: RightColMenu| WrapMenu.reachable_from(bts[row.i()]).marking(row);
+                spawn_cell!(cmds).insert_bundle(menu(RightColMenu::Top));
+                spawn_cell!(cmds).insert_bundle(menu(RightColMenu::Middle));
+                spawn_cell!(cmds).insert_bundle(menu(RightColMenu::Bottom));
             });
         });
     });

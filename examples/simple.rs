@@ -3,13 +3,15 @@ use bevy::prelude::*;
 use bevy_ui_navigation::systems::{
     default_gamepad_input, default_keyboard_input, default_mouse_input, InputMapping,
 };
-use bevy_ui_navigation::{Focusable, NavEvent, NavigationPlugin};
+use bevy_ui_navigation::{FocusState, Focusable, NavEvent, NavigationPlugin};
 
 /// This example illustrates how to mark buttons as focusable and let
 /// NavigationPlugin figure out how to go from one to another.
+/// See lines 15 and 89 for details.
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
+        // vvvvvvvvvvvvvvvvvvvvvvvvvvv
         // 1: Add the NavigationPlugin
         .add_plugin(NavigationPlugin)
         .init_resource::<InputMapping>()
@@ -23,8 +25,8 @@ fn main() {
 }
 
 fn button_system(mut interaction_query: Query<(&Focusable, &mut UiColor), Changed<Focusable>>) {
-    for (focus_state, mut material) in interaction_query.iter_mut() {
-        if focus_state.is_focused() {
+    for (focusable, mut material) in interaction_query.iter_mut() {
+        if let FocusState::Focused = focusable.state() {
             *material = Color::ORANGE_RED.into();
         } else {
             *material = Color::DARK_GRAY.into();
@@ -83,6 +85,7 @@ fn spawn_button(position: Vec2, commands: &mut ChildBuilder) {
             color: Color::DARK_GRAY.into(),
             ..Default::default()
         })
+        // vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
         // 2. Add the `Focusable` component to the navigable Entity
         .insert(Focusable::default());
 }

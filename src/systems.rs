@@ -1,6 +1,6 @@
 //! System for the navigation tree and default input systems to get started
 use crate::events::{Direction, NavRequest, ScopeDirection};
-use crate::{max_by_in_iter, Focusable, Focused};
+use crate::{resolve::max_by_in_iter, Focusable, Focused};
 use bevy::ecs::system::SystemParam;
 use bevy::math::Vec3Swizzles;
 use bevy::prelude::*;
@@ -193,6 +193,8 @@ pub fn default_keyboard_input(
     }
 }
 
+/// [`SystemParam`](https://docs.rs/bevy/0.6.0/bevy/ecs/system/trait.SystemParam.html)
+/// used to compute UI focusable physical positions in mouse input systems.
 #[derive(SystemParam)]
 pub struct NodePosQuery<'w, 's, T: Component, U: Component> {
     entities: Query<'w, 's, (Entity, &'static T, &'static GlobalTransform), With<Focusable>>,
@@ -244,7 +246,12 @@ impl ScreenSize for Node {
     }
 }
 
+/// Marker component for "camera" entity.
+///
+/// We will use the `GlobalTransform` of this entity to compute the offset
+/// needed to correct mouse positions in real-world coordinate.
 #[cfg(feature = "bevy-ui")]
+#[doc(hidden)]
 #[derive(Component)]
 pub struct UiCamera;
 
@@ -300,7 +307,7 @@ pub fn default_mouse_input(
 /// A generic system to send mouse control events to the focus system
 ///
 /// `T` must be a component assigned to `Focusable` elements that implements
-/// the [`ScreenSize`] trait. `M` is simply a marker trait for your camera
+/// the [`ScreenSize`] trait. `M` is simply a marker component for your camera
 /// entity, if no entities has the `M` component, we assume the screen space
 /// is not offset from the `GlobalTransform` of focusable elements.
 ///

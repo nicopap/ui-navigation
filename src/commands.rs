@@ -15,13 +15,10 @@ impl Command for UpdateFocusable {
         if let Some(mut entity) = entity.get_mut::<Focusable>() {
             entity.focus_state = self.new_state;
         }
-        match self.new_state {
-            FocusState::Focused => {
-                entity.insert(Focused);
-            }
-            _ => {
-                entity.remove::<Focused>();
-            }
-        };
+        if let FocusState::Focused = self.new_state {
+            entity.insert(Focused);
+        } else {
+            entity.remove::<Focused>();
+        }
     }
 }

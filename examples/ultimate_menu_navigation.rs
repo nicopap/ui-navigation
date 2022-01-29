@@ -4,7 +4,7 @@ use bevy_ui_build_macros::{build_ui, rect, size, style, unit};
 use bevy_ui_navigation::{
     components::FocusableButtonBundle,
     systems::{default_gamepad_input, default_keyboard_input, default_mouse_input, InputMapping},
-    Focusable, NavMenu, NavigationPlugin,
+    FocusState, Focusable, NavMenu, NavigationPlugin,
 };
 
 /// THE ULTIMATE MENU DEMONSTRATION
@@ -25,7 +25,6 @@ use bevy_ui_navigation::{
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .init_resource::<Materials>()
         .init_resource::<InputMapping>()
         .add_plugin(NavigationPlugin)
         .add_startup_system(setup)
@@ -36,42 +35,19 @@ fn main() {
         .run();
 }
 
-struct Materials {
-    inert: Color,
-    focused: Color,
-    active: Color,
-    dormant: Color,
-}
-impl Default for Materials {
-    fn default() -> Self {
-        Materials {
-            inert: Color::DARK_GRAY,
-            focused: Color::ORANGE_RED,
-            active: Color::GOLD,
-            dormant: Color::GRAY,
-        }
+fn button_system(mut interaction_query: Query<(&Focusable, &mut UiColor), Changed<Focusable>>) {
+    for (focus, mut material) in interaction_query.iter_mut() {
+        let color = match focus.state() {
+            FocusState::Focused => Color::ORANGE_RED,
+            FocusState::Active => Color::GOLD,
+            FocusState::Dormant => Color::GRAY,
+            FocusState::Inert => Color::DARK_GRAY,
+        };
+        *material = color.into();
     }
 }
 
-#[allow(clippy::type_complexity)]
-fn button_system(
-    materials: Res<Materials>,
-    mut interaction_query: Query<(&Focusable, &mut UiColor), (Changed<Focusable>, With<Button>)>,
-) {
-    for (focus_state, mut material) in interaction_query.iter_mut() {
-        if focus_state.is_focused() {
-            *material = materials.focused.into();
-        } else if focus_state.is_active() {
-            *material = materials.active.into();
-        } else if focus_state.is_dormant() {
-            *material = materials.dormant.into();
-        } else {
-            *material = materials.inert.into();
-        }
-    }
-}
-
-fn setup(mut commands: Commands, our_materials: Res<Materials>) {
+fn setup(mut commands: Commands) {
     use FlexDirection::{ColumnReverse, Row};
     use FlexWrap::Wrap;
     use JustifyContent::{FlexStart, SpaceBetween};
@@ -84,7 +60,6 @@ fn setup(mut commands: Commands, our_materials: Res<Materials>) {
     let blue: UiColor = Color::BLUE.into();
     let green: UiColor = Color::GREEN.into();
     let gray: UiColor = Color::rgba(0.9, 0.9, 0.9, 0.3).into();
-    let black: UiColor = our_materials.inert.into();
     let transparent: UiColor = Color::NONE.into();
 
     let vertical = NodeBundle {
@@ -111,7 +86,6 @@ fn setup(mut commands: Commands, our_materials: Res<Materials>) {
             size: size!(40 px, 40 px),
             margin: rect!(2 px),
         },
-        color: black,
         ..Default::default()
     });
     let long = FocusableButtonBundle::from(ButtonBundle {
@@ -119,7 +93,6 @@ fn setup(mut commands: Commands, our_materials: Res<Materials>) {
             size: size!(100 pct, 40 px),
             margin: rect!(2 px),
         },
-        color: black,
         ..Default::default()
     });
     let tab_square = FocusableButtonBundle::from(ButtonBundle {
@@ -127,7 +100,6 @@ fn setup(mut commands: Commands, our_materials: Res<Materials>) {
             size: size!(100 px, 40 px),
             margin: rect!(30 px, 0 px),
         },
-        color: black,
         ..Default::default()
     });
     let column_box = NodeBundle {
@@ -154,8 +126,8 @@ fn setup(mut commands: Commands, our_materials: Res<Materials>) {
         ..Default::default()
     };
 
-    let menu = |name| NavMenu::root().reachable_from_named(name);
-    let cycle_menu = |name| NavMenu::root().cycling().reachable_from_named(name);
+    let menu = |name| NavMenu::Bound2d.reachable_from_named(name);
+    let cycle_menu = |name| NavMenu::Wrapping2d.reachable_from_named(name);
     let named = Name::new;
 
     // The macro is a very thin wrapper over the "normal" UI declaration
@@ -168,41 +140,41 @@ fn setup(mut commands: Commands, our_materials: Res<Materials>) {
     build_ui! {
         #[cmd(commands)]
         // The tab menu should be navigated with `NavRequest::ScopeMove`
-        // hence the `.scope()`                 vvvvvvvvvvvvvvv          vvvvvvvv
-        vertical{size:size!(100 pct, 100 pct)}[;NavMenu::root().cycling().scope()](
+        // hence the `WrappingScope`                    vvvvvvvvvvvvvvvvvvvv
+        vertical{size:size!(100 pct, 100 pct)}[NavMenu::WrappingScope.root();](
             horizontal{justify_content: FlexStart, flex_basis: unit!(10 pct)}(
                 // adding a `Name` component let us refer to those entities
                 // later without having to store their `Entity` ids anywhere.
-                tab_square[;named("red")],
-                tab_square[;named("green")],
-                tab_square[;named("blue")]
+                tab_square[; named("red")],
+                tab_square[; named("green")],
+                tab_square[; named("blue")]
             ),
             column_box(
-                //           vvvvvvvvvvv
-                column[;red, menu("red")](
-                    vertical(long[;named("select1")], long[;named("select2")]),
-                    horizontal{flex_wrap: Wrap}[;gray, cycle_menu("select1")](
+                //     vvvvvvvvvvv refers to the "red" `tab_square`
+                column[menu("red"); red](
+                    vertical(long[; named("select1")], long[; named("select2")]),
+                    horizontal{flex_wrap: Wrap}[cycle_menu("select1"); gray](
                         square, square, square, square, square, square, square, square,
                         square, square, square, square, square, square, square, square,
                         square, square, square, square
                     ),
-                    horizontal{flex_wrap: Wrap}[;gray, cycle_menu("select2")](
+                    horizontal{flex_wrap: Wrap}[cycle_menu("select2"); gray](
                         square, square, square, square, square, square, square, square
                     )
                 ),
-                //             vvvvvvvvvvvvv
-                column[;green, menu("green")](
-                    horizontal(long[;named("g1")], horizontal[;gray, cycle_menu("g1")](square, square)),
-                    horizontal(long[;named("g2")], horizontal[;gray, menu("g2")](square)),
-                    horizontal(long[;named("g3")], horizontal[;gray, cycle_menu("g3")](square, square, square)),
-                    horizontal(long[;named("g4")], horizontal[;gray, menu("g4")](square, square, square)),
-                    horizontal(long[;named("g5")], horizontal[;gray, cycle_menu("g5")](square, square)),
-                    horizontal(long[;named("g6")], horizontal[;gray, menu("g6")](square, square, square)),
-                    horizontal(long[;named("g7")], horizontal[;gray, cycle_menu("g7")](square, square, square)),
-                    horizontal(long[;named("g8")], horizontal[;gray, menu("g8")](square, square))
+                //     vvvvvvvvvvvvv refers to the "green" `tab_square`
+                column[menu("green"); green](
+                    horizontal(long[;named("g1")], horizontal[cycle_menu("g1"); gray](square, square)),
+                    horizontal(long[;named("g2")], horizontal[menu("g2");       gray](square)),
+                    horizontal(long[;named("g3")], horizontal[cycle_menu("g3"); gray](square, square, square)),
+                    horizontal(long[;named("g4")], horizontal[menu("g4");       gray](square, square, square)),
+                    horizontal(long[;named("g5")], horizontal[cycle_menu("g5"); gray](square, square)),
+                    horizontal(long[;named("g6")], horizontal[menu("g6");       gray](square, square, square)),
+                    horizontal(long[;named("g7")], horizontal[cycle_menu("g7"); gray](square, square, square)),
+                    horizontal(long[;named("g8")], horizontal[menu("g8");       gray](square, square))
                 ),
-                //            vvvvvvvvvvvv
-                column[;blue, menu("blue")](
+                //     vvvvvvvvvvvv refers to the "blue" `tab_square`
+                column[menu("blue"); blue](
                     vertical(
                         vertical(long, long, long, long),
                         colored_square
