@@ -79,7 +79,7 @@ for more example code.
 
 To respond to relevant user input, for example when the player pressed the
 "Action" button when focusing `start_game_button`, you should read the
-[`NavEvent`](https://docs.rs/bevy-ui-navigation/0.13.0/bevy_ui_navigation/enum.NavEvent.html) event queue:
+[`NavEvent`](https://docs.rs/bevy-ui-navigation/0.13.0/bevy_ui_navigation/events/enum.NavEvent.html) event queue:
 
 ```rust
 use bevy::prelude::*;
@@ -155,7 +155,7 @@ If you need to supress the navigation algorithm temporarily, you can declare a
 This is useful for example if you want to implement custom widget with their
 own controls, or if you want to disable menu navigation while in game. To
 resume the navigation system, you'll need to send a
-[`NavRequest::Free`](https://docs.rs/bevy-ui-navigation/0.13.0/bevy_ui_navigation/enum.NavRequest.html#variant.Free).
+[`NavRequest::Free`](https://docs.rs/bevy-ui-navigation/0.13.0/bevy_ui_navigation/events/enum.NavRequest.html#variant.Free).
 
 
 ### `NavRequest::FocusOn`
@@ -163,7 +163,7 @@ resume the navigation system, you'll need to send a
 You can't directly manipulate which entity is focused, because we need to keep
 track of a lot of thing on the backend to make the navigation work as expected.
 But you can set the focused element to any arbitrary `Focusable` entity with
-[`NavRequest::FocusOn`](https://docs.rs/bevy-ui-navigation/0.13.0/bevy_ui_navigation/enum.NavRequest.html#variant.FocusOn).
+[`NavRequest::FocusOn`](https://docs.rs/bevy-ui-navigation/0.13.0/bevy_ui_navigation/events/enum.NavRequest.html#variant.FocusOn).
 
 ```rust
 use bevy::prelude::*;
@@ -190,7 +190,7 @@ menu leads to the next menu (for example, you would press the "Options" button
 in the game menu to access the options menu).
 
 For that, you need to use
-[`NavMenu`](https://docs.rs/bevy-ui-navigation/0.13.0/bevy_ui_navigation/struct.NavMenu.html).
+[`NavMenu`](https://docs.rs/bevy-ui-navigation/0.13.0/bevy_ui_navigation/enum.NavMenu.html).
 
 The high level usage of `NavMenu` is as follow:
 1. First you need a "root" `NavMenu`.
@@ -198,7 +198,7 @@ The high level usage of `NavMenu` is as follow:
    [`Focusable`](https://docs.rs/bevy-ui-navigation/0.13.0/bevy_ui_navigation/struct.Focusable.html)
    component. To link the button to your options menu, you need to do
    one of the following:
-   * Add a [`Name("opt_btn_name")`](https://docs.rs/bevy/0.6.0/bevy/core/struct.Name.html)
+   * Add a [`Name("opt_btn_name")`](https://docs.rs/bevy/0.6.0/bevy/core/enum.Name.html)
      component in addition to the `Focusable` component to your options button.
    * Pre-spawn the options button and store somewhere it's [`Entity`
      id](https://docs.rs/bevy/0.6.0/bevy/ecs/system/struct.EntityCommands.html#method.id)
@@ -206,9 +206,9 @@ The high level usage of `NavMenu` is as follow:
 3. to the `NodeBundle` containing all the options menu
    [`Focusable`](https://docs.rs/bevy-ui-navigation/0.13.0/bevy_ui_navigation/struct.Focusable.html)
    entities, you add the following bundle:
-   * [`NavMenu::Bound2d.reachable_from_named("opt_btn_name")`](https://docs.rs/bevy-ui-navigation/0.13.0/bevy_ui_navigation/struct.NavMenu.html#method.reachable_from_named)
+   * [`NavMenu::Bound2d.reachable_from_named("opt_btn_name")`](https://docs.rs/bevy-ui-navigation/0.13.0/bevy_ui_navigation/enum.NavMenu.html#method.reachable_from_named)
      if you opted for adding the `Name` component.
-   * [`NavMenu::Bound2d.reachable_from(opt_btn)`](https://docs.rs/bevy-ui-navigation/0.13.0/bevy_ui_navigation/struct.NavMenu.html#method.reachable_from)
+   * [`NavMenu::Bound2d.reachable_from(opt_btn)`](https://docs.rs/bevy-ui-navigation/0.13.0/bevy_ui_navigation/enum.NavMenu.html#method.reachable_from)
      if you have the `Entity` id.
 
 In code, This will look like this:
@@ -272,9 +272,9 @@ fn spawn_menu(mut cmds: Commands, save_files: Vec<SaveFile>) {
 ```
 
 With this, your game menu will be isolated from your options menu, you can only
-access it by sending [`NavRequest::Action`](https://docs.rs/bevy-ui-navigation/0.13.0/bevy_ui_navigation/enum.NavRequest.html#variant.Action)
+access it by sending [`NavRequest::Action`](https://docs.rs/bevy-ui-navigation/0.13.0/bevy_ui_navigation/events/enum.NavRequest.html#variant.Action)
 when `options_button` is focused, or by sending a
-[`NavRequest::FocusOn(entity)`](https://docs.rs/bevy-ui-navigation/0.13.0/bevy_ui_navigation/enum.NavRequest.html#variant.FocusOn) where `entity` is any of `graphics_option`, `audio_options` or `input_options`.
+[`NavRequest::FocusOn(entity)`](https://docs.rs/bevy-ui-navigation/0.13.0/bevy_ui_navigation/events/enum.NavRequest.html#variant.FocusOn) where `entity` is any of `graphics_option`, `audio_options` or `input_options`.
 
 Note that you won't need to manually send the `NavRequest` if you are using one
 of the default input systems provided in the [`systems`
@@ -285,23 +285,23 @@ Specifically, navigation between
 entities will be constrained to other
 [`Focusable`](https://docs.rs/bevy-ui-navigation/0.13.0/bevy_ui_navigation/struct.Focusable.html)
 that are children of the same
-[`NavMenu`](https://docs.rs/bevy-ui-navigation/0.13.0/bevy_ui_navigation/struct.NavMenu.html).
+[`NavMenu`](https://docs.rs/bevy-ui-navigation/0.13.0/bevy_ui_navigation/enum.NavMenu.html).
 It creates a self-contained menu.
 
 ### Types of `NavMenu`s
 
-A [`NavMenu`](https://docs.rs/bevy-ui-navigation/0.13.0/bevy_ui_navigation/struct.NavMenu.html)
+A [`NavMenu`](https://docs.rs/bevy-ui-navigation/0.13.0/bevy_ui_navigation/enum.NavMenu.html)
 doesn't only define menu-to-menu navigation, but it also gives you
 finner-grained control on how navigation is handled within a menu:
 * `NavMenu::Wrapping*` (as opposed to `NavMenu::Bound*`) enables looping
   navigation, where going offscreen in one direction "wraps" to the opposite
   screen edge.
 * `NavMenu::*Scope` creates a "scope" menu that catches
-  [`NavRequest::ScopeMove`](https://docs.rs/bevy-ui-navigation/0.13.0/bevy_ui_navigation/enum.NavRequest.html#variant.ScopeMove)
+  [`NavRequest::ScopeMove`](https://docs.rs/bevy-ui-navigation/0.13.0/bevy_ui_navigation/events/enum.NavRequest.html#variant.ScopeMove)
   requests even when the focused entity is in another sub-menu reachable from this
   menu. This behaves like you would expect a tabbed menu to behave.
 
-See the [`NavMenu`](https://docs.rs/bevy-ui-navigation/0.13.0/bevy_ui_navigation/struct.NavMenu.html)
+See the [`NavMenu`](https://docs.rs/bevy-ui-navigation/0.13.0/bevy_ui_navigation/enum.NavMenu.html)
 documentation or the ["ultimate" menu navigation
 example](https://github.com/nicopap/ui-navigation/blob/v0.13.0/examples/ultimate_menu_navigation.rs)
 for details.
@@ -310,7 +310,7 @@ for details.
 #### Marking
 
 If you need to know from which menu a
-[`NavEvent::FocusChanged`](https://docs.rs/bevy-ui-navigation/0.13.0/bevy_ui_navigation/enum.NavEvent.html#variant.FocusChanged)
+[`NavEvent::FocusChanged`](https://docs.rs/bevy-ui-navigation/0.13.0/bevy_ui_navigation/events/enum.NavEvent.html#variant.FocusChanged)
 originated, you can use one of the [`marking`](https://docs.rs/bevy-ui-navigation/0.13.0/bevy_ui_navigation/bundles/struct.MenuSeed.html#method.marking) methods on the `NavMenu` seeds.
 
 A usage demo is available in [the `marking.rs` example](https://github.com/nicopap/ui-navigation/tree/v0.13.0/examples/marking.rs).
