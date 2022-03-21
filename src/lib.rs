@@ -47,6 +47,12 @@ impl<T: 'static + Sync + Send + Component + Clone> Plugin for NavMarkerPropagati
     }
 }
 
+/// The label of the system in which the [`NavRequest`] events are handled, the
+/// focus state of the [`Focusable`]s is updated and the [`NavEvent`] events
+/// are sent.
+#[derive(Clone, Debug, Hash, PartialEq, Eq, SystemLabel)]
+pub struct NavRequestSystem;
+
 /// The navigation plugin
 ///
 /// Add it to your app with `.add_plugin(NavigationPlugin)` and send
@@ -56,9 +62,9 @@ impl Plugin for NavigationPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<NavRequest>()
             .add_event::<NavEvent>()
-            .init_resource::<NavLock>()
-            // TODO: add label to system so that it can be sorted
-            .add_system(resolve::listen_nav_requests)
+            .insert_resource(NavLock::new())
+            .add_system(resolve::listen_nav_requests.label(NavRequestSystem))
+            .add_system(resolve::set_first_focused)
             .add_system(resolve::insert_tree_menus.label("nav_build"))
             .add_system(named::resolve_named_menus.before("nav_build"));
     }

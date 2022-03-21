@@ -1,4 +1,4 @@
-//! System for the navigation tree and default input systems to get started
+//! System for the navigation tree and default input systems to get started.
 use crate::events::{Direction, NavRequest, ScopeDirection};
 use crate::{resolve::max_by_in_iter, Focusable, Focused};
 use bevy::ecs::system::SystemParam;
@@ -106,6 +106,7 @@ macro_rules! mapping {
 /// system that sends [`NavRequest`](crate::NavRequest) events
 pub fn default_gamepad_input(
     mut nav_cmds: EventWriter<NavRequest>,
+    has_focused: Query<(), With<Focused>>,
     input_mapping: Res<InputMapping>,
     buttons: Res<Input<GamepadButton>>,
     axis: Res<Axis<GamepadAxis>>,
@@ -113,6 +114,11 @@ pub fn default_gamepad_input(
 ) {
     use Direction::*;
     use NavRequest::{Action, Cancel, Free, Move, ScopeMove};
+
+    if has_focused.is_empty() {
+        // Do not compute navigation if there is no focus to change
+        return;
+    }
 
     let pad = Gamepad(0);
     macro_rules! axis_delta {
@@ -163,12 +169,18 @@ pub fn default_gamepad_input(
 /// when integrating in the game) in this case, you should write your own
 /// system that sends [`NavRequest`](crate::NavRequest) events
 pub fn default_keyboard_input(
+    has_focused: Query<(), With<Focused>>,
     keyboard: Res<Input<KeyCode>>,
     input_mapping: Res<InputMapping>,
     mut nav_cmds: EventWriter<NavRequest>,
 ) {
     use Direction::*;
     use NavRequest::*;
+
+    if has_focused.is_empty() {
+        // Do not compute navigation if there is no focus to change
+        return;
+    }
 
     let command_mapping = mapping! {
         input_mapping.key_action => Action,

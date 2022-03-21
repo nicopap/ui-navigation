@@ -1,10 +1,10 @@
 use bevy::prelude::*;
 
-use bevy_ui_build_macros::{build_ui, rect, size, style, unit};
+use bevy_ui_build_macros::{rect, size, style, unit};
 use bevy_ui_navigation::{
     components::FocusableButtonBundle,
     systems::{default_gamepad_input, default_keyboard_input, default_mouse_input, InputMapping},
-    FocusState, Focusable, NavMenu, NavigationPlugin,
+    FocusState, Focusable, NavMenu, NavRequestSystem, NavigationPlugin,
 };
 
 /// THE ULTIMATE MENU DEMONSTRATION
@@ -28,7 +28,9 @@ fn main() {
         .init_resource::<InputMapping>()
         .add_plugin(NavigationPlugin)
         .add_startup_system(setup)
-        .add_system(button_system)
+        // IMPORTANT: setting the button appearance update system after the
+        // NavRNavRequestSystem makes everything much snappier, highly recommended.
+        .add_system(button_system.after(NavRequestSystem))
         .add_system(default_gamepad_input)
         .add_system(default_keyboard_input)
         .add_system(default_mouse_input)
@@ -130,57 +132,114 @@ fn setup(mut commands: Commands) {
     let cycle_menu = |name| NavMenu::Wrapping2d.reachable_from_named(name);
     let named = Name::new;
 
-    // The macro is a very thin wrapper over the "normal" UI declaration
-    // technic. Please look at the doc for `build_ui` for info on what it does.
+    // Note that bevy's native UI library IS NOT NICE TO WORK WITH. I
+    // personally use `build_ui` from `bevy_ui_build_macros`, but for the sake
+    // of comprehension, I use the native way of creating a UI here.
     //
     // Pay attention to calls to `menu("id")`, `cycle_menu("id"), `named`, and
     // `NavMenu::root()`. You'll notice we use `Name` to give a sort of
     // identifier to our focusables so that they are refereable by `NavMenu`s
     // afterward.
-    build_ui! {
-        #[cmd(commands)]
-        // The tab menu should be navigated with `NavRequest::ScopeMove`
-        // hence the `WrappingScope`                    vvvvvvvvvvvvvvvvvvvv
-        vertical{size:size!(100 pct, 100 pct)}[NavMenu::WrappingScope.root();](
-            horizontal{justify_content: FlexStart, flex_basis: unit!(10 pct)}(
-                // adding a `Name` component let us refer to those entities
-                // later without having to store their `Entity` ids anywhere.
-                tab_square[; named("red")],
-                tab_square[; named("green")],
-                tab_square[; named("blue")]
-            ),
-            column_box(
-                //     vvvvvvvvvvv refers to the "red" `tab_square`
-                column[menu("red"); red](
-                    vertical(long[; named("select1")], long[; named("select2")]),
-                    horizontal{flex_wrap: Wrap}[cycle_menu("select1"); gray](
-                        square, square, square, square, square, square, square, square,
-                        square, square, square, square, square, square, square, square,
-                        square, square, square, square
-                    ),
-                    horizontal{flex_wrap: Wrap}[cycle_menu("select2"); gray](
-                        square, square, square, square, square, square, square, square
-                    )
-                ),
-                //     vvvvvvvvvvvvv refers to the "green" `tab_square`
-                column[menu("green"); green](
-                    horizontal(long[;named("g1")], horizontal[cycle_menu("g1"); gray](square, square)),
-                    horizontal(long[;named("g2")], horizontal[menu("g2");       gray](square)),
-                    horizontal(long[;named("g3")], horizontal[cycle_menu("g3"); gray](square, square, square)),
-                    horizontal(long[;named("g4")], horizontal[menu("g4");       gray](square, square, square)),
-                    horizontal(long[;named("g5")], horizontal[cycle_menu("g5"); gray](square, square)),
-                    horizontal(long[;named("g6")], horizontal[menu("g6");       gray](square, square, square)),
-                    horizontal(long[;named("g7")], horizontal[cycle_menu("g7"); gray](square, square, square)),
-                    horizontal(long[;named("g8")], horizontal[menu("g8");       gray](square, square))
-                ),
-                //     vvvvvvvvvvvv refers to the "blue" `tab_square`
-                column[menu("blue"); blue](
-                    vertical(
-                        vertical(long, long, long, long),
-                        colored_square
-                    )
-                )
-            )
-        )
-    };
+    commands
+        .spawn_bundle(vertical.clone())
+        .insert(Style {
+            size: size!( 100 pct, 100 pct),
+            ..vertical.style.clone()
+        })
+        // The tab menu should be navigated with `NavRequest::ScopeMove` hence the `WrappingScope`
+        //             vvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+        .insert_bundle(NavMenu::WrappingScope.root())
+        .with_children(|cmds| {
+            cmds.spawn_bundle(horizontal.clone())
+                .insert(Style {
+                    justify_content: FlexStart,
+                    flex_basis: unit!(10 pct),
+                    ..horizontal.style.clone()
+                })
+                .with_children(|cmds| {
+                    // adding a `Name` component let us refer to those entities
+                    // later without having to store their `Entity` ids anywhere.
+                    cmds.spawn_bundle(tab_square.clone()).insert(named("red"));
+                    cmds.spawn_bundle(tab_square.clone()).insert(named("green"));
+                    cmds.spawn_bundle(tab_square).insert(named("blue"));
+                });
+            cmds.spawn_bundle(column_box).with_children(|cmds| {
+                cmds.spawn_bundle(column.clone())
+                    // refers to the "red" `tab_square`
+                    //                 vvvvvvvvvvv
+                    .insert_bundle(menu("red"))
+                    .insert(red)
+                    .with_children(|cmds| {
+                        cmds.spawn_bundle(vertical.clone()).with_children(|cmds| {
+                            cmds.spawn_bundle(long.clone()).insert(named("select1"));
+                            cmds.spawn_bundle(long.clone()).insert(named("select2"));
+                        });
+                        cmds.spawn_bundle(horizontal.clone())
+                            .insert(Style {
+                                flex_wrap: Wrap,
+                                ..horizontal.style.clone()
+                            })
+                            .insert_bundle(cycle_menu("select1"))
+                            .insert(gray)
+                            .with_children(|cmds| {
+                                for _ in 0..20 {
+                                    cmds.spawn_bundle(square.clone());
+                                }
+                            });
+                        cmds.spawn_bundle(horizontal.clone())
+                            .insert(Style {
+                                flex_wrap: Wrap,
+                                ..horizontal.style.clone()
+                            })
+                            .insert_bundle(cycle_menu("select2"))
+                            .insert(gray)
+                            .with_children(|cmds| {
+                                for _ in 0..8 {
+                                    cmds.spawn_bundle(square.clone());
+                                }
+                            });
+                    });
+                cmds.spawn_bundle(column.clone())
+                    // refers to the "green" `tab_square`
+                    //             vvvvvvvvvvvvv
+                    .insert_bundle(menu("green"))
+                    .insert(green)
+                    .with_children(|cmds| {
+                        for i in 0..8 {
+                            let name = format!("green_{i}");
+                            let child_bundle = if i % 2 == 0 {
+                                NavMenu::Wrapping2d.reachable_from_named(name.clone())
+                            } else {
+                                NavMenu::Bound2d.reachable_from_named(name.clone())
+                            };
+                            cmds.spawn_bundle(horizontal.clone()).with_children(|cmds| {
+                                cmds.spawn_bundle(long.clone()).insert(Name::new(name));
+                                cmds.spawn_bundle(horizontal.clone())
+                                    .insert_bundle(child_bundle)
+                                    .insert(gray)
+                                    .with_children(|cmds| {
+                                        for _ in 0..i % 6 + 1 {
+                                            cmds.spawn_bundle(square.clone());
+                                        }
+                                    });
+                            });
+                        }
+                    });
+                cmds.spawn_bundle(column.clone())
+                    // refers to the "blue" `tab_square`
+                    //             vvvvvvvvvvvv
+                    .insert_bundle(menu("blue"))
+                    .insert(blue)
+                    .with_children(|cmds| {
+                        cmds.spawn_bundle(vertical.clone()).with_children(|cmds| {
+                            cmds.spawn_bundle(vertical).with_children(|cmds| {
+                                for _ in 0..6 {
+                                    cmds.spawn_bundle(long.clone());
+                                }
+                            });
+                            cmds.spawn_bundle(colored_square);
+                        });
+                    });
+            });
+        });
 }

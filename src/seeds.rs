@@ -1,4 +1,4 @@
-//! [`NavMenu`] builders to convert into [`TreeMenu`]
+//! [`NavMenu`] builders to convert into [`TreeMenu`].
 //!
 //! This module defines a bunch of "seed" bundles. Systems in [`crate::named`],
 //! [`crate::marker`] and [`crate::resolve`] will take the components
@@ -147,6 +147,10 @@ pub(crate) struct NavMarker<T>(pub(crate) T);
 ///   [`NavMenu::reachable_from`] or [`NavMenu::reachable_from_named`] if you don't
 ///   have access to the [`Entity`](https://docs.rs/bevy/0.6.0/bevy/ecs/entity/struct.Entity.html)
 ///   for the parent [`Focusable`](crate::Focusable)
+///
+/// If you want to specify which [`Focusable`](crate::Focusable) should be
+/// focused first when entering a menu, you should mark one of the children of
+/// this menu with [`Focusable::dormant`](crate::Focusable::dormant).
 ///
 /// ## Example
 ///

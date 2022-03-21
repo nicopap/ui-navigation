@@ -1,4 +1,4 @@
-//! Navigation events and requests
+//! Navigation events and requests.
 //!
 //! The navigation system works through bevy's `Events` system. Basically, it is
 //! a system with one input and two outputs:
@@ -18,19 +18,19 @@ use bevy::ecs::entity::Entity;
 use bevy::math::Vec2;
 use non_empty_vec::NonEmpty;
 
-/// Requests to send to the navigation system to update focus
+/// Requests to send to the navigation system to update focus.
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum NavRequest {
-    /// Move in 2d in provided direction
+    /// Move in 2d in provided direction.
     Move(Direction),
-    /// Move within the encompassing [`NavMenu::BoundScope`](crate::NavMenu::BoundScope)
+    /// Move within the encompassing [`NavMenu::BoundScope`](crate::NavMenu::BoundScope).
     ScopeMove(ScopeDirection),
     /// Enter submenu if any [`NavMenu::reachable_from`](crate::NavMenu::reachable_from)
     /// the currently focused entity.
     Action,
-    /// Leave this submenu to enter the one it is [`reachable_from`](crate::NavMenu::reachable_from)
+    /// Leave this submenu to enter the one it is [`reachable_from`](crate::NavMenu::reachable_from).
     Cancel,
-    /// Move the focus to any arbitrary [`Focusable`](crate::Focusable) entity
+    /// Move the focus to any arbitrary [`Focusable`](crate::Focusable) entity.
     FocusOn(Entity),
     /// Unlocks the navigation system.
     ///
@@ -74,6 +74,12 @@ impl Direction {
 /// pressed.
 #[derive(Debug, Clone)]
 pub enum NavEvent {
+    /// Tells the app which element is the first one to be focused.
+    ///
+    /// This will be sent whenever the number of focused elements go from 0 to 1.
+    /// Meaning: whenever you spawn a new UI with [`crate::Focusable`] elements.
+    InitiallyFocused(Entity),
+
     /// Focus changed
     ///
     /// ## Notes
@@ -105,6 +111,7 @@ pub enum NavEvent {
     /// Once the navigation plugin enters a locked state, the only way to exit
     /// it is to send a [`NavRequest::Free`].
     Locked(Entity),
+
     /// A [lock focusable](crate::Focusable::lock) has been triggered
     ///
     /// Once the navigation plugin enters a locked state, the only way to exit

@@ -1,4 +1,4 @@
-//! Focusable components and bundles to ease navigable UI declaration
+//! Focusable components and bundles to ease navigable UI declaration.
 use bevy::prelude::{Bundle, ButtonBundle};
 
 use super::Focusable;

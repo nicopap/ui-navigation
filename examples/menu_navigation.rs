@@ -3,7 +3,9 @@ use bevy::prelude::*;
 use bevy_ui_navigation::systems::{
     default_gamepad_input, default_keyboard_input, default_mouse_input, InputMapping,
 };
-use bevy_ui_navigation::{FocusState, Focusable, NavEvent, NavMenu, NavRequest, NavigationPlugin};
+use bevy_ui_navigation::{
+    FocusState, Focusable, NavEvent, NavMenu, NavRequest, NavRequestSystem, NavigationPlugin,
+};
 
 /// This example demonstrates a more complex menu system where you navigate
 /// through menus and go to submenus using the `Action` and `Cancel`
@@ -33,11 +35,11 @@ fn main() {
         .init_resource::<InputMapping>()
         .insert_resource(Gameui::new())
         .add_startup_system(setup)
-        .add_system(button_system)
+        .add_system(button_system.after(NavRequestSystem))
         .add_system(default_keyboard_input)
         .add_system(default_gamepad_input)
         .add_system(default_mouse_input)
-        .add_system(handle_nav_events)
+        .add_system(handle_nav_events.after(NavRequestSystem))
         .run();
 }
 
