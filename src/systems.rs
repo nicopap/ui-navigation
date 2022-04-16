@@ -205,7 +205,7 @@ pub fn default_keyboard_input(
     }
 }
 
-/// [`SystemParam`](https://docs.rs/bevy/0.6.0/bevy/ecs/system/trait.SystemParam.html)
+/// [`SystemParam`](https://docs.rs/bevy/0.7.0/bevy/ecs/system/trait.SystemParam.html)
 /// used to compute UI focusable physical positions in mouse input systems.
 #[derive(SystemParam)]
 pub struct NodePosQuery<'w, 's, T: Component, U: Component> {
@@ -288,13 +288,12 @@ pub fn default_mouse_input(
     mouse: Res<Input<MouseButton>>,
     touch: Res<Touches>,
     focusables: NodePosQuery<Node, UiCamera>,
-    names: Query<(Entity, &Camera)>,
+    ui_cam: Query<Entity, With<bevy::ui::entity::CameraUi>>,
     focused: Query<Entity, With<Focused>>,
     mut cmds: Commands,
     nav_cmds: EventWriter<NavRequest>,
     last_pos: Local<Vec2>,
 ) {
-    use bevy::ui::CAMERA_UI;
     if focusables.cam.get_single().is_ok() {
         generic_default_mouse_input(
             input_mapping,
@@ -307,10 +306,7 @@ pub fn default_mouse_input(
             last_pos,
         );
     } else {
-        let ui_cam = names
-            .iter()
-            .find(|cam| cam.1.name.as_deref() == Some(CAMERA_UI));
-        if let Some((ui_cam_entity, _)) = ui_cam {
+        if let Ok(ui_cam_entity) = ui_cam.get_single() {
             cmds.entity(ui_cam_entity).insert(UiCamera);
         }
     }

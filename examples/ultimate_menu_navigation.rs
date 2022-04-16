@@ -71,7 +71,7 @@ fn setup(mut commands: Commands) {
             margin: rect!(2 px),
         },
         color: transparent,
-        ..Default::default()
+        ..default()
     };
     let horizontal = NodeBundle {
         style: style! {
@@ -81,28 +81,28 @@ fn setup(mut commands: Commands) {
             margin: rect!(2 px),
         },
         color: transparent,
-        ..Default::default()
+        ..default()
     };
     let square = FocusableButtonBundle::from(ButtonBundle {
         style: style! {
             size: size!(40 px, 40 px),
             margin: rect!(2 px),
         },
-        ..Default::default()
+        ..default()
     });
     let long = FocusableButtonBundle::from(ButtonBundle {
         style: style! {
             size: size!(100 pct, 40 px),
             margin: rect!(2 px),
         },
-        ..Default::default()
+        ..default()
     });
     let tab_square = FocusableButtonBundle::from(ButtonBundle {
         style: style! {
             size: size!(100 px, 40 px),
             margin: rect!(30 px, 0 px),
         },
-        ..Default::default()
+        ..default()
     });
     let column_box = NodeBundle {
         style: style! {
@@ -111,7 +111,7 @@ fn setup(mut commands: Commands) {
             size: size!(100 pct, 90 pct),
             padding: rect!(30 px),
         },
-        ..Default::default()
+        ..default()
     };
     let column = NodeBundle {
         style: style! {
@@ -120,12 +120,12 @@ fn setup(mut commands: Commands) {
             padding: rect!(10 px),
             margin: rect!(5 px, 0 px),
         },
-        ..Default::default()
+        ..default()
     };
     let colored_square = NodeBundle {
         style: style! { size: size!(100 pct, 100 pct), },
         color: Color::rgb(1.0, 0.3, 0.9).into(),
-        ..Default::default()
+        ..default()
     };
 
     let menu = |name| NavMenu::Bound2d.reachable_from_named(name);
