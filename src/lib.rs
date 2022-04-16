@@ -17,7 +17,7 @@ pub use non_empty_vec::NonEmpty;
 
 pub use seeds::NavMenu;
 
-/// The [`Bundle`](https://docs.rs/bevy/0.6.0/bevy/ecs/bundle/trait.Bundle.html)s
+/// The [`Bundle`](https://docs.rs/bevy/0.7.0/bevy/ecs/bundle/trait.Bundle.html)s
 /// returned by the [`NavMenu`] methods.
 pub mod bundles {
     pub use crate::seeds::{MarkingMenuSeed, MenuSeed, NamedMarkingMenuSeed, NamedMenuSeed};
@@ -65,7 +65,7 @@ impl Plugin for NavigationPlugin {
             .insert_resource(NavLock::new())
             .add_system(resolve::listen_nav_requests.label(NavRequestSystem))
             .add_system(resolve::set_first_focused)
-            .add_system(resolve::insert_tree_menus.label("nav_build"))
-            .add_system(named::resolve_named_menus.before("nav_build"));
+            .add_system(resolve::insert_tree_menus)
+            .add_system(named::resolve_named_menus.before(resolve::insert_tree_menus));
     }
 }

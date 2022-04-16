@@ -2,9 +2,9 @@
 //!
 //! The navigation system works through bevy's `Events` system. Basically, it is
 //! a system with one input and two outputs:
-//! * Input [`Events<NavRequst>`](https://docs.rs/bevy/0.6.0/bevy/app/struct.Events.html),
+//! * Input [`Events<NavRequst>`](https://docs.rs/bevy/0.7.0/bevy/app/struct.Events.html),
 //!   tells the navigation system what to do. Your app should have a system
-//!   that writes to a [`EventWriter<NavRequest>`](https://docs.rs/bevy/0.6.0/bevy/app/struct.EventWriter.html)
+//!   that writes to a [`EventWriter<NavRequest>`](https://docs.rs/bevy/0.7.0/bevy/app/struct.EventWriter.html)
 //!   based on inputs or internal game state. Usually, the default input systems specified
 //!   in [`crate::systems`] do that for you. But you can add your own requests
 //!   on top of the ones the default systems send. For example to unlock the UI with
@@ -12,7 +12,7 @@
 //! * Output [`Focusable`](crate::Focusable) components. The navigation system
 //!   updates the focusables component according to the focus state of the
 //!   navigation system. See examples directory for how to read those
-//! * Output [`EventReader<NavEvent>`](https://docs.rs/bevy/0.6.0/bevy/app/struct.EventReader.html),
+//! * Output [`EventReader<NavEvent>`](https://docs.rs/bevy/0.7.0/bevy/app/struct.EventReader.html),
 //!   contains specific information about what the navigation system is doing.
 use bevy::ecs::entity::Entity;
 use bevy::math::Vec2;
