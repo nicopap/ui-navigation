@@ -1,4 +1,5 @@
 //! Focusable components and bundles to ease navigable UI declaration.
+#![allow(clippy::forget_non_drop)]
 use bevy::prelude::{Bundle, ButtonBundle};
 
 use super::Focusable;

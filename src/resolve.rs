@@ -37,12 +37,18 @@ use crate::{
 
 #[allow(clippy::type_complexity)]
 #[derive(SystemParam)]
-pub(crate) struct NavQueries<'w, 's> {
+pub(crate) struct ChildQueries<'w, 's> {
     children: Query<'w, 's, &'static Children>,
+    is_focusable: Query<'w, 's, (), With<Focusable>>,
+    is_menu: Query<'w, 's, (), Or<(With<TreeMenu>, With<seeds::TreeMenuSeed>)>>,
+}
+#[allow(clippy::type_complexity)]
+#[derive(SystemParam)]
+pub(crate) struct NavQueries<'w, 's> {
+    pub(crate) children: ChildQueries<'w, 's>,
     parents: Query<'w, 's, &'static Parent>,
-    focusables: Query<'w, 's, (Entity, &'static mut Focusable), Without<TreeMenu>>,
-    menus: Query<'w, 's, (Entity, &'static mut TreeMenu), Without<Focusable>>,
-    is_menu: Query<'w, 's, Entity, Or<(With<TreeMenu>, With<seeds::TreeMenuSeed>)>>,
+    focusables: Query<'w, 's, (Entity, &'static Focusable), Without<TreeMenu>>,
+    menus: Query<'w, 's, (Entity, &'static TreeMenu), Without<Focusable>>,
     transform: Query<'w, 's, &'static GlobalTransform>,
 }
 impl<'w, 's> NavQueries<'w, 's> {
@@ -60,8 +66,37 @@ impl<'w, 's> NavQueries<'w, 's> {
             .or_else(any_dormant)
             .or_else(fallback)
     }
+}
+
+#[derive(SystemParam)]
+pub(crate) struct MutQueries<'w, 's> {
+    parents: Query<'w, 's, &'static Parent>,
+    focusables: Query<'w, 's, &'static mut Focusable, Without<TreeMenu>>,
+    menus: Query<'w, 's, &'static mut TreeMenu, Without<Focusable>>,
+}
+impl<'w, 's> MutQueries<'w, 's> {
+    /// Set the [`active_child`](TreeMenu::active_child) field of the enclosing
+    /// [`TreeMenu`] and disables the previous one.
+    fn set_active_child(&mut self, cmds: &mut Commands, child: Entity) {
+        let mut focusable = child;
+        let mut nav_menu = loop {
+            // Find the enclosing parent menu.
+            if let Ok(&Parent(parent)) = self.parents.get(focusable) {
+                focusable = parent;
+                if let Ok(menu) = self.menus.get_mut(parent) {
+                    break menu;
+                }
+            } else {
+                return;
+            }
+        };
+        let entity = nav_menu.active_child;
+        nav_menu.active_child = child;
+        self.set_entity_focus(cmds, entity, FocusState::Inert);
+    }
+
     fn set_entity_focus(&mut self, cmds: &mut Commands, entity: Entity, state: FocusState) {
-        if let Ok((_, mut focusable)) = self.focusables.get_mut(entity) {
+        if let Ok(mut focusable) = self.focusables.get_mut(entity) {
             focusable.state = state;
             cmds.add(set_focus_state(entity, state));
         }
@@ -354,7 +389,7 @@ fn resolve(
                 None => (None, true),
             };
             let siblings = match parent {
-                Some(parent) => children_focusables(parent, queries),
+                Some(parent) => queries.children.focusables_of(parent),
                 None => {
                     let focusables: Vec<_> = queries.focusables.iter().map(|tpl| tpl.0).collect();
                     NonEmpty::try_from(focusables).expect(
@@ -393,7 +428,7 @@ fn resolve(
         }
         ScopeMove(scope_dir) => {
             let (parent, menu) = or_none!(parent_menu(focused, queries));
-            let siblings = children_focusables(parent, queries);
+            let siblings = queries.children.focusables_of(parent);
             if !menu.setting.is_scope() {
                 let focused = or_none!(menu.focus_parent);
                 resolve(focused, request, queries, lock, from.into())
@@ -438,7 +473,7 @@ pub(crate) fn insert_tree_menus(
     use FocusState::{Active, Dormant, Focused};
     let mut inserts = Vec::new();
     for (entity, seed) in seeds.iter() {
-        let children = children_focusables(entity, &queries);
+        let children = queries.children.focusables_of(entity);
         let child = children
             .iter()
             .find_map(|e| {
@@ -457,13 +492,14 @@ pub(crate) fn insert_tree_menus(
 /// navigation has been done yet.
 pub(crate) fn set_first_focused(
     has_focused: Query<(), With<Focused>>,
-    mut queries: NavQueries,
+    mut queries: ParamSet<(NavQueries, MutQueries)>,
     mut cmds: Commands,
     mut events: EventWriter<NavEvent>,
 ) {
+    use FocusState::Focused;
     if has_focused.is_empty() {
-        if let Some(to_focus) = queries.focused() {
-            queries.set_entity_focus(&mut cmds, to_focus, FocusState::Focused);
+        if let Some(to_focus) = queries.p0().focused() {
+            queries.p1().set_entity_focus(&mut cmds, to_focus, Focused);
             events.send(NavEvent::InitiallyFocused(to_focus));
         }
     }
@@ -473,7 +509,7 @@ pub(crate) fn set_first_focused(
 /// relevant.
 pub(crate) fn listen_nav_requests(
     mut cmds: Commands,
-    mut queries: NavQueries,
+    mut queries: ParamSet<(NavQueries, MutQueries)>,
     mut lock: ResMut<NavLock>,
     mut requests: EventReader<NavRequest>,
     mut events: EventWriter<NavEvent>,
@@ -486,52 +522,34 @@ pub(crate) fn listen_nav_requests(
             continue;
         }
         // TODO: ensure no multiple Focused entities
-        let focused = if let Some(e) = queries.focused() {
+        let focused = if let Some(e) = queries.p0().focused() {
             e
         } else {
             warn!(no_focused);
             continue;
         };
-        let event = resolve(focused, *request, &queries, &mut lock, Vec::new());
+        let event = resolve(focused, *request, &queries.p0(), &mut lock, Vec::new());
         // Change focus state of relevant entities
         if let NavEvent::FocusChanged { to, from } = &event {
+            let mut mut_queries = queries.p1();
             if to == from {
                 continue;
             }
             let (&disable, put_to_sleep) = from.split_last();
-            queries.set_entity_focus(&mut cmds, disable, Fs::Inert);
+            mut_queries.set_entity_focus(&mut cmds, disable, Fs::Inert);
             for &entity in put_to_sleep {
-                queries.set_entity_focus(&mut cmds, entity, Fs::Dormant);
+                mut_queries.set_entity_focus(&mut cmds, entity, Fs::Dormant);
             }
             let (&focus, activate) = to.split_first();
-            set_active_child(&mut cmds, focus, &mut queries);
-            queries.set_entity_focus(&mut cmds, focus, Fs::Focused);
+            mut_queries.set_active_child(&mut cmds, focus);
+            mut_queries.set_entity_focus(&mut cmds, focus, Fs::Focused);
             for &entity in activate {
-                set_active_child(&mut cmds, entity, &mut queries);
-                queries.set_entity_focus(&mut cmds, entity, Fs::Active);
+                mut_queries.set_active_child(&mut cmds, entity);
+                mut_queries.set_entity_focus(&mut cmds, entity, Fs::Active);
             }
         };
         events.send(event);
     }
-}
-
-/// Set the [`active_child`](TreeMenu::active_child) field of the enclosing
-/// [`TreeMenu`] and disables the previous one.
-fn set_active_child(cmds: &mut Commands, child: Entity, queries: &mut NavQueries) {
-    let mut focusable = child;
-    let mut nav_menu = loop {
-        if let Ok(&Parent(parent)) = queries.parents.get(focusable) {
-            focusable = parent;
-            if let Ok(menu) = queries.menus.get_mut(parent) {
-                break menu.1;
-            }
-        } else {
-            return;
-        }
-    };
-    let entity = nav_menu.active_child;
-    nav_menu.active_child = child;
-    queries.set_entity_focus(cmds, entity, FocusState::Inert);
 }
 
 /// The child [`TreeMenu`] of `focusable`.
@@ -551,28 +569,30 @@ pub(crate) fn parent_menu(focusable: Entity, queries: &NavQueries) -> Option<(En
     }
 }
 
-/// All sibling [`Focusable`]s within a single [`TreeMenu`].
-pub(crate) fn children_focusables(menu: Entity, queries: &NavQueries) -> NonEmpty<Entity> {
-    let ret = children_focusables_helper(menu, queries);
-    NonEmpty::try_from(ret)
-        .expect("A NavMenu MUST AT LEAST HAVE ONE Focusable child, found one without")
-}
+impl<'w, 's> ChildQueries<'w, 's> {
+    /// All sibling [`Focusable`]s within a single [`TreeMenu`].
+    pub(crate) fn focusables_of(&self, menu: Entity) -> NonEmpty<Entity> {
+        let ret = self.focusables_of_helper(menu);
+        NonEmpty::try_from(ret)
+            .expect("A NavMenu MUST AT LEAST HAVE ONE Focusable child, found one without")
+    }
 
-fn children_focusables_helper(menu: Entity, queries: &NavQueries) -> Vec<Entity> {
-    match queries.children.get(menu).ok() {
-        Some(direct_children) => {
-            let focusables = direct_children
-                .iter()
-                .filter(|e| queries.focusables.get(**e).is_ok())
-                .cloned();
-            let transitive_focusables = direct_children
-                .iter()
-                .filter(|e| queries.focusables.get(**e).is_err())
-                .filter(|e| queries.is_menu.get(**e).is_err())
-                .flat_map(|e| children_focusables_helper(*e, queries));
-            focusables.chain(transitive_focusables).collect()
+    fn focusables_of_helper(&self, menu: Entity) -> Vec<Entity> {
+        match self.children.get(menu).ok() {
+            Some(direct_children) => {
+                let focusables = direct_children
+                    .iter()
+                    .filter(|e| self.is_focusable.get(**e).is_ok())
+                    .cloned();
+                let transitive_focusables = direct_children
+                    .iter()
+                    .filter(|e| self.is_focusable.get(**e).is_err())
+                    .filter(|e| self.is_menu.get(**e).is_err())
+                    .flat_map(|e| self.focusables_of_helper(*e));
+                focusables.chain(transitive_focusables).collect()
+            }
+            None => Vec::new(),
         }
-        None => Vec::new(),
     }
 }
 

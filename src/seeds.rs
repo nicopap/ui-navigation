@@ -55,6 +55,7 @@
 //! The resolve_named/insert relationship should be upheld. Otherwise, root
 //! NavMenus will spawn instead of NavMenus with parent with given name.
 #![allow(unused_parens)]
+#![allow(clippy::forget_non_drop)]
 
 use std::borrow::Cow;
 
