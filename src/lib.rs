@@ -53,7 +53,7 @@ impl<T: 'static + Sync + Send + Component + Clone> Plugin for NavMarkerPropagati
 #[derive(Clone, Debug, Hash, PartialEq, Eq, SystemLabel)]
 pub struct NavRequestSystem;
 
-/// The navigation plugin
+/// The navigation plugin.
 ///
 /// Add it to your app with `.add_plugin(NavigationPlugin)` and send
 /// [`NavRequest`]s to move focus within declared [`Focusable`] entities.

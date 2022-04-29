@@ -16,12 +16,21 @@
 //! The bulk of the resolution algorithm is implemented in [`resolve`],
 //! delegating some abstract tasks to helper functions, of which:
 //! * [`parent_menu`]
-//! * [`children_focusables`]
+//! * [`ChildQueries::focusables_of`]
 //! * [`child_menu`]
 //! * [`focus_deep`]
 //! * [`root_path`]
 //! * [`resolve_2d`]
 //! * [`resolve_scope`]
+//!
+//! We define some `SystemParam`:
+//! * [`ChildQueries`]: queries used to find the focusable children of a given entity.
+//! * [`NavQueries`]: All **immutable** queries used by the resolution algorithm.
+//! * [`MutQueries`]: Queries with mutable access to [`Focusable`] and [`TreeMenu`]
+//!   for updating them in [`listen_nav_requests`].
+//!
+//! [`listen_nav_requests`] uses a `ParamSet` to access the focusables immutably for
+//! navigation resolution and mutably for updating them with the new navigation state.
 use std::cmp::Ordering;
 use std::fmt;
 use std::num::NonZeroUsize;
@@ -42,6 +51,16 @@ pub(crate) struct ChildQueries<'w, 's> {
     is_focusable: Query<'w, 's, (), With<Focusable>>,
     is_menu: Query<'w, 's, (), Or<(With<TreeMenu>, With<seeds::TreeMenuSeed>)>>,
 }
+
+#[allow(clippy::type_complexity)]
+#[derive(SystemParam)]
+pub(crate) struct UiProjectionQuery<'w, 's> {
+    ui_projection:
+        Query<'w, 's, (&'static GlobalTransform, &'static OrthographicProjection), With<CameraUi>>,
+    transforms: Query<'w, 's, &'static GlobalTransform>,
+}
+
+/// Collection of queries to manage the navigation tree.
 #[allow(clippy::type_complexity)]
 #[derive(SystemParam)]
 pub(crate) struct NavQueries<'w, 's> {
@@ -49,7 +68,7 @@ pub(crate) struct NavQueries<'w, 's> {
     parents: Query<'w, 's, &'static Parent>,
     focusables: Query<'w, 's, (Entity, &'static Focusable), Without<TreeMenu>>,
     menus: Query<'w, 's, (Entity, &'static TreeMenu), Without<Focusable>>,
-    transform: Query<'w, 's, &'static GlobalTransform>,
+    queries2d: UiProjectionQuery<'w, 's>,
 }
 impl<'w, 's> NavQueries<'w, 's> {
     fn focused(&self) -> Option<Entity> {
@@ -68,6 +87,13 @@ impl<'w, 's> NavQueries<'w, 's> {
     }
 }
 
+/// Queries [`Focusable`] and [`TreeMenu`] in a mutable way.
+///
+/// NOTE: This is separate from [`NavQueries`] to work around
+/// [bevy's query exclusion rules][bevy-exclusion] in the `marker.rs`
+/// module.
+///
+/// [bevy-exclusion]: https://github.com/bevyengine/bevy/issues/4624
 #[derive(SystemParam)]
 pub(crate) struct MutQueries<'w, 's> {
     parents: Query<'w, 's, &'static Parent>,
@@ -287,17 +313,18 @@ pub struct Focused;
 
 /// Which `Entity` in `siblings` can be reached from `focused` in
 /// `direction` given entities `transform` if any, otherwise `None`.
-fn resolve_2d<'a, 'b, 'c>(
+fn resolve_2d<'a, 'b, 'w, 's>(
     focused: Entity,
     direction: events::Direction,
     cycles: bool,
     siblings: &'a [Entity],
-    transform: &'b Query<&'c GlobalTransform>,
+    queries: &'b UiProjectionQuery<'w, 's>,
 ) -> Option<&'a Entity> {
     use events::Direction::*;
 
     let pos_of = |entity: Entity| {
-        transform
+        queries
+            .transforms
             .get(entity)
             .expect("Focusable entities must have a GlobalTransform component")
             .translation
@@ -308,21 +335,30 @@ fn resolve_2d<'a, 'b, 'c>(
         .iter()
         .filter(|sibling| direction.is_in(focused_pos, pos_of(**sibling)) && **sibling != focused);
     let closest = max_by_in_iter(closest, |s| -focused_pos.distance_squared(pos_of(**s)));
-    match closest {
-        // Cycle if we do not find an entity in the requested direction
-        // TODO: clean this up to handle properly camera offset and true screen size
-        None if cycles => {
+    match (closest, queries.ui_projection.get_single()) {
+        (None, Err(err)) if cycles => {
+            warn!(
+                "Tried to move in {direction:?} from Focusable {focused:?} while no other \
+                 Focusables were there. We didn't find the UI camera, so we couldn't compute \
+                 the screen edges for cycling. See the following error: {:#?}",
+                err
+            );
+            None
+        }
+        (None, Ok((cam_trans, cam_proj))) if cycles => {
+            let (cam_x, cam_y) = (cam_trans.translation.x, cam_trans.translation.y);
             let focused_pos = match direction {
-                South => Vec2::new(focused_pos.x, 3000.0),
-                North => Vec2::new(focused_pos.x, 0.0),
-                East => Vec2::new(0.0, focused_pos.y),
-                West => Vec2::new(3000.0, focused_pos.y),
+                // NOTE: up/down axises are inverted in bevy
+                South => Vec2::new(focused_pos.x, cam_y + cam_proj.top * cam_proj.scale),
+                North => Vec2::new(focused_pos.x, cam_y - cam_proj.bottom * cam_proj.scale),
+                East => Vec2::new(cam_x - cam_proj.left * cam_proj.scale, focused_pos.y),
+                West => Vec2::new(cam_x + cam_proj.right * cam_proj.scale, focused_pos.y),
             };
             max_by_in_iter(siblings.iter(), |s| {
                 -focused_pos.distance_squared(pos_of(**s))
             })
         }
-        anyelse => anyelse,
+        (anyelse, _) => anyelse,
     }
 }
 
@@ -397,7 +433,7 @@ fn resolve(
                     )
                 }
             };
-            let to = resolve_2d(focused, direction, cycles, &siblings, &queries.transform);
+            let to = resolve_2d(focused, direction, cycles, &siblings, &queries.queries2d);
             NavEvent::focus_changed(*or_none!(to), from)
         }
         Cancel => {
