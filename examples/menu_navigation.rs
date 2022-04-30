@@ -36,9 +36,9 @@ fn main() {
         .insert_resource(Gameui::new())
         .add_startup_system(setup)
         .add_system(button_system.after(NavRequestSystem))
-        .add_system(default_keyboard_input)
-        .add_system(default_gamepad_input)
-        .add_system(default_mouse_input)
+        .add_system(default_keyboard_input.before(NavRequestSystem))
+        .add_system(default_gamepad_input.before(NavRequestSystem))
+        .add_system(default_mouse_input.before(NavRequestSystem))
         .add_system(handle_nav_events.after(NavRequestSystem))
         .run();
 }

@@ -29,11 +29,11 @@ fn main() {
         .add_plugin(NavigationPlugin)
         .add_startup_system(setup)
         // IMPORTANT: setting the button appearance update system after the
-        // NavRNavRequestSystem makes everything much snappier, highly recommended.
+        // NavRequestSystem makes everything much snappier, highly recommended.
         .add_system(button_system.after(NavRequestSystem))
-        .add_system(default_gamepad_input)
-        .add_system(default_keyboard_input)
-        .add_system(default_mouse_input)
+        .add_system(default_gamepad_input.before(NavRequestSystem))
+        .add_system(default_keyboard_input.before(NavRequestSystem))
+        .add_system(default_mouse_input.before(NavRequestSystem))
         .run();
 }
 

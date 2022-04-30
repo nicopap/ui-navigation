@@ -50,6 +50,34 @@ impl<T: 'static + Sync + Send + Component + Clone> Plugin for NavMarkerPropagati
 /// The label of the system in which the [`NavRequest`] events are handled, the
 /// focus state of the [`Focusable`]s is updated and the [`NavEvent`] events
 /// are sent.
+///
+/// Systems updating visuals of UI elements should run _after_ the `NavRequestSystem`,
+/// while systems that emit [`NavRequest`] should run _before_ it. For example, the
+/// [`systems::default_mouse_input`] systems should run before the `NavRequestSystem`.
+///
+/// Failing to do so won't cause logical errors, but will make the UI feel more slugish
+/// than necessary. This is especially critical of you are running on low framerate.
+///
+/// # Example
+///
+/// ```rust, no_run
+/// use bevy::prelude::*;
+/// use bevy_ui_navigation::{NavRequestSystem, NavigationPlugin};
+/// use bevy_ui_navigation::systems::default_mouse_input;
+/// # fn button_system() {}
+/// fn main() {
+///     App::new()
+///         .add_plugins(DefaultPlugins)
+///         .add_plugin(NavigationPlugin)
+///         // ...
+///         // Add the button color update system after the focus update system
+///         .add_system(button_system.after(NavRequestSystem))
+///         // Add input systems before the focus update system
+///         .add_system(default_mouse_input.before(NavRequestSystem))
+///         // ...
+///         .run();
+/// }
+/// ```
 #[derive(Clone, Debug, Hash, PartialEq, Eq, SystemLabel)]
 pub struct NavRequestSystem;
 

@@ -153,6 +153,7 @@ happen every frame, you should add `button_system` to your app using the
 ```rust, no_run
 use bevy::prelude::*;
 use bevy_ui_navigation::{NavRequestSystem, NavigationPlugin};
+use bevy_ui_navigation::systems::default_mouse_input;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
@@ -160,6 +161,8 @@ fn main() {
         // ...
         // Add the button color update system after the focus update system
         .add_system(button_system.after(NavRequestSystem))
+        // Add input systems before the focus update system
+        .add_system(default_mouse_input.before(NavRequestSystem))
         // ...
         .run();
 }
