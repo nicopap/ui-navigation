@@ -349,13 +349,14 @@ pub fn generic_default_mouse_input<T: ScreenSize + Component, M: Component>(
     // find which node we are hovering and to switch focus to it (since we are
     // already focused on it)
     if focused.iter().all(not_hovering_focused) {
+        // We only run this code when we really need it because we iterate over all
+        // focusables, which can eat a lot of CPU.
         let under_mouse = focusables
             .entities
             .iter()
             .filter(|query_elem| is_in_node(world_cursor_pos, query_elem));
         let under_mouse =
             max_by_in_iter(under_mouse, |elem| elem.2.translation.z).map(|elem| elem.0);
-        // `ui_focusable_at` is computationally heavy
         let to_target = match under_mouse {
             Some(c) => c,
             None => return,
