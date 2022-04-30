@@ -210,14 +210,12 @@ pub fn default_keyboard_input(
 #[derive(SystemParam)]
 pub struct NodePosQuery<'w, 's, T: Component, U: Component> {
     entities: Query<'w, 's, (Entity, &'static T, &'static GlobalTransform), With<Focusable>>,
-    cam: Query<'w, 's, &'static GlobalTransform, With<U>>,
+    cam: Query<'w, 's, (&'static GlobalTransform, &'static OrthographicProjection), With<U>>,
 }
 impl<'w, 's, T: Component, U: Component> NodePosQuery<'w, 's, T, U> {
-    fn camera_offset(&self) -> Vec2 {
-        self.cam
-            .get_single()
-            .ok()
-            .map_or(Vec2::ZERO, |trans| trans.translation.xy())
+    fn cursor_pos(&self, at: Vec2) -> Option<Vec2> {
+        let (ui_cam_pos, ui_cam_proj) = self.cam.get_single().ok()?;
+        Some(at * ui_cam_proj.scale + ui_cam_pos.translation.xy())
     }
 }
 
@@ -229,17 +227,19 @@ fn is_in_node<T: ScreenSize>(at: Vec2, (_, node, trans): &(Entity, &T, &GlobalTr
     (min.x..max.x).contains(&at.x) && (min.y..max.y).contains(&at.y)
 }
 
-/// Check which [`Focusable`] displays below `at` if any
+/// Check which [`Focusable`] displays below `at` if any.
+///
+/// NOTE: returns `None` when There is no camera marked with `U`.
 pub fn ui_focusable_at<T, U>(at: Vec2, query: &NodePosQuery<T, U>) -> Option<Entity>
 where
     T: ScreenSize + Component,
     U: Component,
 {
-    let ui_cam_position = query.camera_offset();
+    let world_at = query.cursor_pos(at)?;
     let under_mouse = query
         .entities
         .iter()
-        .filter(|query_elem| is_in_node(at + ui_cam_position, query_elem));
+        .filter(|query_elem| is_in_node(world_at, query_elem));
     max_by_in_iter(under_mouse, |elem| elem.2.translation.z).map(|elem| elem.0)
 }
 
@@ -257,15 +257,6 @@ impl ScreenSize for Node {
         self.size
     }
 }
-
-/// Marker component for "camera" entity.
-///
-/// We will use the `GlobalTransform` of this entity to compute the offset
-/// needed to correct mouse positions in real-world coordinate.
-#[cfg(feature = "bevy-ui")]
-#[doc(hidden)]
-#[derive(Component)]
-pub struct UiCamera;
 
 /// A system to send mouse control events to the focus system
 ///
@@ -287,10 +278,8 @@ pub fn default_mouse_input(
     windows: Res<Windows>,
     mouse: Res<Input<MouseButton>>,
     touch: Res<Touches>,
-    focusables: NodePosQuery<Node, UiCamera>,
-    ui_cam: Query<Entity, With<bevy::ui::entity::CameraUi>>,
+    focusables: NodePosQuery<Node, CameraUi>,
     focused: Query<Entity, With<Focused>>,
-    mut cmds: Commands,
     nav_cmds: EventWriter<NavRequest>,
     last_pos: Local<Vec2>,
 ) {
@@ -305,8 +294,6 @@ pub fn default_mouse_input(
             nav_cmds,
             last_pos,
         );
-    } else if let Ok(ui_cam_entity) = ui_cam.get_single() {
-        cmds.entity(ui_cam_entity).insert(UiCamera);
     }
 }
 
@@ -339,7 +326,10 @@ pub fn generic_default_mouse_input<T: ScreenSize + Component, M: Component>(
         Some(c) => c,
         None => return,
     };
-    let ui_camera_position = focusables.camera_offset();
+    let world_cursor_pos = match focusables.cursor_pos(cursor_pos) {
+        Some(c) => c,
+        None => return,
+    };
     let released = mouse.just_released(input_mapping.mouse_action) || touch.just_released(0);
     let focused = focused.get_single();
     // Return early if cursor didn't move since last call
@@ -353,14 +343,20 @@ pub fn generic_default_mouse_input<T: ScreenSize + Component, M: Component>(
             .entities
             .get(*focused)
             .expect("Entity with `Focused` component must also have a `Focusable` component");
-        !is_in_node(cursor_pos + ui_camera_position, &focused)
+        !is_in_node(world_cursor_pos, &focused)
     };
     // If the currently hovered node is the focused one, there is no need to
     // find which node we are hovering and to switch focus to it (since we are
     // already focused on it)
     if focused.iter().all(not_hovering_focused) {
+        let under_mouse = focusables
+            .entities
+            .iter()
+            .filter(|query_elem| is_in_node(world_cursor_pos, query_elem));
+        let under_mouse =
+            max_by_in_iter(under_mouse, |elem| elem.2.translation.z).map(|elem| elem.0);
         // `ui_focusable_at` is computationally heavy
-        let to_target = match ui_focusable_at(cursor_pos, &focusables) {
+        let to_target = match under_mouse {
             Some(c) => c,
             None => return,
         };
