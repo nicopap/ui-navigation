@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 
+use bevy_ui_navigation::events::{Direction, NavRequest};
 use bevy_ui_navigation::systems::{
     default_gamepad_input, default_keyboard_input, default_mouse_input, InputMapping,
 };
@@ -11,6 +12,8 @@ use bevy_ui_navigation::{FocusState, Focusable, NavRequestSystem, NavigationPlug
 ///
 /// It is very useful to assess the performance of bevy ui and how expansive our systems
 /// are.
+///
+/// You can toggle automatic generation of NavRequest with the `K` key.
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
@@ -19,6 +22,7 @@ fn main() {
         .add_startup_system(setup)
         .add_system(button_system.after(NavRequestSystem))
         .add_system(default_keyboard_input.before(NavRequestSystem))
+        .add_system(non_stop_move.before(NavRequestSystem))
         .add_system(default_gamepad_input.before(NavRequestSystem))
         .add_system(default_mouse_input.before(NavRequestSystem))
         .run();
@@ -36,6 +40,42 @@ fn button_system(
         } else {
             *material = *idle_color;
         }
+    }
+}
+
+struct MyDirection(Direction);
+impl Default for MyDirection {
+    fn default() -> Self {
+        Self(Direction::South)
+    }
+}
+
+fn non_stop_move(
+    input: Res<Input<KeyCode>>,
+    mut requests: EventWriter<NavRequest>,
+    mut enabled: Local<bool>,
+    time: Res<Time>,
+    mut last_direction: Local<MyDirection>,
+) {
+    let delta = time.delta_seconds_f64();
+    let current_time = time.seconds_since_startup();
+    let at_interval = |t: f64| current_time % t < delta;
+    if input.just_pressed(KeyCode::K) {
+        *enabled = !*enabled;
+    }
+    if *enabled {
+        for _ in 0..10 {
+            requests.send(NavRequest::Move(last_direction.0));
+        }
+    }
+    if at_interval(2.0) {
+        let new_direction = match last_direction.0 {
+            Direction::East => Direction::North,
+            Direction::North => Direction::West,
+            Direction::West => Direction::South,
+            Direction::South => Direction::East,
+        };
+        last_direction.0 = new_direction;
     }
 }
 
