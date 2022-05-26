@@ -13,11 +13,11 @@ A generic UI navigation algorithm for the
 bevy-ui-navigation = "0.17.0"
 ```
 
-The in-depth design specification is [available here](https://github.com/nicopap/rfcs/blob/ui-navigation/rfcs/41-ui-navigation.md).
+The in-depth design specification is [available here][rfc41].
 
 ### Examples
 
-Check out the [`examples`](https://github.com/nicopap/ui-navigation/tree/v0.17.0/examples) directory for bevy examples.
+Check out the [`examples`][examples] directory for bevy examples.
 
 ![Demonstration of "Ultimate navigation" example](https://user-images.githubusercontent.com/26321040/141612751-ba0e62b2-23d6-429a-b5d1-48b09c10d526.gif)
 
@@ -26,27 +26,25 @@ Check out the [`examples`](https://github.com/nicopap/ui-navigation/tree/v0.17.0
 
 This crate exposes the `bevy-ui` feature. It is enabled by default. Toggling
 off this feature let you compile this crate without requiring the bevy `render`
-feature. But you won't be able to use [`FocusableButtonBundle`](https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/components/struct.FocusableButtonBundle.html), and you'll have
-to use [`generic_default_mouse_input`](https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/systems/fn.generic_default_mouse_input.html) for mouse input and define special spacial
+feature. But you won't be able to use [`FocusableButtonBundle`], and you'll have
+to use [`generic_default_mouse_input`] for mouse input and define special spacial
 components to get it working.
 
 
 ## Usage
 
-See [this example](https://github.com/nicopap/ui-navigation/tree/v0.17.0/examples/simple.rs)
-for a quick start guide.
+See [this example][example-simple] for a quick start guide.
 
-[The crate documentation is extensive](https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/),
-but for practical reason doesn't include many examples. This page contains most of the
-doc examples, you should check the [examples directory](https://github.com/nicopap/ui-navigation/tree/v0.17.0/examples)
-for examples showcasing all features of this crate.
+[The crate documentation is extensive][doc-root], but for practical reason
+doesn't include many examples. This page contains most of the doc examples,
+you should check the [examples directory][examples] for examples showcasing
+all features of this crate.
 
 
 ### Simple case
 
 To create a simple menu with navigation between buttons, simply replace usages
-of [`ButtonBundle`](https://docs.rs/bevy/0.7.0/bevy/ui/entity/struct.ButtonBundle.html)
-with [`FocusableButtonBundle`](https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/components/struct.FocusableButtonBundle.html).
+of [`ButtonBundle`] with [`FocusableButtonBundle`].
 
 You will need to create your own system to change the color of focused elements, and add
 manually the input systems, but with that setup you get: **Complete physical
@@ -71,15 +69,13 @@ fn main() {
 }
 ```
 
-Use the [`InputMapping`](https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/systems/struct.InputMapping.html)
-resource to change keyboard and gamepad button mapping.
+Use the [`InputMapping`] resource to change keyboard and gamepad button mapping.
 
-Check the [`examples directory`](https://github.com/nicopap/ui-navigation/tree/v0.17.0/examples)
-for more example code.
+Check the [`examples directory`][examples] for more example code.
 
 To respond to relevant user input, for example when the player pressed the
 "Action" button when focusing `start_game_button`, you should read the
-[`NavEvent`](https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/events/enum.NavEvent.html) event queue:
+[`NavEvent`] event queue:
 
 ```rust
 use bevy::prelude::*;
@@ -106,9 +102,7 @@ The focus navigation works across the whole UI tree, regardless of how or where
 you've put your focusable entities. You just move in the direction you want to
 go, and you get there.
 
-Any [`Entity`](https://docs.rs/bevy/0.7.0/bevy/ecs/entity/struct.Entity.html)
-can be converted into a focusable entity by adding the
-[`Focusable`](https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/struct.Focusable.html)
+Any [`Entity`] can be converted into a focusable entity by adding the [`Focusable`]
 component to it. To do so, just:
 ```rust
 # use bevy::prelude::*;
@@ -117,15 +111,11 @@ fn system(mut cmds: Commands, my_entity: Entity) {
     cmds.entity(my_entity).insert(Focusable::default());
 }
 ```
-That's it! Now `my_entity` is part of the navigation tree. The player can
-select it with their controller the same way as any other
-[`Focusable`](https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/struct.Focusable.html)
-element.
+That's it! Now `my_entity` is part of the navigation tree. The player can select
+it with their controller the same way as any other [`Focusable`] element.
 
 You probably want to render the focused button differently than other buttons,
-this can be done with the
-[`Changed<Focusable>`](https://docs.rs/bevy/0.7.0/bevy/ecs/prelude/struct.Changed.html)
-query parameter as follow:
+this can be done with the [`Changed<Focusable>`][Changed] query parameter as follow:
 ```rust
 use bevy::prelude::*;
 use bevy_ui_navigation::{FocusState, Focusable};
@@ -149,7 +139,7 @@ fn button_system(
 You will want the interaction feedback to be snappy. This means the
 interaction feedback should run the same frame as the focus change. For this to
 happen every frame, you should add `button_system` to your app using the
-`NavRequestSystem` label like so:
+[`NavRequestSystem`] label like so:
 ```rust, no_run
 use bevy::prelude::*;
 use bevy_ui_navigation::{NavRequestSystem, NavigationPlugin};
@@ -176,13 +166,11 @@ fn button_system() {}
 ### Locking
 
 If you need to supress the navigation algorithm temporarily, you can declare a
-`Focusable` as
-[`Focusable::lock`](https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/struct.Focusable.html#method.lock).
+[`Focusable`] as [`Focusable::lock`].
 
 This is useful for example if you want to implement custom widget with their
 own controls, or if you want to disable menu navigation while in game. To
-resume the navigation system, you'll need to send a
-[`NavRequest::Free`](https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/events/enum.NavRequest.html#variant.Free).
+resume the navigation system, you'll need to send a [`NavRequest::Free`].
 
 
 ### `NavRequest::FocusOn`
@@ -190,7 +178,7 @@ resume the navigation system, you'll need to send a
 You can't directly manipulate which entity is focused, because we need to keep
 track of a lot of thing on the backend to make the navigation work as expected.
 But you can set the focused element to any arbitrary `Focusable` entity with
-[`NavRequest::FocusOn`](https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/events/enum.NavRequest.html#variant.FocusOn).
+[`NavRequest::FocusOn`].
 
 ```rust
 use bevy::prelude::*;
@@ -207,8 +195,8 @@ fn set_focus_to_arbitrary_focusable(
 ### Set the first focused element
 
 You probably want to be able to chose which element is the first one to gain
-focus. By default, the system picks the first `Focusable` it finds. To change
-this behavior, spawn a dormant `Focusable` with [`Focusable::dormant`](https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/struct.Focusable.html#method.dormant).
+focus. By default, the system picks the first [`Focusable`] it finds. To change
+this behavior, spawn a dormant [`Focusable`] with [`Focusable::dormant`].
 
 ### `NavMenu`s
 
@@ -222,27 +210,23 @@ In this case, you need to be capable of specifying which button in the previous
 menu leads to the next menu (for example, you would press the "Options" button
 in the game menu to access the options menu).
 
-For that, you need to use
-[`NavMenu`](https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/enum.NavMenu.html).
+For that, you need to use [`NavMenu`].
 
-The high level usage of `NavMenu` is as follow:
-1. First you need a "root" `NavMenu`.
-2. You need to spawn into the ECS your "options" button with a
-   [`Focusable`](https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/struct.Focusable.html)
-   component. To link the button to your options menu, you need to do
-   one of the following:
-   * Add a [`Name("opt_btn_name")`](https://docs.rs/bevy/0.7.0/bevy/core/enum.Name.html)
-     component in addition to the `Focusable` component to your options button.
-   * Pre-spawn the options button and store somewhere it's [`Entity`
-     id](https://docs.rs/bevy/0.7.0/bevy/ecs/system/struct.EntityCommands.html#method.id)
+The high level usage of [`NavMenu`] is as follow:
+1. First you need a "root" [`NavMenu`].
+2. You need to spawn into the ECS your "options" button with a [`Focusable`]
+   component. To link the button to your options menu, you need to do one of
+   the following:
+   * Add a [`Name("opt_btn_name")`][Name] component in addition to the
+     [`Focusable`] component to your options button.
+   * Pre-spawn the options button and store somewhere it's [`Entity` id][entity-id]
      (`let opt_btn = commands.spawn_bundle(FocusableButtonBundle).id();`)
-3. to the `NodeBundle` containing all the options menu
-   [`Focusable`](https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/struct.Focusable.html)
-   entities, you add the following bundle:
-   * [`NavMenu::Bound2d.reachable_from_named("opt_btn_name")`](https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/enum.NavMenu.html#method.reachable_from_named)
+3. to the `NodeBundle` containing all the options menu [`Focusable`] entities,
+   you add the following bundle:
+   * [`NavMenu::Bound2d.reachable_from_named("opt_btn_name")`][NavMenu::reachable_from_named]
      if you opted for adding the `Name` component.
-   * [`NavMenu::Bound2d.reachable_from(opt_btn)`](https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/enum.NavMenu.html#method.reachable_from)
-     if you have the `Entity` id.
+   * [`NavMenu::Bound2d.reachable_from(opt_btn)`][NavMenu::reachable_from]
+     if you have the [`Entity`] id.
 
 In code, This will look like this:
 ```rust
@@ -305,56 +289,46 @@ fn spawn_menu(mut cmds: Commands, save_files: Vec<SaveFile>) {
 ```
 
 With this, your game menu will be isolated from your options menu, you can only
-access it by sending [`NavRequest::Action`](https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/events/enum.NavRequest.html#variant.Action)
-when `options_button` is focused, or by sending a
-[`NavRequest::FocusOn(entity)`](https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/events/enum.NavRequest.html#variant.FocusOn) where `entity` is any of `graphics_option`, `audio_options` or `input_options`.
+access it by sending [`NavRequest::Action`] when `options_button` is focused, or
+by sending a [`NavRequest::FocusOn(entity)`][`NavRequest::FocusOn`] where `entity`
+is any of `graphics_option`, `audio_options` or `input_options`.
 
-Note that you won't need to manually send the `NavRequest` if you are using one
-of the default input systems provided in the [`systems`
-module](https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/systems/index.html).
+Note that you won't need to manually send the [`NavRequest`] if you are using one
+of the default input systems provided in the [`systems` module][module-systems].
 
-Specifically, navigation between
-[`Focusable`](https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/struct.Focusable.html)
-entities will be constrained to other
-[`Focusable`](https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/struct.Focusable.html)
-that are children of the same
-[`NavMenu`](https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/enum.NavMenu.html).
-It creates a self-contained menu.
+Specifically, navigation between [`Focusable`] entities will be constrained to other
+[`Focusable`] that are children of the same [`NavMenu`]. It creates a self-contained
+menu.
 
 ### Types of `NavMenu`s
 
-A [`NavMenu`](https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/enum.NavMenu.html)
-doesn't only define menu-to-menu navigation, but it also gives you
+A [`NavMenu`] doesn't only define menu-to-menu navigation, but it also gives you
 finner-grained control on how navigation is handled within a menu:
 * `NavMenu::Wrapping*` (as opposed to `NavMenu::Bound*`) enables looping
   navigation, where going offscreen in one direction "wraps" to the opposite
   screen edge.
-* `NavMenu::*Scope` creates a "scope" menu that catches
-  [`NavRequest::ScopeMove`](https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/events/enum.NavRequest.html#variant.ScopeMove)
+* `NavMenu::*Scope` creates a "scope" menu that catches [`NavRequest::ScopeMove`]
   requests even when the focused entity is in another sub-menu reachable from this
   menu. This behaves like you would expect a tabbed menu to behave.
 
-See the [`NavMenu`](https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/enum.NavMenu.html)
-documentation or the ["ultimate" menu navigation
-example](https://github.com/nicopap/ui-navigation/blob/v0.17.0/examples/ultimate_menu_navigation.rs)
-for details.
+See the [`NavMenu`] documentation or the ["ultimate" menu navigation
+example][example-ultimate] for details.
 
 
 #### Marking
 
-If you need to know from which menu a
-[`NavEvent::FocusChanged`](https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/events/enum.NavEvent.html#variant.FocusChanged)
-originated, you can use one of the [`marking`](https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/bundles/struct.MenuSeed.html#method.marking) methods on the `NavMenu` seeds.
+If you need to know from which menu a [`NavEvent::FocusChanged`] originated, you
+can use one of the [`marking`][module-marking] methods on the `NavMenu` seeds.
 
-A usage demo is available in [the `marking.rs` example](https://github.com/nicopap/ui-navigation/tree/v0.17.0/examples/marking.rs).
+A usage demo is available in [the `marking.rs` example][example-marking].
 
 
 ## Changelog
 
 * `0.8.2`: Fix offsetting of mouse focus with `UiCamera`s with a transform set
   to anything else than zero.
-* `0.9.0`: Add [`Focusable::cancel`](https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/struct.Focusable.html#method.cancel) (see documentation for details); Add warning
-  message rather than do dumb things when there is more than a single `NavRequest`
+* `0.9.0`: Add [`Focusable::cancel`] (see documentation for details); Add warning
+  message rather than do dumb things when there is more than a single [`NavRequest`]
   per frame
 * `0.9.1`: Fix #8, Panic on diagonal gamepad input
 * `0.10.0`: Add the `bevy-ui` feature, technically this includes breaking
@@ -372,7 +346,7 @@ A usage demo is available in [the `marking.rs` example](https://github.com/nicop
 * `0.12.0`: Remove `NavMenu` methods from `MarkingMenu` and make the `menu`
   field public instead. Internally, this represented too much duplicate code.
 * `0.12.1`: Add *by-name* menus, making declaring complex menus in one go much easier.
-* `0.13.0`: Complete rewrite of the `NavMenu` declaration system:
+* `0.13.0`: Complete rewrite of the [`NavMenu`] declaration system:
   * Add automatic submenu access for `scope` menus.
   * Rename examples, they were named weirdly.
   * **Breaking**: Replace `NavMenu` constructor API with an enum (KISS) and a
@@ -392,11 +366,11 @@ A usage demo is available in [the `marking.rs` example](https://github.com/nicop
     `events` module.
 * `0.13.1`: Fix broken URLs in Readme.md
 * `0.14.0`: Some important changes, and a bunch of new very useful features.
-  * Add a [`Focusable::dormant()`](https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/struct.Focusable.html#method.dormant) constructor to specify which focusable you want to be the first to focus, this also works for `Focusable`s within `NavMenu`s.
+  * Add a [`Focusable::dormant`] constructor to specify which focusable you want to be the first to focus, this also works for `Focusable`s within `NavMenu`s.
   * **Important**: This changes the library behavior, now there will
     automatically be a `Focused` entity set. Add a system to set the first
     `Focused` whenever `Focusable`s are added to the world.
-  * Add [`NavEvent::InitiallyFocused`](https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/events/enum.NavEvent.html#variant.InitiallyFocused) to handle this first `Focused` event.
+  * Add [`NavEvent::InitiallyFocused`] to handle this first `Focused` event.
   * Early-return in `default_gamepad_input` and `default_keyboard_input` when
     there are no `Focusable` elements in the world. This saves your precious
     CPU cycles. And prevents spurious `warn` log messages.
@@ -436,10 +410,43 @@ A usage demo is available in [the `marking.rs` example](https://github.com/nicop
     fill an issue if you stumble uppon that case.
 * `0.17.0`: Non-breaking, but due to cargo semver handling is a minor bump.
   * Add the `event_helpers` module to simplify ui event handling
-  * Add a `prelude` module to import every useful things at the same time.
+  * Fix README and crate-level documentation links
 * UPCOMING: `0.17.1`:
   * Add a more concrete example showcasing how `bevy_ui_navigation` could be used in the
     real world: `mini_game.rs`.
+
+[`ButtonBundle`]: https://docs.rs/bevy/0.7.0/bevy/ui/entity/struct.ButtonBundle.html
+[Changed]: https://docs.rs/bevy/0.7.0/bevy/ecs/prelude/struct.Changed.html
+[doc-root]: https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/
+[`Entity`]: https://docs.rs/bevy/0.7.0/bevy/ecs/entity/struct.Entity.html
+[entity-id]: https://docs.rs/bevy/0.7.0/bevy/ecs/system/struct.EntityCommands.html#method.id
+[example-marking]: https://github.com/nicopap/ui-navigation/tree/v0.17.0/examples/marking.rs
+[examples]: https://github.com/nicopap/ui-navigation/tree/v0.17.0/examples
+[example-simple]: https://github.com/nicopap/ui-navigation/tree/v0.17.0/examples/simple.rs
+[example-ultimate]: https://github.com/nicopap/ui-navigation/blob/v0.17.0/examples/ultimate_menu_navigation.rs
+[`FocusableButtonBundle`]: https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/components/struct.FocusableButtonBundle.html
+[`Focusable::cancel`]: https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/struct.Focusable.html#method.cancel
+[`Focusable::dormant`]: https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/struct.Focusable.html#method.dormant
+[`Focusable`]: https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/struct.Focusable.html
+[`Focusable::lock`]: https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/struct.Focusable.html#method.lock
+[`generic_default_mouse_input`]: https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/systems/fn.generic_default_mouse_input.html
+[`InputMapping`]: https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/systems/struct.InputMapping.html
+[module-marking]: https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/bundles/struct.MenuSeed.html#method.marking
+[module-systems]: https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/systems/index.html
+[Name]: https://docs.rs/bevy/0.7.0/bevy/core/enum.Name.html
+[`NavEvent::FocusChanged`]: https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/events/enum.NavEvent.html#variant.FocusChanged
+[`NavEvent`]: https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/events/enum.NavEvent.html
+[`NavEvent::InitiallyFocused`]: https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/events/enum.NavEvent.html#variant.InitiallyFocused
+[`NavMenu`]: https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/enum.NavMenu.html
+[NavMenu::reachable_from]: https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/enum.NavMenu.html#method.reachable_from
+[NavMenu::reachable_from_named]: https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/enum.NavMenu.html#method.reachable_from_named
+[`NavRequest::Action`]: https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/events/enum.NavRequest.html#variant.Action
+[`NavRequest::FocusOn`]: https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/events/enum.NavRequest.html#variant.FocusOn
+[`NavRequest::Free`]: https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/events/enum.NavRequest.html#variant.Free
+[`NavRequest::ScopeMove`]: https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/events/enum.NavRequest.html#variant.ScopeMove
+[`NavRequestSystem`]: https://docs.rs/bevy-ui-navigation/0.17.0/bevy_ui_navigation/struct.NavRequestSystem.html
+[rfc41]: https://github.com/nicopap/rfcs/blob/ui-navigation/rfcs/41-ui-navigation.md
+
 
 ### Version matrix
 

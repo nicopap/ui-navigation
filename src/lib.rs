@@ -1,3 +1,30 @@
+/*!
+[`ButtonBundle`]: ButtonBundle
+[Changed]: Changed
+[doc-root]: ./index.html
+[`Entity`]: Entity
+[entity-id]: bevy::ecs::system::EntityCommands::id
+[`FocusableButtonBundle`]: components::FocusableButtonBundle
+[`Focusable::cancel`]: Focusable::cancel
+[`Focusable::dormant`]: Focusable::dormant
+[`Focusable`]: Focusable
+[`Focusable::lock`]: Focusable::lock
+[`generic_default_mouse_input`]: systems::generic_default_mouse_input
+[`InputMapping`]: systems::InputMapping
+[module-marking]: bundles::MenuSeed
+[module-systems]: systems
+[Name]: Name
+[`NavEvent::FocusChanged`]: NavEvent::FocusChanged
+[`NavEvent`]: NavEvent
+[`NavEvent::InitiallyFocused`]: NavEvent::InitiallyFocused
+[`NavMenu`]: NavMenu
+[NavMenu::reachable_from]: NavMenu::reachable_from
+[NavMenu::reachable_from_named]: NavMenu::reachable_from_named
+[`NavRequest::Action`]: NavRequest::Action
+[`NavRequest::FocusOn`]: NavRequest::FocusOn
+[`NavRequest::Free`]: NavRequest::Free
+[`NavRequest::ScopeMove`]: NavRequest::ScopeMove
+*/
 #![doc = include_str!("../Readme.md")]
 mod commands;
 #[cfg(feature = "bevy-ui")]
