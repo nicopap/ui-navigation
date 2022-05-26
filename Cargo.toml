@@ -8,7 +8,7 @@ keywords = ["bevy", "ui", "navigation", "keyboard", "gamepad"]
 categories = ["game-development", "accessibility", "gui"]
 repository = "https://github.com/nicopap/ui-navigation"
 homepage = "https://github.com/nicopap/ui-navigation"
-exclude = ["assets"]
+exclude = ["assets", ".github"]
 version = "0.17.0"
 edition = "2021"
 
