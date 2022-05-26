@@ -2,6 +2,7 @@
 mod commands;
 #[cfg(feature = "bevy-ui")]
 pub mod components;
+pub mod event_helpers;
 pub mod events;
 mod marker;
 mod named;
@@ -13,8 +14,9 @@ use std::marker::PhantomData;
 
 use bevy::prelude::*;
 
+pub use events::{NavEvent, NavRequest};
 pub use non_empty_vec::NonEmpty;
-
+pub use resolve::{FocusAction, FocusState, Focusable, Focused, NavLock};
 pub use seeds::NavMenu;
 
 /// The [`Bundle`](https://docs.rs/bevy/0.7.0/bevy/ecs/bundle/trait.Bundle.html)s
@@ -22,8 +24,6 @@ pub use seeds::NavMenu;
 pub mod bundles {
     pub use crate::seeds::{MarkingMenuSeed, MenuSeed, NamedMarkingMenuSeed, NamedMenuSeed};
 }
-pub use events::{NavEvent, NavRequest};
-pub use resolve::{FocusAction, FocusState, Focusable, Focused, NavLock};
 
 /// Plugin for menu marker propagation.
 ///
