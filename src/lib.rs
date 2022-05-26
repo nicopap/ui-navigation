@@ -24,6 +24,7 @@
 [`NavRequest::FocusOn`]: NavRequest::FocusOn
 [`NavRequest::Free`]: NavRequest::Free
 [`NavRequest::ScopeMove`]: NavRequest::ScopeMove
+[`NavRequestSystem`]: NavRequestSystem
 */
 #![doc = include_str!("../Readme.md")]
 mod commands;

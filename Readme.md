@@ -476,4 +476,4 @@ pre-`1.` versions do).
 Copyright © 2022 Nicola Papale
 
 This software is licensed under either MIT or Apache 2.0 at your leisure. See
-LICENSE file for details.
+licenses directory for details.
