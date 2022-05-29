@@ -1,11 +1,8 @@
 use bevy::prelude::*;
 
-use bevy_ui_navigation::systems::{
-    default_gamepad_input, default_keyboard_input, default_mouse_input, InputMapping,
-};
 use bevy_ui_navigation::{
-    FocusState, Focusable, Focused, NavMarkerPropagationPlugin, NavMenu, NavRequestSystem,
-    NavigationPlugin,
+    DefaultNavigationPlugins, FocusState, Focusable, Focused, NavMarkerPropagationPlugin, NavMenu,
+    NavRequestSystem,
 };
 
 macro_rules! column_type {
@@ -49,13 +46,9 @@ fn main() {
         .add_plugin(NavMarkerPropagationPlugin::<LeftColMenu>::new())
         .add_plugin(NavMarkerPropagationPlugin::<CenterColMenu>::new())
         .add_plugin(NavMarkerPropagationPlugin::<RightColMenu>::new())
-        .add_plugin(NavigationPlugin)
-        .init_resource::<InputMapping>()
+        .add_plugins(DefaultNavigationPlugins)
         .add_startup_system(setup)
         .add_system(button_system.after(NavRequestSystem))
-        .add_system(default_keyboard_input.before(NavRequestSystem))
-        .add_system(default_gamepad_input.before(NavRequestSystem))
-        .add_system(default_mouse_input.before(NavRequestSystem))
         .add_system(print_menus.after(NavRequestSystem))
         .run();
 }

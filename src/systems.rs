@@ -1,9 +1,10 @@
 //! System for the navigation tree and default input systems to get started.
-use crate::events::{Direction, NavRequest, ScopeDirection};
-use crate::{resolve::max_by_in_iter, Focusable, Focused};
-use bevy::ecs::system::SystemParam;
-use bevy::math::Vec3Swizzles;
-use bevy::prelude::*;
+use crate::{
+    events::{Direction, NavRequest, ScopeDirection},
+    resolve::{max_by_in_iter, ScreenBoundaries},
+    Focusable, Focused,
+};
+use bevy::{ecs::system::SystemParam, prelude::*};
 
 /// Control default ui navigation input buttons
 pub struct InputMapping {
@@ -208,14 +209,14 @@ pub fn default_keyboard_input(
 /// [`SystemParam`](https://docs.rs/bevy/0.7.0/bevy/ecs/system/trait.SystemParam.html)
 /// used to compute UI focusable physical positions in mouse input systems.
 #[derive(SystemParam)]
-pub struct NodePosQuery<'w, 's, T: Component, U: Component> {
+pub struct NodePosQuery<'w, 's, T: Component> {
     entities: Query<'w, 's, (Entity, &'static T, &'static GlobalTransform), With<Focusable>>,
-    cam: Query<'w, 's, (&'static GlobalTransform, &'static OrthographicProjection), With<U>>,
+    boundaries: Option<Res<'w, ScreenBoundaries>>,
 }
-impl<'w, 's, T: Component, U: Component> NodePosQuery<'w, 's, T, U> {
+impl<'w, 's, T: Component> NodePosQuery<'w, 's, T> {
     fn cursor_pos(&self, at: Vec2) -> Option<Vec2> {
-        let (ui_cam_pos, ui_cam_proj) = self.cam.get_single().ok()?;
-        Some(at * ui_cam_proj.scale + ui_cam_pos.translation.xy())
+        let boundaries = self.boundaries.as_ref()?;
+        Some(at * boundaries.scale + boundaries.position)
     }
 }
 
@@ -227,13 +228,12 @@ fn is_in_node<T: ScreenSize>(at: Vec2, (_, node, trans): &(Entity, &T, &GlobalTr
     (min.x..max.x).contains(&at.x) && (min.y..max.y).contains(&at.y)
 }
 
-/// Check which [`Focusable`] displays below `at` if any.
+/// Check which [`Focusable`] is at position `at` if any.
 ///
-/// NOTE: returns `None` when There is no camera marked with `U`.
-pub fn ui_focusable_at<T, U>(at: Vec2, query: &NodePosQuery<T, U>) -> Option<Entity>
+/// NOTE: returns `None` if there is no [`ScreenBoundaries`] resource.
+pub fn ui_focusable_at<T>(at: Vec2, query: &NodePosQuery<T>) -> Option<Entity>
 where
     T: ScreenSize + Component,
-    U: Component,
 {
     let world_at = query.cursor_pos(at)?;
     let under_mouse = query
@@ -278,31 +278,27 @@ pub fn default_mouse_input(
     windows: Res<Windows>,
     mouse: Res<Input<MouseButton>>,
     touch: Res<Touches>,
-    focusables: NodePosQuery<Node, CameraUi>,
+    focusables: NodePosQuery<Node>,
     focused: Query<Entity, With<Focused>>,
     nav_cmds: EventWriter<NavRequest>,
     last_pos: Local<Vec2>,
 ) {
-    if focusables.cam.get_single().is_ok() {
-        generic_default_mouse_input(
-            input_mapping,
-            windows,
-            mouse,
-            touch,
-            focusables,
-            focused,
-            nav_cmds,
-            last_pos,
-        );
-    }
+    generic_default_mouse_input(
+        input_mapping,
+        windows,
+        mouse,
+        touch,
+        focusables,
+        focused,
+        nav_cmds,
+        last_pos,
+    );
 }
 
 /// A generic system to send mouse control events to the focus system
 ///
 /// `T` must be a component assigned to `Focusable` elements that implements
-/// the [`ScreenSize`] trait. `M` is simply a marker component for your camera
-/// entity, if no entities has the `M` component, we assume the screen space
-/// is not offset from the `GlobalTransform` of focusable elements.
+/// the [`ScreenSize`] trait.
 ///
 /// Which button to press to cause an action event is specified in the
 /// [`InputMapping`] resource.
@@ -312,12 +308,12 @@ pub fn default_mouse_input(
 /// system that sends [`NavRequest`](crate::NavRequest) events. You may use
 /// [`ui_focusable_at`] to tell which focusable is currently being hovered.
 #[allow(clippy::too_many_arguments)]
-pub fn generic_default_mouse_input<T: ScreenSize + Component, M: Component>(
+pub fn generic_default_mouse_input<T: ScreenSize + Component>(
     input_mapping: Res<InputMapping>,
     windows: Res<Windows>,
     mouse: Res<Input<MouseButton>>,
     touch: Res<Touches>,
-    focusables: NodePosQuery<T, M>,
+    focusables: NodePosQuery<T>,
     focused: Query<Entity, With<Focused>>,
     mut nav_cmds: EventWriter<NavRequest>,
     mut last_pos: Local<Vec2>,
@@ -333,7 +329,8 @@ pub fn generic_default_mouse_input<T: ScreenSize + Component, M: Component>(
     let released = mouse.just_released(input_mapping.mouse_action) || touch.just_released(0);
     let focused = focused.get_single();
     // Return early if cursor didn't move since last call
-    if !released && *last_pos == cursor_pos {
+    let camera_moved = focusables.boundaries.map_or(false, |b| b.is_changed());
+    if !released && *last_pos == cursor_pos && !camera_moved {
         return;
     } else {
         *last_pos = cursor_pos;
@@ -364,5 +361,60 @@ pub fn generic_default_mouse_input<T: ScreenSize + Component, M: Component>(
         nav_cmds.send(NavRequest::FocusOn(to_target));
     } else if released {
         nav_cmds.send(NavRequest::Action);
+    }
+}
+
+/// Update [`ScreenBoundaries`] resource based on the bevy [`CameraUi`].
+///
+/// See [`ScreenBoundaries`] doc for details.
+#[cfg(feature = "bevy-ui")]
+#[allow(clippy::type_complexity)]
+pub fn update_boundaries(
+    mut commands: Commands,
+    mut boundaries: Option<ResMut<ScreenBoundaries>>,
+    cam: Query<
+        (&GlobalTransform, &OrthographicProjection),
+        (
+            With<CameraUi>,
+            Or<(Changed<GlobalTransform>, Changed<OrthographicProjection>)>,
+        ),
+    >,
+) {
+    use bevy::math::Vec3Swizzles;
+    if let Some((transform, projection)) = cam.iter().next() {
+        let new_boundaries = ScreenBoundaries {
+            position: transform.translation.xy(),
+            screen_edge: Rect {
+                left: projection.left,
+                right: projection.right,
+                top: projection.top,
+                bottom: projection.bottom,
+            },
+            scale: projection.scale,
+        };
+        if let Some(boundaries) = boundaries.as_mut() {
+            **boundaries = new_boundaries;
+        } else {
+            commands.insert_resource(new_boundaries);
+        }
+    }
+}
+
+/// Default input systems for ui navigation.
+#[cfg(feature = "bevy-ui")]
+pub struct DefaultNavigationSystems;
+#[cfg(feature = "bevy-ui")]
+impl Plugin for DefaultNavigationSystems {
+    fn build(&self, app: &mut App) {
+        use crate::NavRequestSystem;
+        app.init_resource::<InputMapping>()
+            .add_system(default_mouse_input.before(NavRequestSystem))
+            .add_system(default_gamepad_input.before(NavRequestSystem))
+            .add_system(default_keyboard_input.before(NavRequestSystem))
+            .add_system(
+                update_boundaries
+                    .before(NavRequestSystem)
+                    .before(default_mouse_input),
+            );
     }
 }

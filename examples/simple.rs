@@ -1,9 +1,8 @@
 use bevy::prelude::*;
 
-use bevy_ui_navigation::systems::{
-    default_gamepad_input, default_keyboard_input, default_mouse_input, InputMapping,
+use bevy_ui_navigation::{
+    DefaultNavigationPlugins, FocusState, Focusable, NavEvent, NavRequestSystem,
 };
-use bevy_ui_navigation::{FocusState, Focusable, NavEvent, NavRequestSystem, NavigationPlugin};
 
 /// This example illustrates how to mark buttons as focusable and let
 /// NavigationPlugin figure out how to go from one to another.
@@ -12,17 +11,12 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         // vvvvvvvvvvvvvvvvvvvvvvvvvvv
-        // 1: Add the NavigationPlugin
-        .add_plugin(NavigationPlugin)
-        .init_resource::<InputMapping>()
+        // 1: Add the DefaultNavigationPlugins
+        .add_plugins(DefaultNavigationPlugins)
         .add_startup_system(setup)
         // So that the UI _feels_ smooth, make sure to update the visual
         // after the navigation system ran
         .add_system(button_system.after(NavRequestSystem))
-        // Conversly, input systems should run _before_ the navigation system
-        .add_system(default_keyboard_input.before(NavRequestSystem))
-        .add_system(default_gamepad_input.before(NavRequestSystem))
-        .add_system(default_mouse_input.before(NavRequestSystem))
         .add_system(print_nav_events.after(NavRequestSystem))
         .run();
 }

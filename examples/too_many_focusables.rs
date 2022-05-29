@@ -1,10 +1,7 @@
 use bevy::prelude::*;
 
 use bevy_ui_navigation::events::{Direction, NavRequest};
-use bevy_ui_navigation::systems::{
-    default_gamepad_input, default_keyboard_input, default_mouse_input, InputMapping,
-};
-use bevy_ui_navigation::{FocusState, Focusable, NavRequestSystem, NavigationPlugin};
+use bevy_ui_navigation::{DefaultNavigationPlugins, FocusState, Focusable, NavRequestSystem};
 
 /// This example shows what happens when there is a lot of focusables on screen.
 /// It doesn't run well on debug builds, you should try running it with the `--release`
@@ -17,14 +14,10 @@ use bevy_ui_navigation::{FocusState, Focusable, NavRequestSystem, NavigationPlug
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(NavigationPlugin)
-        .init_resource::<InputMapping>()
+        .add_plugins(DefaultNavigationPlugins)
         .add_startup_system(setup)
         .add_system(button_system.after(NavRequestSystem))
-        .add_system(default_keyboard_input.before(NavRequestSystem))
         .add_system(non_stop_move.before(NavRequestSystem))
-        .add_system(default_gamepad_input.before(NavRequestSystem))
-        .add_system(default_mouse_input.before(NavRequestSystem))
         .run();
 }
 

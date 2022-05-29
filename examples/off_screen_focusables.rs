@@ -1,9 +1,8 @@
 use bevy::prelude::*;
 
-use bevy_ui_navigation::systems::{
-    default_gamepad_input, default_keyboard_input, default_mouse_input, InputMapping,
+use bevy_ui_navigation::{
+    systems::InputMapping, DefaultNavigationPlugins, FocusState, Focusable, NavRequestSystem,
 };
-use bevy_ui_navigation::{FocusState, Focusable, NavRequestSystem, NavigationPlugin};
 
 /// This example shows the interaction focusables navigation and Ui camera
 /// movement.
@@ -14,7 +13,7 @@ use bevy_ui_navigation::{FocusState, Focusable, NavRequestSystem, NavigationPlug
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(NavigationPlugin)
+        .add_plugins(DefaultNavigationPlugins)
         // NOTE: The default navigation key mapping can be changed as follow:
         .insert_resource(InputMapping {
             key_up: KeyCode::I,
@@ -26,9 +25,6 @@ fn main() {
         .add_startup_system(setup)
         .add_system(cam_system.before(NavRequestSystem))
         .add_system(button_system.after(NavRequestSystem))
-        .add_system(default_keyboard_input.before(NavRequestSystem))
-        .add_system(default_gamepad_input.before(NavRequestSystem))
-        .add_system(default_mouse_input.before(NavRequestSystem))
         .run();
 }
 

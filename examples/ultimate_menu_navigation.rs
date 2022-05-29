@@ -2,9 +2,8 @@ use bevy::prelude::*;
 
 use bevy_ui_build_macros::{rect, size, style, unit};
 use bevy_ui_navigation::{
-    components::FocusableButtonBundle,
-    systems::{default_gamepad_input, default_keyboard_input, default_mouse_input, InputMapping},
-    FocusState, Focusable, NavMenu, NavRequestSystem, NavigationPlugin,
+    components::FocusableButtonBundle, DefaultNavigationPlugins, FocusState, Focusable, NavMenu,
+    NavRequestSystem,
 };
 
 /// THE ULTIMATE MENU DEMONSTRATION
@@ -25,15 +24,11 @@ use bevy_ui_navigation::{
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .init_resource::<InputMapping>()
-        .add_plugin(NavigationPlugin)
+        .add_plugins(DefaultNavigationPlugins)
         .add_startup_system(setup)
         // IMPORTANT: setting the button appearance update system after the
         // NavRequestSystem makes everything much snappier, highly recommended.
         .add_system(button_system.after(NavRequestSystem))
-        .add_system(default_gamepad_input.before(NavRequestSystem))
-        .add_system(default_keyboard_input.before(NavRequestSystem))
-        .add_system(default_mouse_input.before(NavRequestSystem))
         .run();
 }
 

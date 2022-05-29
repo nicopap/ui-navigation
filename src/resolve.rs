@@ -44,6 +44,25 @@ use crate::{
     seeds::{self, NavMenu as MenuSetting},
 };
 
+/// Camera modifiers for movement cycling.
+///
+/// This is only used by the cycling routine to find [`Focusable`]s at the
+/// opposite side of the screen. It's expected to contain the ui camera
+/// projection screen boundaries and position. See implementation of
+/// [`systems::update_boundaries`](crate::systems::update_boundaries) to
+/// see how to implement it yourself.
+///
+/// # Note
+///
+/// This is a [resource](Res). It is optional and will log a warning if
+/// a cycling request is made and it does not exist.
+#[derive(Debug)]
+pub struct ScreenBoundaries {
+    pub position: Vec2,
+    pub screen_edge: Rect<f32>,
+    pub scale: f32,
+}
+
 #[allow(clippy::type_complexity)]
 #[derive(SystemParam)]
 pub(crate) struct ChildQueries<'w, 's> {
@@ -55,8 +74,7 @@ pub(crate) struct ChildQueries<'w, 's> {
 #[allow(clippy::type_complexity)]
 #[derive(SystemParam)]
 pub(crate) struct UiProjectionQuery<'w, 's> {
-    ui_projection:
-        Query<'w, 's, (&'static GlobalTransform, &'static OrthographicProjection), With<CameraUi>>,
+    boundaries: Option<Res<'w, ScreenBoundaries>>,
     transforms: Query<'w, 's, &'static GlobalTransform>,
 }
 
@@ -335,24 +353,27 @@ fn resolve_2d<'a, 'b, 'w, 's>(
         .iter()
         .filter(|sibling| direction.is_in(focused_pos, pos_of(**sibling)) && **sibling != focused);
     let closest = max_by_in_iter(closest, |s| -focused_pos.distance_squared(pos_of(**s)));
-    match (closest, queries.ui_projection.get_single()) {
-        (None, Err(err)) if cycles => {
+    match (closest, queries.boundaries.as_ref()) {
+        (None, None) if cycles => {
             warn!(
                 "Tried to move in {direction:?} from Focusable {focused:?} while no other \
-                 Focusables were there. We didn't find the UI camera, so we couldn't compute \
-                 the screen edges for cycling. See the following error: {:#?}",
-                err
+                 Focusables were there. There were no `Res<ScreenBoundaries>`, so we couldn't \
+                 compute the screen edges for cycling. Make sure you either add the \
+                 bevy_ui_navigation::systems::update_boundaries system to your app or implement \
+                 your own routine to manage a `Res<ScreenBoundaries>`."
             );
             None
         }
-        (None, Ok((cam_trans, cam_proj))) if cycles => {
-            let (cam_x, cam_y) = (cam_trans.translation.x, cam_trans.translation.y);
+        (None, Some(boundaries)) if cycles => {
+            let (x, y) = (boundaries.position.x, boundaries.position.y);
+            let edge = boundaries.screen_edge;
+            let scale = boundaries.scale;
             let focused_pos = match direction {
                 // NOTE: up/down axises are inverted in bevy
-                South => Vec2::new(focused_pos.x, cam_y + cam_proj.top * cam_proj.scale),
-                North => Vec2::new(focused_pos.x, cam_y - cam_proj.bottom * cam_proj.scale),
-                East => Vec2::new(cam_x - cam_proj.left * cam_proj.scale, focused_pos.y),
-                West => Vec2::new(cam_x + cam_proj.right * cam_proj.scale, focused_pos.y),
+                South => Vec2::new(focused_pos.x, y + edge.top * scale),
+                North => Vec2::new(focused_pos.x, y - edge.bottom * scale),
+                East => Vec2::new(x - edge.left * scale, focused_pos.y),
+                West => Vec2::new(x + edge.right * scale, focused_pos.y),
             };
             max_by_in_iter(siblings.iter(), |s| {
                 -focused_pos.distance_squared(pos_of(**s))

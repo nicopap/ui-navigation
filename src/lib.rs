@@ -11,6 +11,7 @@
 [`Focusable::lock`]: Focusable::lock
 [`generic_default_mouse_input`]: systems::generic_default_mouse_input
 [`InputMapping`]: systems::InputMapping
+[module-event_helpers]: event_helpers
 [module-marking]: bundles::MenuSeed
 [module-systems]: systems
 [Name]: Name
@@ -44,8 +45,10 @@ use bevy::prelude::*;
 
 pub use events::{NavEvent, NavRequest};
 pub use non_empty_vec::NonEmpty;
-pub use resolve::{FocusAction, FocusState, Focusable, Focused, NavLock};
+pub use resolve::{FocusAction, FocusState, Focusable, Focused, NavLock, ScreenBoundaries};
 pub use seeds::NavMenu;
+#[cfg(feature = "bevy-ui")]
+pub use systems::DefaultNavigationSystems;
 
 /// The [`Bundle`](https://docs.rs/bevy/0.7.0/bevy/ecs/bundle/trait.Bundle.html)s
 /// returned by the [`NavMenu`] methods.
@@ -90,18 +93,15 @@ impl<T: 'static + Sync + Send + Component + Clone> Plugin for NavMarkerPropagati
 ///
 /// ```rust, no_run
 /// use bevy::prelude::*;
-/// use bevy_ui_navigation::{NavRequestSystem, NavigationPlugin};
-/// use bevy_ui_navigation::systems::default_mouse_input;
+/// use bevy_ui_navigation::{NavRequestSystem, DefaultNavigationPlugins};
 /// # fn button_system() {}
 /// fn main() {
 ///     App::new()
 ///         .add_plugins(DefaultPlugins)
-///         .add_plugin(NavigationPlugin)
+///         .add_plugins(DefaultNavigationPlugins)
 ///         // ...
 ///         // Add the button color update system after the focus update system
 ///         .add_system(button_system.after(NavRequestSystem))
-///         // Add input systems before the focus update system
-///         .add_system(default_mouse_input.before(NavRequestSystem))
 ///         // ...
 ///         .run();
 /// }
@@ -113,6 +113,10 @@ pub struct NavRequestSystem;
 ///
 /// Add it to your app with `.add_plugin(NavigationPlugin)` and send
 /// [`NavRequest`]s to move focus within declared [`Focusable`] entities.
+///
+/// This means you'll also have to add manaully the systems from [`systems`]
+/// and [`systems::InputMapping`]. You should prefer [`DefaultNavigationPlugins`]
+/// if you don't want to bother with that.
 pub struct NavigationPlugin;
 impl Plugin for NavigationPlugin {
     fn build(&self, app: &mut App) {
@@ -123,5 +127,20 @@ impl Plugin for NavigationPlugin {
             .add_system(resolve::set_first_focused)
             .add_system(resolve::insert_tree_menus)
             .add_system(named::resolve_named_menus.before(resolve::insert_tree_menus));
+    }
+}
+/// The navigation plugin and the default input scheme.
+///
+/// Add it to your app with `.add_plugins(DefaultNavigationPlugins)`.
+///
+/// This provides default implementations for input handling, if you want
+/// your own custom input handling, you should use [`NavigationPlugin`] and
+/// provide your own input handling systems.
+pub struct DefaultNavigationPlugins;
+impl PluginGroup for DefaultNavigationPlugins {
+    fn build(&mut self, group: &mut bevy::app::PluginGroupBuilder) {
+        group.add(NavigationPlugin);
+        #[cfg(feature = "bevy-ui")]
+        group.add(DefaultNavigationSystems);
     }
 }

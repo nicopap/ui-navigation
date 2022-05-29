@@ -1,10 +1,8 @@
 use bevy::prelude::*;
 
-use bevy_ui_navigation::systems::{
-    default_gamepad_input, default_keyboard_input, default_mouse_input, InputMapping,
-};
 use bevy_ui_navigation::{
-    FocusState, Focusable, NavEvent, NavMenu, NavRequest, NavRequestSystem, NavigationPlugin,
+    DefaultNavigationPlugins, FocusState, Focusable, NavEvent, NavMenu, NavRequest,
+    NavRequestSystem,
 };
 
 /// This example demonstrates a more complex menu system where you navigate
@@ -30,15 +28,11 @@ use bevy_ui_navigation::{
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(NavigationPlugin)
+        .add_plugins(DefaultNavigationPlugins)
         .init_resource::<Materials>()
-        .init_resource::<InputMapping>()
         .insert_resource(Gameui::new())
         .add_startup_system(setup)
         .add_system(button_system.after(NavRequestSystem))
-        .add_system(default_keyboard_input.before(NavRequestSystem))
-        .add_system(default_gamepad_input.before(NavRequestSystem))
-        .add_system(default_mouse_input.before(NavRequestSystem))
         .add_system(handle_nav_events.after(NavRequestSystem))
         .run();
 }

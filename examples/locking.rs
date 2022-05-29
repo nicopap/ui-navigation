@@ -1,9 +1,8 @@
 use bevy::prelude::*;
 
-use bevy_ui_navigation::systems::{
-    default_gamepad_input, default_keyboard_input, default_mouse_input, InputMapping,
+use bevy_ui_navigation::{
+    DefaultNavigationPlugins, FocusState, Focusable, NavEvent, NavRequestSystem,
 };
-use bevy_ui_navigation::{FocusState, Focusable, NavEvent, NavRequestSystem, NavigationPlugin};
 
 /// This example illustrates how to make a button "lock". To lock the UI, press
 /// 'A' on controller or 'left click' on mouse when the button with the lock is
@@ -15,15 +14,10 @@ use bevy_ui_navigation::{FocusState, Focusable, NavEvent, NavRequestSystem, Navi
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        // 1: Add the NavigationPlugin
-        .add_plugin(NavigationPlugin)
+        .add_plugins(DefaultNavigationPlugins)
         .init_resource::<Images>()
-        .init_resource::<InputMapping>()
         .add_startup_system(setup)
         .add_system(button_system.after(NavRequestSystem))
-        .add_system(default_keyboard_input.before(NavRequestSystem))
-        .add_system(default_gamepad_input.before(NavRequestSystem))
-        .add_system(default_mouse_input.before(NavRequestSystem))
         .add_system(print_nav_events.after(NavRequestSystem))
         .run();
 }
