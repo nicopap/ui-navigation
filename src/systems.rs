@@ -277,7 +277,6 @@ pub fn default_mouse_input(
     input_mapping: Res<InputMapping>,
     windows: Res<Windows>,
     mouse: Res<Input<MouseButton>>,
-    touch: Res<Touches>,
     focusables: NodePosQuery<Node>,
     focused: Query<Entity, With<Focused>>,
     nav_cmds: EventWriter<NavRequest>,
@@ -287,7 +286,6 @@ pub fn default_mouse_input(
         input_mapping,
         windows,
         mouse,
-        touch,
         focusables,
         focused,
         nav_cmds,
@@ -312,7 +310,6 @@ pub fn generic_default_mouse_input<T: ScreenSize + Component>(
     input_mapping: Res<InputMapping>,
     windows: Res<Windows>,
     mouse: Res<Input<MouseButton>>,
-    touch: Res<Touches>,
     focusables: NodePosQuery<T>,
     focused: Query<Entity, With<Focused>>,
     mut nav_cmds: EventWriter<NavRequest>,
@@ -326,7 +323,7 @@ pub fn generic_default_mouse_input<T: ScreenSize + Component>(
         Some(c) => c,
         None => return,
     };
-    let released = mouse.just_released(input_mapping.mouse_action) || touch.just_released(0);
+    let released = mouse.just_released(input_mapping.mouse_action);
     let focused = focused.get_single();
     // Return early if cursor didn't move since last call
     let camera_moved = focusables.boundaries.map_or(false, |b| b.is_changed());
