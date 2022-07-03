@@ -410,7 +410,6 @@ impl Plugin for DefaultNavigationSystems {
         app.init_resource::<InputMapping>()
             .add_system(default_mouse_input.before(NavRequestSystem))
             .add_system(default_gamepad_input.before(NavRequestSystem))
-            .add_system(default_keyboard_input.before(NavRequestSystem))
             .add_system(
                 update_boundaries
                     .before(NavRequestSystem)
