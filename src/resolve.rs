@@ -44,6 +44,11 @@ use crate::{
     seeds::{self, NavMenu as MenuSetting},
 };
 
+#[derive(Debug, Clone, Copy)]
+pub struct Rect {
+    pub min: Vec2,
+    pub max: Vec2,
+}
 /// Camera modifiers for movement cycling.
 ///
 /// This is only used by the cycling routine to find [`Focusable`]s at the
@@ -59,7 +64,7 @@ use crate::{
 #[derive(Debug)]
 pub struct ScreenBoundaries {
     pub position: Vec2,
-    pub screen_edge: Rect<f32>,
+    pub screen_edge: Rect,
     pub scale: f32,
 }
 
@@ -125,7 +130,8 @@ impl<'w, 's> MutQueries<'w, 's> {
         let mut focusable = child;
         let mut nav_menu = loop {
             // Find the enclosing parent menu.
-            if let Ok(&Parent(parent)) = self.parents.get(focusable) {
+            if let Ok(parent) = self.parents.get(focusable) {
+                let parent = parent.get();
                 focusable = parent;
                 if let Ok(menu) = self.menus.get_mut(parent) {
                     break menu;
@@ -345,7 +351,7 @@ fn resolve_2d<'a, 'b, 'w, 's>(
             .transforms
             .get(entity)
             .expect("Focusable entities must have a GlobalTransform component")
-            .translation
+            .translation()
             .xy()
     };
     let focused_pos = pos_of(focused);
@@ -370,10 +376,10 @@ fn resolve_2d<'a, 'b, 'w, 's>(
             let scale = boundaries.scale;
             let focused_pos = match direction {
                 // NOTE: up/down axises are inverted in bevy
-                South => Vec2::new(focused_pos.x, y + edge.top * scale),
-                North => Vec2::new(focused_pos.x, y - edge.bottom * scale),
-                East => Vec2::new(x - edge.left * scale, focused_pos.y),
-                West => Vec2::new(x + edge.right * scale, focused_pos.y),
+                North => Vec2::new(focused_pos.x, y - scale * edge.min.y),
+                South => Vec2::new(focused_pos.x, y + scale * edge.max.y),
+                East => Vec2::new(x - edge.min.x * scale, focused_pos.y),
+                West => Vec2::new(x + edge.max.x * scale, focused_pos.y),
             };
             max_by_in_iter(siblings.iter(), |s| {
                 -focused_pos.distance_squared(pos_of(**s))
@@ -619,7 +625,7 @@ fn child_menu<'a>(focusable: Entity, queries: &'a NavQueries) -> Option<(Entity,
 
 /// The [`TreeMenu`] containing `focusable`, if any.
 pub(crate) fn parent_menu(focusable: Entity, queries: &NavQueries) -> Option<(Entity, TreeMenu)> {
-    let &Parent(parent) = queries.parents.get(focusable).ok()?;
+    let parent = queries.parents.get(focusable).ok()?.get();
     match queries.menus.get(parent) {
         Ok(menu) => Some((parent, menu.1.clone())),
         Err(_) => parent_menu(parent, queries),

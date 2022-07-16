@@ -29,7 +29,7 @@
 */
 #![doc = include_str!("../Readme.md")]
 mod commands;
-#[cfg(feature = "bevy-ui")]
+#[cfg(feature = "bevy_ui")]
 pub mod components;
 pub mod event_helpers;
 pub mod events;
@@ -45,9 +45,9 @@ use bevy::prelude::*;
 
 pub use events::{NavEvent, NavRequest};
 pub use non_empty_vec::NonEmpty;
-pub use resolve::{FocusAction, FocusState, Focusable, Focused, NavLock, ScreenBoundaries};
+pub use resolve::{FocusAction, FocusState, Focusable, Focused, NavLock, Rect, ScreenBoundaries};
 pub use seeds::NavMenu;
-#[cfg(feature = "bevy-ui")]
+#[cfg(feature = "bevy_ui")]
 pub use systems::DefaultNavigationSystems;
 
 /// The [`Bundle`](https://docs.rs/bevy/0.7.0/bevy/ecs/bundle/trait.Bundle.html)s
@@ -140,7 +140,7 @@ pub struct DefaultNavigationPlugins;
 impl PluginGroup for DefaultNavigationPlugins {
     fn build(&mut self, group: &mut bevy::app::PluginGroupBuilder) {
         group.add(NavigationPlugin);
-        #[cfg(feature = "bevy-ui")]
+        #[cfg(feature = "bevy_ui")]
         group.add(DefaultNavigationSystems);
     }
 }

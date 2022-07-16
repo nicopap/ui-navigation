@@ -119,7 +119,7 @@ fn menu(materials: &Materials) -> NodeBundle {
 }
 fn setup(mut commands: Commands, materials: Res<Materials>, mut game: ResMut<Gameui>) {
     // ui camera
-    commands.spawn_bundle(UiCameraBundle::default());
+    commands.spawn_bundle(Camera2dBundle::default());
 
     let size_fn = |width, height| Size::new(Val::Percent(width), Val::Percent(height));
     let style = Style {
@@ -191,7 +191,7 @@ fn button() -> ButtonBundle {
     let size = size_fn(95.0, 12.0);
     let style = Style {
         size,
-        margin: Rect::all(Val::Percent(3.0)),
+        margin: UiRect::all(Val::Percent(3.0)),
         ..Default::default()
     };
     ButtonBundle {

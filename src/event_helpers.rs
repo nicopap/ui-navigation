@@ -111,7 +111,7 @@
 use std::ops::{Deref, DerefMut};
 
 use bevy::ecs::{
-    query::{Fetch, FilterFetch, QueryItem, WorldQuery},
+    query::{QueryItem, ROQueryItem, WorldQuery},
     system::SystemParam,
 };
 use bevy::prelude::*;
@@ -274,10 +274,6 @@ impl<'w, 's> NavEventReader<'w, 's> {
     }
 }
 
-/// The item returned by `iter()` and `get()` on queries, the mutable equivalent is
-/// [`bevy::ecs::query::QueryItem`].
-pub type ROQueryItem<'w, 's, Q> = <<Q as WorldQuery>::ReadOnlyFetch as Fetch<'w, 's>>::Item;
-
 /// Convinient wrapper around a query for a quick way of handling UI events.
 ///
 /// See [the module level doc](crate::event_helpers) for justification and
@@ -295,18 +291,11 @@ pub type ROQueryItem<'w, 's, Q> = <<Q as WorldQuery>::ReadOnlyFetch as Fetch<'w,
 /// fn handle_ui(mut button_events: NavEventQuery<&MenuButton>) {}
 /// ```
 #[derive(SystemParam)]
-pub struct NavEventQuery<'w, 's, Q: WorldQuery + 'static, F: WorldQuery = ()>
-where
-    F::Fetch: FilterFetch,
-    F: 'static,
-{
+pub struct NavEventQuery<'w, 's, Q: WorldQuery + 'static, F: 'static + WorldQuery = ()> {
     query: Query<'w, 's, Q, F>,
     events: NavEventReader<'w, 's>,
 }
-impl<'w, 's, Q: WorldQuery, F: WorldQuery> NavEventQuery<'w, 's, Q, F>
-where
-    F::Fetch: FilterFetch,
-{
+impl<'w, 's, Q: WorldQuery, F: WorldQuery> NavEventQuery<'w, 's, Q, F> {
     /// Like [`NavEventQuery::iter_activated`], but for mutable queries.
     ///
     /// You can use this method to get mutable access to items from the `Q`

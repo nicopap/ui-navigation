@@ -9,18 +9,20 @@ categories = ["game-development", "accessibility", "gui"]
 repository = "https://github.com/nicopap/ui-navigation"
 homepage = "https://github.com/nicopap/ui-navigation"
 exclude = ["assets", ".github"]
-version = "0.18.0"
+version = "0.19.0"
 edition = "2021"
 
 [features]
-default = ["bevy-ui"]
-bevy-ui = ["bevy/render"]
+default = ["bevy_ui"]
+bevy_ui = ["bevy/render"]
 
 [dependencies]
-bevy = { version = "0.7.0", default-features = false }
+bevy = { version = "0.8.0-dev", default-features = false, git = "https://github.com/bevyengine/bevy.git", rev = "25d222b73e57f27cf7f346015c7f554dafab131a" }
 non-empty-vec = { version = "0.2.2", default-features = false }
 
 [dev-dependencies]
-bevy = { version = "0.7.0", default-features = false, features = ["render", "x11", "png", "bevy_gilrs" ] }
-bevy-ui-build-macros = "0.2.1"
-
+bevy = { version = "0.8.0-dev", default-features = false, features = [
+  "x11",
+  "png",
+  "bevy_gilrs",
+], git = "https://github.com/bevyengine/bevy.git", rev = "25d222b73e57f27cf7f346015c7f554dafab131a" }

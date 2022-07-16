@@ -56,7 +56,7 @@ impl FromWorld for Images {
 fn setup(mut commands: Commands, imgs: Res<Images>) {
     let center_pct = |v: usize| Val::Percent((v as f32) * 25.0 + 25.0);
     // ui camera
-    commands.spawn_bundle(UiCameraBundle::default());
+    commands.spawn_bundle(Camera2dBundle::default());
     commands
         .spawn_bundle(NodeBundle {
             style: Style {
@@ -69,7 +69,7 @@ fn setup(mut commands: Commands, imgs: Res<Images>) {
         .with_children(|commands| {
             for x in 0..3 {
                 for y in 0..3 {
-                    let position = Rect {
+                    let position = UiRect {
                         left: center_pct(x),
                         bottom: center_pct(y),
                         ..Default::default()
@@ -93,7 +93,7 @@ fn setup(mut commands: Commands, imgs: Res<Images>) {
             }
         });
 }
-fn button_bundle(position: Rect<Val>) -> ButtonBundle {
+fn button_bundle(position: UiRect<Val>) -> ButtonBundle {
     ButtonBundle {
         style: Style {
             size: Size::new(Val::Px(95.0), Val::Px(65.0)),

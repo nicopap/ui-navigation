@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 
-use bevy_ui_build_macros::{rect, size, style, unit};
 use bevy_ui_navigation::{
     components::FocusableButtonBundle, DefaultNavigationPlugins, FocusState, Focusable, NavMenu,
     NavRequestSystem,
@@ -49,9 +48,7 @@ fn setup(mut commands: Commands) {
     use FlexWrap::Wrap;
     use JustifyContent::{FlexStart, SpaceBetween};
     // ui camera
-    commands
-        .spawn_bundle(UiCameraBundle::default())
-        .insert(Transform::from_xyz(40.0, -60.0, 1000.0 - 0.1));
+    commands.spawn_bundle(Camera2dBundle::default());
 
     let red: UiColor = Color::RED.into();
     let blue: UiColor = Color::BLUE.into();
@@ -59,66 +56,88 @@ fn setup(mut commands: Commands) {
     let gray: UiColor = Color::rgba(0.9, 0.9, 0.9, 0.3).into();
     let transparent: UiColor = Color::NONE.into();
 
+    let pct = Val::Percent;
+    let px = Val::Px;
     let vertical = NodeBundle {
-        style: style! {
+        style: Style {
             flex_direction: ColumnReverse,
-            size: size!(100 pct, 100 pct),
-            margin: rect!(2 px),
+            size: Size::new(pct(100.0), pct(100.0)),
+            margin: UiRect::all(px(2.0)),
+            ..default()
         },
         color: transparent,
         ..default()
     };
     let horizontal = NodeBundle {
-        style: style! {
+        style: Style {
             flex_direction: Row,
-            size: size!(100 pct, 100 pct),
+            size: Size::new(pct(100.0), pct(100.0)),
             justify_content: SpaceBetween,
-            margin: rect!(2 px),
+            margin: UiRect::all(px(2.0)),
+            ..default()
         },
         color: transparent,
         ..default()
     };
     let square = FocusableButtonBundle::from(ButtonBundle {
-        style: style! {
-            size: size!(40 px, 40 px),
-            margin: rect!(2 px),
+        style: Style {
+            size: Size::new(px(40.0), px(40.0)),
+            margin: UiRect::all(px(2.0)),
+            ..default()
         },
         ..default()
     });
     let long = FocusableButtonBundle::from(ButtonBundle {
-        style: style! {
-            size: size!(100 pct, 40 px),
-            margin: rect!(2 px),
+        style: Style {
+            size: Size::new(pct(100.0), px(40.0)),
+            margin: UiRect::all(px(2.0)),
+            ..default()
         },
         ..default()
     });
     let tab_square = FocusableButtonBundle::from(ButtonBundle {
-        style: style! {
-            size: size!(100 px, 40 px),
-            margin: rect!(30 px, 0 px),
+        style: Style {
+            size: Size::new(px(100.0), px(40.0)),
+            margin: UiRect {
+                left: px(30.0),
+                right: px(30.0),
+                top: px(0.0),
+                bottom: px(0.0),
+            },
+            ..default()
         },
         ..default()
     });
     let column_box = NodeBundle {
-        style: style! {
+        style: Style {
             flex_direction: Row,
-            flex_basis: unit!(90 pct),
-            size: size!(100 pct, 90 pct),
-            padding: rect!(30 px),
+            flex_basis: pct(90.0),
+            size: Size::new(pct(100.0), pct(90.0)),
+            padding: UiRect::all(px(30.0)),
+            ..default()
         },
         ..default()
     };
     let column = NodeBundle {
-        style: style! {
+        style: Style {
             flex_direction: ColumnReverse,
-            size: size!(33 pct, 100 pct),
-            padding: rect!(10 px),
-            margin: rect!(5 px, 0 px),
+            size: Size::new(pct(33.0), pct(100.0)),
+            padding: UiRect::all(px(10.0)),
+            margin: UiRect {
+                left: px(5.0),
+                right: px(5.0),
+                top: px(0.0),
+                bottom: px(0.0),
+            },
+            ..default()
         },
         ..default()
     };
     let colored_square = NodeBundle {
-        style: style! { size: size!(100 pct, 100 pct), },
+        style: Style {
+            size: Size::new(pct(100.0), pct(100.0)),
+            ..default()
+        },
         color: Color::rgb(1.0, 0.3, 0.9).into(),
         ..default()
     };
@@ -138,7 +157,7 @@ fn setup(mut commands: Commands) {
     commands
         .spawn_bundle(vertical.clone())
         .insert(Style {
-            size: size!( 100 pct, 100 pct),
+            size: Size::new(pct(100.0), pct(100.0)),
             ..vertical.style.clone()
         })
         // The tab menu should be navigated with `NavRequest::ScopeMove` hence the `WrappingScope`
@@ -148,7 +167,7 @@ fn setup(mut commands: Commands) {
             cmds.spawn_bundle(horizontal.clone())
                 .insert(Style {
                     justify_content: FlexStart,
-                    flex_basis: unit!(10 pct),
+                    flex_basis: pct(10.0),
                     ..horizontal.style.clone()
                 })
                 .with_children(|cmds| {

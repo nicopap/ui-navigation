@@ -92,7 +92,7 @@ fn setup(mut commands: Commands) {
     use NavMenu::Wrapping2d as WrapMenu;
     use Val::{Percent as Pct, Px};
     // ui camera
-    commands.spawn_bundle(UiCameraBundle::default());
+    commands.spawn_bundle(Camera2dBundle::default());
 
     // First argument to `bndl!` is the color of the node, second is the Style
     macro_rules! bndl {
@@ -109,7 +109,7 @@ fn setup(mut commands: Commands) {
             }
         )
     }
-    let good_margin = Rect::all(Val::Px(20.0));
+    let good_margin = UiRect::all(Val::Px(20.0));
     // white background
     let root = bndl!(Color::WHITE, {
         size: Size::new(Pct(100.0), Pct(100.0)),
@@ -134,7 +134,7 @@ fn setup(mut commands: Commands) {
     // navigable buttons within columns
     let button = bndl!(Color::BLACK, {
         size: Size::new(Px(40.0), Px(40.0)),
-        margin: Rect::all(Px(5.0)),
+        margin: UiRect::all(Px(5.0)),
     });
     // spawn nine different buttons for the keyboard menu
     macro_rules! nine {

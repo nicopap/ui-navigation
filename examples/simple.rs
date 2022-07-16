@@ -38,7 +38,7 @@ fn print_nav_events(mut events: EventReader<NavEvent>) {
 
 fn setup(mut commands: Commands) {
     // ui camera
-    commands.spawn_bundle(UiCameraBundle::default());
+    commands.spawn_bundle(Camera2dBundle::default());
     let positions = [
         Vec2::new(10.0, 10.0),
         Vec2::new(15.0, 50.0),
@@ -66,7 +66,7 @@ fn setup(mut commands: Commands) {
         });
 }
 fn spawn_button(position: Vec2, commands: &mut ChildBuilder) {
-    let position = Rect {
+    let position = UiRect {
         left: Val::Percent(position.x),
         top: Val::Percent(position.y),
         ..Default::default()

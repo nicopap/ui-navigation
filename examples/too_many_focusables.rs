@@ -75,7 +75,7 @@ fn non_stop_move(
 fn setup(mut commands: Commands) {
     let top = 310;
     let as_rainbow = |i: u32| Color::hsl((i as f32 / top as f32) * 360.0, 0.9, 0.8);
-    commands.spawn_bundle(UiCameraBundle::default());
+    commands.spawn_bundle(Camera2dBundle::default());
     commands
         .spawn_bundle(NodeBundle {
             style: Style {
@@ -100,7 +100,7 @@ fn spawn_button(commands: &mut ChildBuilder, color: UiColor, max: u32, i: u32, j
             style: Style {
                 size: Size::new(Val::Percent(width), Val::Percent(width)),
 
-                position: Rect {
+                position: UiRect {
                     bottom: Val::Percent((100.0 / max as f32) * i as f32),
                     left: Val::Percent((100.0 / max as f32) * j as f32),
                     ..default()
