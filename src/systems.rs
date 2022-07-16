@@ -386,7 +386,8 @@ pub fn generic_default_mouse_input<T: ScreenSize + Component>(
     }
 }
 
-/// Update [`ScreenBoundaries`] resource based on the bevy [`CameraUi`].
+/// Update [`ScreenBoundaries`] resource when the UI camera change
+/// (assuming there is a unique one).
 ///
 /// See [`ScreenBoundaries`] doc for details.
 #[cfg(feature = "bevy_ui")]

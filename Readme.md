@@ -79,7 +79,7 @@ fn custom_input_system_emitting_nav_requests(mut events: EventWriter<NavRequest>
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(NavigationPlugin)
+        .add_plugin(NavigationPlugin::new())
         .add_system(custom_input_system_emitting_nav_requests)
         .run();
 }
@@ -177,7 +177,7 @@ fn custom_mouse_input(mut events: EventWriter<NavRequest>) {
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(NavigationPlugin)
+        .add_plugin(NavigationPlugin::new())
         // ...
         // Add the button color update system after the focus update system
         .add_system(button_system.after(NavRequestSystem))
@@ -452,7 +452,7 @@ A usage demo is available in [the `marking.rs` example][example-marking].
   * Fix `bevy-ui` feature not building. This issue was introduced in `0.16.0`.
 * `0.19.0`: **Breaking**: Update to bevy 0.8.0
   * **Warning**: 0.8.0 removed the ability for the user to change the ui camera position
-    and perspective, see https://github.com/bevyengine/bevy/pull/5252
+    and perspective, see <https://github.com/bevyengine/bevy/pull/5252>
     Generic support for user-defined UIs still allows custom cropping, but it not a relevant
     use case to the default bevy_ui library.
   * Keyboard navigation in the style of games pre-dating computer mouses is now disabled by default.
@@ -461,6 +461,11 @@ A usage demo is available in [the `marking.rs` example][example-marking].
     You can enable keyboard movement using the [`InputMapping::keyboard_navigation`] field.
   * Touch input handling has been removed, it was untested and probably broken, better let
     the user who knows what they are doing do it.
+  * **NEW**: Add complete user-customizable focus movement. Now it should be possible to implement
+    focus navigation in 3d space.
+  * **Breaking**: This requires making the plugin generic over the navigation system, if you were
+    manually adding `NavigationPlugin`, please consider using `DefaultNavigationPlugins` instead,
+    if it is not possible, then use `NavigationPlugin::new()`.
 
 [`ButtonBundle`]: https://docs.rs/bevy/0.8.0/bevy/ui/entity/struct.ButtonBundle.html
 [Changed]: https://docs.rs/bevy/0.8.0/bevy/ecs/prelude/struct.Changed.html

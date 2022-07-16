@@ -11,6 +11,7 @@
 [`Focusable::lock`]: Focusable::lock
 [`generic_default_mouse_input`]: systems::generic_default_mouse_input
 [`InputMapping`]: systems::InputMapping
+[`InputMapping::keyboard_navigation`]: systems::InputMapping::keyboard_navigation
 [module-event_helpers]: event_helpers
 [module-marking]: bundles::MenuSeed
 [module-systems]: systems
@@ -41,16 +42,22 @@ pub mod systems;
 
 use std::marker::PhantomData;
 
-use bevy::prelude::*;
+use bevy::{
+    ecs::system::{SystemParam, SystemParamItem},
+    prelude::*,
+};
 
 pub use events::{NavEvent, NavRequest};
 pub use non_empty_vec::NonEmpty;
-pub use resolve::{FocusAction, FocusState, Focusable, Focused, NavLock, Rect, ScreenBoundaries};
+pub use resolve::{
+    FocusAction, FocusState, Focusable, Focused, MoveParam, NavLock, Rect, ScreenBoundaries,
+    UiProjectionQuery,
+};
 pub use seeds::NavMenu;
 #[cfg(feature = "bevy_ui")]
 pub use systems::DefaultNavigationSystems;
 
-/// The [`Bundle`](https://docs.rs/bevy/0.8.0/bevy/ecs/bundle/trait.Bundle.html)s
+/// The [`Bundle`](bevy::prelude::Bundle)s
 /// returned by the [`NavMenu`] methods.
 pub mod bundles {
     pub use crate::seeds::{MarkingMenuSeed, MenuSeed, NamedMarkingMenuSeed, NamedMenuSeed};
@@ -117,13 +124,31 @@ pub struct NavRequestSystem;
 /// This means you'll also have to add manaully the systems from [`systems`]
 /// and [`systems::InputMapping`]. You should prefer [`DefaultNavigationPlugins`]
 /// if you don't want to bother with that.
-pub struct NavigationPlugin;
-impl Plugin for NavigationPlugin {
+///
+/// # Note on generic parameters
+///
+/// The `MP` type parameter might seem complicated, but all you have to do
+/// is for your type to implement [`SystemParam`] and [`MoveParam`].
+/// See the [`resolve::UiProjectionQuery`] source code for implementation hints.
+pub struct GenericNavigationPlugin<MP>(PhantomData<MP>);
+pub type NavigationPlugin<'w, 's> = GenericNavigationPlugin<UiProjectionQuery<'w, 's>>;
+unsafe impl<T> Send for GenericNavigationPlugin<T> {}
+unsafe impl<T> Sync for GenericNavigationPlugin<T> {}
+
+impl<MP: MoveParam> GenericNavigationPlugin<MP> {
+    pub fn new() -> Self {
+        Self(PhantomData)
+    }
+}
+impl<MP: SystemParam + 'static> Plugin for GenericNavigationPlugin<MP>
+where
+    for<'w, 's> SystemParamItem<'w, 's, MP>: MoveParam,
+{
     fn build(&self, app: &mut App) {
         app.add_event::<NavRequest>()
             .add_event::<NavEvent>()
             .insert_resource(NavLock::new())
-            .add_system(resolve::listen_nav_requests.label(NavRequestSystem))
+            .add_system(resolve::listen_nav_requests::<MP>.label(NavRequestSystem))
             .add_system(resolve::set_first_focused)
             .add_system(resolve::insert_tree_menus)
             .add_system(named::resolve_named_menus.before(resolve::insert_tree_menus));
@@ -139,7 +164,7 @@ impl Plugin for NavigationPlugin {
 pub struct DefaultNavigationPlugins;
 impl PluginGroup for DefaultNavigationPlugins {
     fn build(&mut self, group: &mut bevy::app::PluginGroupBuilder) {
-        group.add(NavigationPlugin);
+        group.add(GenericNavigationPlugin::<UiProjectionQuery>::new());
         #[cfg(feature = "bevy_ui")]
         group.add(DefaultNavigationSystems);
     }

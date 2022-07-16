@@ -20,14 +20,18 @@
 //! * [`child_menu`]
 //! * [`focus_deep`]
 //! * [`root_path`]
-//! * [`resolve_2d`]
+//! * [`MoveParam::resolve_2d`]
 //! * [`resolve_scope`]
+//!
+//! A trait [`MoveParam`] allows user-defined movements through a custom system parameter
+//! by implementing `resolve_2d`.
 //!
 //! We define some `SystemParam`:
 //! * [`ChildQueries`]: queries used to find the focusable children of a given entity.
 //! * [`NavQueries`]: All **immutable** queries used by the resolution algorithm.
 //! * [`MutQueries`]: Queries with mutable access to [`Focusable`] and [`TreeMenu`]
 //!   for updating them in [`listen_nav_requests`].
+//! * [`UiProjectionQuery`]: A default implementation of [`MoveParam`] for `bevy_ui`.
 //!
 //! [`listen_nav_requests`] uses a `ParamSet` to access the focusables immutably for
 //! navigation resolution and mutably for updating them with the new navigation state.
@@ -35,7 +39,12 @@ use std::cmp::Ordering;
 use std::fmt;
 use std::num::NonZeroUsize;
 
-use bevy::{ecs::system::SystemParam, log::warn, math::Vec3Swizzles, prelude::*};
+use bevy::{
+    ecs::system::{StaticSystemParam, SystemParam, SystemParamItem},
+    log::warn,
+    math::Vec3Swizzles,
+    prelude::*,
+};
 use non_empty_vec::NonEmpty;
 
 use crate::{
@@ -43,6 +52,32 @@ use crate::{
     events::{self, NavEvent, NavRequest},
     seeds::{self, NavMenu as MenuSetting},
 };
+
+/// System parameter used to resolve movement and cycling focus updates.
+///
+/// This is useful if you don't want to depend on bevy's [`GlobalTransform`]
+/// for your UI, or want to implement your own navigation algorithm. For example,
+/// if you want your ui to be 3d elements in the world.
+///
+/// See the [`UiProjectionQuery`] source code for implementation hints.
+pub trait MoveParam {
+    /// Which `Entity` in `siblings` can be reached from `focused` in
+    /// `direction` if any, otherwise `None`.
+    ///
+    /// * `focused`: The currently focused entity in the menu
+    /// * `direction`: The direction in which the focus should move
+    /// * `cycles`: Whether the navigation should loop
+    /// * `sibligns`: All the other focusable entities in this menu
+    ///
+    /// Note that `focused` appears once in `siblings`.
+    fn resolve_2d<'a>(
+        &self,
+        focused: Entity,
+        direction: events::Direction,
+        cycles: bool,
+        siblings: &'a [Entity],
+    ) -> Option<&'a Entity>;
+}
 
 #[derive(Debug, Clone, Copy)]
 pub struct Rect {
@@ -68,17 +103,22 @@ pub struct ScreenBoundaries {
     pub scale: f32,
 }
 
-#[allow(clippy::type_complexity)]
 #[derive(SystemParam)]
 pub(crate) struct ChildQueries<'w, 's> {
     children: Query<'w, 's, &'static Children>,
-    is_focusable: Query<'w, 's, (), With<Focusable>>,
-    is_menu: Query<'w, 's, (), Or<(With<TreeMenu>, With<seeds::TreeMenuSeed>)>>,
+    is_focusable: Query<'w, 's, With<Focusable>>,
+    is_menu: Query<'w, 's, Or<(With<TreeMenu>, With<seeds::TreeMenuSeed>)>>,
 }
 
-#[allow(clippy::type_complexity)]
+/// System parameter for the default cursor navigation system.
+///
+/// It uses the bevy [`GlobalTransform`] to compute relative positions
+/// and change focus to the correct entity.
+/// It uses the [`ScreenBoundaries`] resource to compute screen boundaries
+/// and move the cursor accordingly when it reaches a screen border
+/// in a cycling menu.
 #[derive(SystemParam)]
-pub(crate) struct UiProjectionQuery<'w, 's> {
+pub struct UiProjectionQuery<'w, 's> {
     boundaries: Option<Res<'w, ScreenBoundaries>>,
     transforms: Query<'w, 's, &'static GlobalTransform>,
 }
@@ -91,19 +131,19 @@ pub(crate) struct NavQueries<'w, 's> {
     parents: Query<'w, 's, &'static Parent>,
     focusables: Query<'w, 's, (Entity, &'static Focusable), Without<TreeMenu>>,
     menus: Query<'w, 's, (Entity, &'static TreeMenu), Without<Focusable>>,
-    queries2d: UiProjectionQuery<'w, 's>,
 }
 impl<'w, 's> NavQueries<'w, 's> {
     fn focused(&self) -> Option<Entity> {
         use FocusState::{Dormant, Focused};
-        let menu_dormant = |menu: &TreeMenu| menu.focus_parent.is_none().then(|| menu.active_child);
-        let any_dormant = |(e, focus): (Entity, &Focusable)| (focus.state == Dormant).then(|| e);
+        let menu_dormant =
+            |menu: &TreeMenu| menu.focus_parent.is_none().then_some(menu.active_child);
+        let any_dormant = |(e, focus): (Entity, &Focusable)| (focus.state == Dormant).then_some(e);
         let any_dormant = || self.focusables.iter().find_map(any_dormant);
         let root_dormant = || self.menus.iter().find_map(|(_, menu)| menu_dormant(menu));
         let fallback = || self.focusables.iter().next().map(|(entity, _)| entity);
         self.focusables
             .iter()
-            .find_map(|(e, focus)| (focus.state == Focused).then(|| e))
+            .find_map(|(e, focus)| (focus.state == Focused).then_some(e))
             .or_else(root_dormant)
             .or_else(any_dormant)
             .or_else(fallback)
@@ -335,57 +375,56 @@ impl Focusable {
 #[non_exhaustive]
 pub struct Focused;
 
-/// Which `Entity` in `siblings` can be reached from `focused` in
-/// `direction` given entities `transform` if any, otherwise `None`.
-fn resolve_2d<'a, 'b, 'w, 's>(
-    focused: Entity,
-    direction: events::Direction,
-    cycles: bool,
-    siblings: &'a [Entity],
-    queries: &'b UiProjectionQuery<'w, 's>,
-) -> Option<&'a Entity> {
-    use events::Direction::*;
+impl<'w, 's> MoveParam for UiProjectionQuery<'w, 's> {
+    fn resolve_2d<'a>(
+        &self,
+        focused: Entity,
+        direction: events::Direction,
+        cycles: bool,
+        siblings: &'a [Entity],
+    ) -> Option<&'a Entity> {
+        use events::Direction::*;
 
-    let pos_of = |entity: Entity| {
-        queries
-            .transforms
-            .get(entity)
-            .expect("Focusable entities must have a GlobalTransform component")
-            .translation()
-            .xy()
-    };
-    let focused_pos = pos_of(focused);
-    let closest = siblings
-        .iter()
-        .filter(|sibling| direction.is_in(focused_pos, pos_of(**sibling)) && **sibling != focused);
-    let closest = max_by_in_iter(closest, |s| -focused_pos.distance_squared(pos_of(**s)));
-    match (closest, queries.boundaries.as_ref()) {
-        (None, None) if cycles => {
-            warn!(
-                "Tried to move in {direction:?} from Focusable {focused:?} while no other \
+        let pos_of = |entity: Entity| {
+            self.transforms
+                .get(entity)
+                .expect("Focusable entities must have a GlobalTransform component")
+                .translation()
+                .xy()
+        };
+        let focused_pos = pos_of(focused);
+        let closest = siblings.iter().filter(|sibling| {
+            direction.is_in(focused_pos, pos_of(**sibling)) && **sibling != focused
+        });
+        let closest = max_by_in_iter(closest, |s| -focused_pos.distance_squared(pos_of(**s)));
+        match (closest, self.boundaries.as_ref()) {
+            (None, None) if cycles => {
+                warn!(
+                    "Tried to move in {direction:?} from Focusable {focused:?} while no other \
                  Focusables were there. There were no `Res<ScreenBoundaries>`, so we couldn't \
                  compute the screen edges for cycling. Make sure you either add the \
                  bevy_ui_navigation::systems::update_boundaries system to your app or implement \
                  your own routine to manage a `Res<ScreenBoundaries>`."
-            );
-            None
+                );
+                None
+            }
+            (None, Some(boundaries)) if cycles => {
+                let (x, y) = (boundaries.position.x, boundaries.position.y);
+                let edge = boundaries.screen_edge;
+                let scale = boundaries.scale;
+                let focused_pos = match direction {
+                    // NOTE: up/down axises are inverted in bevy
+                    North => Vec2::new(focused_pos.x, y - scale * edge.min.y),
+                    South => Vec2::new(focused_pos.x, y + scale * edge.max.y),
+                    East => Vec2::new(x - edge.min.x * scale, focused_pos.y),
+                    West => Vec2::new(x + edge.max.x * scale, focused_pos.y),
+                };
+                max_by_in_iter(siblings.iter(), |s| {
+                    -focused_pos.distance_squared(pos_of(**s))
+                })
+            }
+            (anyelse, _) => anyelse,
         }
-        (None, Some(boundaries)) if cycles => {
-            let (x, y) = (boundaries.position.x, boundaries.position.y);
-            let edge = boundaries.screen_edge;
-            let scale = boundaries.scale;
-            let focused_pos = match direction {
-                // NOTE: up/down axises are inverted in bevy
-                North => Vec2::new(focused_pos.x, y - scale * edge.min.y),
-                South => Vec2::new(focused_pos.x, y + scale * edge.max.y),
-                East => Vec2::new(x - edge.min.x * scale, focused_pos.y),
-                West => Vec2::new(x + edge.max.x * scale, focused_pos.y),
-            };
-            max_by_in_iter(siblings.iter(), |s| {
-                -focused_pos.distance_squared(pos_of(**s))
-            })
-        }
-        (anyelse, _) => anyelse,
     }
 }
 
@@ -413,12 +452,13 @@ fn resolve_scope(
 }
 
 /// Resolve `request` where the focused element is `focused`
-fn resolve(
+fn resolve<MP: MoveParam>(
     focused: Entity,
     request: NavRequest,
     queries: &NavQueries,
     lock: &mut NavLock,
     from: Vec<Entity>,
+    mquery: &MP,
 ) -> NavEvent {
     use NavRequest::*;
 
@@ -460,7 +500,7 @@ fn resolve(
                     )
                 }
             };
-            let to = resolve_2d(focused, direction, cycles, &siblings, &queries.queries2d);
+            let to = mquery.resolve_2d(focused, direction, cycles, &siblings);
             NavEvent::focus_changed(*or_none!(to), from)
         }
         Cancel => {
@@ -475,7 +515,7 @@ fn resolve(
                     FocusAction::Cancel => {
                         let mut from = from.to_vec();
                         from.truncate(from.len() - 1);
-                        return resolve(focused, NavRequest::Cancel, queries, lock, from);
+                        return resolve(focused, NavRequest::Cancel, queries, lock, from, mquery);
                     }
                     FocusAction::Lock => {
                         lock.entity = Some(focused);
@@ -494,7 +534,7 @@ fn resolve(
             let siblings = queries.children.focusables_of(parent);
             if !menu.setting.is_scope() {
                 let focused = or_none!(menu.focus_parent);
-                resolve(focused, request, queries, lock, from.into())
+                resolve(focused, request, queries, lock, from.into(), mquery)
             } else {
                 let cycles = !menu.setting.bound();
                 let to = or_none!(resolve_scope(focused, scope_dir, cycles, &siblings));
@@ -541,7 +581,7 @@ pub(crate) fn insert_tree_menus(
             .iter()
             .find_map(|e| {
                 let (_, focusable) = queries.focusables.get(*e).ok()?;
-                matches!(focusable.state, Dormant | Active | Focused).then(|| e)
+                matches!(focusable.state, Dormant | Active | Focused).then_some(e)
             })
             .unwrap_or_else(|| children.first());
         let menu = seed.clone().with_child(*child);
@@ -570,13 +610,16 @@ pub(crate) fn set_first_focused(
 
 /// Listen to [`NavRequest`] and update the state of [`Focusable`] entities if
 /// relevant.
-pub(crate) fn listen_nav_requests(
+pub(crate) fn listen_nav_requests<MP: SystemParam>(
     mut cmds: Commands,
     mut queries: ParamSet<(NavQueries, MutQueries)>,
+    mquery: StaticSystemParam<MP>,
     mut lock: ResMut<NavLock>,
     mut requests: EventReader<NavRequest>,
     mut events: EventWriter<NavEvent>,
-) {
+) where
+    for<'w, 's> SystemParamItem<'w, 's, MP>: MoveParam,
+{
     use FocusState as Fs;
 
     let no_focused = "Tried to execute a NavRequest when no focusables exist, NavRequest does nothing if there isn't any navigation to do.";
@@ -591,7 +634,8 @@ pub(crate) fn listen_nav_requests(
             warn!(no_focused);
             continue;
         };
-        let event = resolve(focused, *request, &queries.p0(), &mut lock, Vec::new());
+        let from = Vec::new();
+        let event = resolve(focused, *request, &queries.p0(), &mut lock, from, &*mquery);
         // Change focus state of relevant entities
         if let NavEvent::FocusChanged { to, from } = &event {
             let mut mut_queries = queries.p1();
@@ -724,9 +768,9 @@ fn resolve_index(
 ) -> Option<usize> {
     use events::ScopeDirection::*;
     match (direction, from) {
-        (Previous, 0) => cycles.then(|| max_value),
+        (Previous, 0) => cycles.then_some(max_value),
         (Previous, from) => Some(from - 1),
-        (Next, from) if from == max_value => cycles.then(|| 0),
+        (Next, from) if from == max_value => cycles.then_some(0),
         (Next, from) => Some(from + 1),
     }
 }
