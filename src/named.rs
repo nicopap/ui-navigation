@@ -1,5 +1,5 @@
 //! Declare menu navigation through
-//! [`Name`](https://docs.rs/bevy/0.7.0/bevy/core/struct.Name.html).
+//! [`Name`](https://docs.rs/bevy/0.8.0/bevy/core/struct.Name.html).
 //!
 //! The most difficult part of the API to deal with was giving
 //! [`NavMenu::reachable_from`](crate::NavMenu::reachable_from) the `Entity` for of

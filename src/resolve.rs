@@ -193,7 +193,7 @@ impl NavLock {
     pub(crate) fn new() -> Self {
         Self { entity: None }
     }
-    /// The [`Entity`](https://docs.rs/bevy/0.7.0/bevy/ecs/entity/struct.Entity.html)
+    /// The [`Entity`](https://docs.rs/bevy/0.8.0/bevy/ecs/entity/struct.Entity.html)
     /// that triggered the lock.
     pub fn entity(&self) -> Option<Entity> {
         self.entity
@@ -246,7 +246,7 @@ pub enum FocusAction {
     Lock,
 }
 
-/// An [`Entity`](https://docs.rs/bevy/0.7.0/bevy/ecs/entity/struct.Entity.html)
+/// An [`Entity`](https://docs.rs/bevy/0.8.0/bevy/ecs/entity/struct.Entity.html)
 /// that can be navigated to using the ui navigation system.
 ///
 /// It is in one of multiple [`FocusState`], you can check its state with
@@ -318,7 +318,7 @@ impl Focusable {
 /// You cannot edit it or create new `Focused` component. To set an arbitrary
 /// [`Focusable`] to _focused_, you should send [`NavRequest::FocusOn`].
 ///
-/// This [`Component`](https://docs.rs/bevy/0.7.0/bevy/ecs/component/trait.Component.html)
+/// This [`Component`](https://docs.rs/bevy/0.8.0/bevy/ecs/component/trait.Component.html)
 /// is useful if you need to query for the _currently focused_ element using a
 /// `Query<Entity, With<Focused>>` for example.
 ///

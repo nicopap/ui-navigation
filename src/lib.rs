@@ -50,7 +50,7 @@ pub use seeds::NavMenu;
 #[cfg(feature = "bevy_ui")]
 pub use systems::DefaultNavigationSystems;
 
-/// The [`Bundle`](https://docs.rs/bevy/0.7.0/bevy/ecs/bundle/trait.Bundle.html)s
+/// The [`Bundle`](https://docs.rs/bevy/0.8.0/bevy/ecs/bundle/trait.Bundle.html)s
 /// returned by the [`NavMenu`] methods.
 pub mod bundles {
     pub use crate::seeds::{MarkingMenuSeed, MenuSeed, NamedMarkingMenuSeed, NamedMenuSeed};
