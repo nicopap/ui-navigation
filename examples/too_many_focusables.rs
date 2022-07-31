@@ -1,7 +1,9 @@
 use bevy::prelude::*;
 
 use bevy_ui_navigation::events::{Direction, NavRequest};
-use bevy_ui_navigation::{DefaultNavigationPlugins, FocusState, Focusable, NavRequestSystem};
+use bevy_ui_navigation::prelude::{
+    DefaultNavigationPlugins, FocusState, Focusable, NavRequestSystem,
+};
 
 /// This example shows what happens when there is a lot of focusables on screen.
 /// It doesn't run well on debug builds, you should try running it with the `--release`

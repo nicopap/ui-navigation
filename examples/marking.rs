@@ -1,7 +1,8 @@
 use bevy::prelude::*;
 
-use bevy_ui_navigation::{
-    DefaultNavigationPlugins, FocusState, Focusable, Focused, NavMarkerPropagationPlugin, NavMenu,
+use bevy_ui_navigation::mark::{NavMarker, NavMarkerPropagationPlugin};
+use bevy_ui_navigation::prelude::{
+    DefaultNavigationPlugins, FocusState, Focusable, Focused, MenuBuilder, MenuSetting,
     NavRequestSystem,
 };
 
@@ -80,7 +81,7 @@ fn button_system(mut interaction_query: Query<(&Focusable, &mut UiColor), Change
         let color = match focus.state() {
             FocusState::Focused => Color::ORANGE,
             FocusState::Active => Color::GOLD,
-            FocusState::Dormant => Color::GRAY,
+            FocusState::Prioritized => Color::GRAY,
             FocusState::Inert => Color::BLACK,
         };
         *material = color.into();
@@ -89,7 +90,6 @@ fn button_system(mut interaction_query: Query<(&Focusable, &mut UiColor), Change
 
 fn setup(mut commands: Commands) {
     use FlexDirection::{ColumnReverse, Row};
-    use NavMenu::Wrapping2d as WrapMenu;
     use Val::{Percent as Pct, Px};
     // ui camera
     commands.spawn_bundle(Camera2dBundle::default());
@@ -109,6 +109,8 @@ fn setup(mut commands: Commands) {
             }
         )
     }
+    let wrap = MenuSetting::new().wrapping();
+    let reachable_from = MenuBuilder::EntityParent;
     let good_margin = UiRect::all(Val::Px(20.0));
     // white background
     let root = bndl!(Color::WHITE, {
@@ -161,8 +163,8 @@ fn setup(mut commands: Commands) {
     // spawn the whole UI tree
     commands.spawn_bundle(root).with_children(|cmds| {
         cmds.spawn_bundle(keyboard)
-            // Add root menu        vvvvvvvvvvvvvvvvvvvv
-            .insert_bundle(NavMenu::WrappingScope.root())
+            // Add root menu                                       vvvvvvvvvvvvvvvvv
+            .insert_bundle((MenuSetting::new().wrapping().scope(), MenuBuilder::Root))
             .push_children(&bts);
 
         cmds.spawn_bundle(billboard).with_children(|cmds| {
@@ -172,22 +174,23 @@ fn setup(mut commands: Commands) {
             // in `print_menus`, we detect the menu in which we are
             // using the `Query<&LeftColumnMenus>` query.
             //
-            // `WrapMenu` = `NavMenu::Wrapping2d`, see type alias on top of this
+            // `wrap` = `MenuSetting::Wrapping2d`, see type alias on top of this
             // function.
             cmds.spawn_bundle(column(red)).with_children(|cmds| {
-                let menu = |row: LeftColMenu| WrapMenu.reachable_from(bts[row.i()]).marking(row);
+                let menu = |row: LeftColMenu| (wrap, reachable_from(bts[row.i()]), NavMarker(row));
                 spawn_cell!(cmds).insert_bundle(menu(LeftColMenu::Top));
                 spawn_cell!(cmds).insert_bundle(menu(LeftColMenu::Middle));
                 spawn_cell!(cmds).insert_bundle(menu(LeftColMenu::Bottom));
             });
             cmds.spawn_bundle(column(green)).with_children(|cmds| {
-                let menu = |row: CenterColMenu| WrapMenu.reachable_from(bts[row.i()]).marking(row);
+                let menu =
+                    |row: CenterColMenu| (wrap, reachable_from(bts[row.i()]), NavMarker(row));
                 spawn_cell!(cmds).insert_bundle(menu(CenterColMenu::Top));
                 spawn_cell!(cmds).insert_bundle(menu(CenterColMenu::Middle));
                 spawn_cell!(cmds).insert_bundle(menu(CenterColMenu::Bottom));
             });
             cmds.spawn_bundle(column(blue)).with_children(|cmds| {
-                let menu = |row: RightColMenu| WrapMenu.reachable_from(bts[row.i()]).marking(row);
+                let menu = |row: RightColMenu| (wrap, reachable_from(bts[row.i()]), NavMarker(row));
                 spawn_cell!(cmds).insert_bundle(menu(RightColMenu::Top));
                 spawn_cell!(cmds).insert_bundle(menu(RightColMenu::Middle));
                 spawn_cell!(cmds).insert_bundle(menu(RightColMenu::Bottom));

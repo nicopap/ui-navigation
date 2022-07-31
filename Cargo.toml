@@ -17,12 +17,13 @@ default = ["bevy_ui"]
 bevy_ui = ["bevy/render"]
 
 [dependencies]
-bevy = { version = "0.8.0-dev", default-features = false, git = "https://github.com/bevyengine/bevy.git", rev = "25d222b73e57f27cf7f346015c7f554dafab131a" }
+bevy = { version = "0.8.0", default-features = false, features = ["bevy_asset"] }
 non-empty-vec = { version = "0.2.2", default-features = false }
 
 [dev-dependencies]
-bevy = { version = "0.8.0-dev", default-features = false, features = [
+bevy = { version = "0.8.0", default-features = false, features = [
   "x11",
   "png",
+  "bevy_asset",
   "bevy_gilrs",
-], git = "https://github.com/bevyengine/bevy.git", rev = "25d222b73e57f27cf7f346015c7f554dafab131a" }
+] }

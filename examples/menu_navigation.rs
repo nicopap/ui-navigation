@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
-use bevy_ui_navigation::{
-    DefaultNavigationPlugins, FocusState, Focusable, NavEvent, NavMenu, NavRequest,
-    NavRequestSystem,
+use bevy_ui_navigation::prelude::{
+    DefaultNavigationPlugins, FocusState, Focusable, MenuBuilder, MenuSetting, NavEvent,
+    NavRequest, NavRequestSystem,
 };
 
 /// This example demonstrates a more complex menu system where you navigate
@@ -74,7 +74,7 @@ fn button_system(mut interaction_query: Query<(&Focusable, &mut UiColor), Change
         let color = match focus.state() {
             FocusState::Focused => Color::ORANGE_RED,
             FocusState::Active => Color::GOLD,
-            FocusState::Dormant => Color::GRAY,
+            FocusState::Prioritized => Color::GRAY,
             FocusState::Inert => Color::DARK_GRAY,
         };
         *material = color.into();
@@ -154,7 +154,10 @@ fn setup(mut commands: Commands, materials: Res<Materials>, mut game: ResMut<Gam
                 .spawn_bundle(menu(&materials))
                 // Note: when next_menu_button is None,
                 // `with_parent(next_menu_button)` represents the root menu
-                .insert_bundle(NavMenu::Wrapping2d.with_parent(next_menu_button))
+                .insert_bundle((
+                    MenuSetting::new().wrapping(),
+                    MenuBuilder::from(next_menu_button),
+                ))
                 .with_children(|commands| {
                     for i in 0..4 {
                         let mut button = commands.spawn_bundle(button());

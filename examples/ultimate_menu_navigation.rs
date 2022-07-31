@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
-use bevy_ui_navigation::{
-    components::FocusableButtonBundle, DefaultNavigationPlugins, FocusState, Focusable, NavMenu,
-    NavRequestSystem,
+use bevy_ui_navigation::components::FocusableButtonBundle;
+use bevy_ui_navigation::prelude::{
+    DefaultNavigationPlugins, FocusState, Focusable, MenuBuilder, MenuSetting, NavRequestSystem,
 };
 
 /// THE ULTIMATE MENU DEMONSTRATION
@@ -36,7 +36,7 @@ fn button_system(mut interaction_query: Query<(&Focusable, &mut UiColor), Change
         let color = match focus.state() {
             FocusState::Focused => Color::ORANGE_RED,
             FocusState::Active => Color::GOLD,
-            FocusState::Dormant => Color::GRAY,
+            FocusState::Prioritized => Color::GRAY,
             FocusState::Inert => Color::DARK_GRAY,
         };
         *material = color.into();
@@ -142,8 +142,8 @@ fn setup(mut commands: Commands) {
         ..default()
     };
 
-    let menu = |name| NavMenu::Bound2d.reachable_from_named(name);
-    let cycle_menu = |name| NavMenu::Wrapping2d.reachable_from_named(name);
+    let menu = |name| (MenuSetting::new(), MenuBuilder::from_named(name));
+    let cycle_menu = |name| (MenuSetting::new().wrapping(), MenuBuilder::from_named(name));
     let named = Name::new;
 
     // Note that bevy's native UI library IS NOT NICE TO WORK WITH. I
@@ -151,8 +151,8 @@ fn setup(mut commands: Commands) {
     // of comprehension, I use the native way of creating a UI here.
     //
     // Pay attention to calls to `menu("id")`, `cycle_menu("id"), `named`, and
-    // `NavMenu::root()`. You'll notice we use `Name` to give a sort of
-    // identifier to our focusables so that they are refereable by `NavMenu`s
+    // `MenuSetting::root()`. You'll notice we use `Name` to give a sort of
+    // identifier to our focusables so that they are refereable by `MenuSetting`s
     // afterward.
     commands
         .spawn_bundle(vertical.clone())
@@ -160,9 +160,9 @@ fn setup(mut commands: Commands) {
             size: Size::new(pct(100.0), pct(100.0)),
             ..vertical.style.clone()
         })
-        // The tab menu should be navigated with `NavRequest::ScopeMove` hence the `WrappingScope`
-        //             vvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-        .insert_bundle(NavMenu::WrappingScope.root())
+        // The tab menu should be navigated with `NavRequest::ScopeMove` hence the `.scope()`
+        //             vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+        .insert_bundle((MenuSetting::new().wrapping().scope(), MenuBuilder::Root))
         .with_children(|cmds| {
             cmds.spawn_bundle(horizontal.clone())
                 .insert(Style {
@@ -222,9 +222,12 @@ fn setup(mut commands: Commands) {
                         for i in 0..8 {
                             let name = format!("green_{i}");
                             let child_bundle = if i % 2 == 0 {
-                                NavMenu::Wrapping2d.reachable_from_named(name.clone())
+                                (
+                                    MenuSetting::new().wrapping(),
+                                    MenuBuilder::from_named(name.clone()),
+                                )
                             } else {
-                                NavMenu::Bound2d.reachable_from_named(name.clone())
+                                (MenuSetting::new(), MenuBuilder::from_named(name.clone()))
                             };
                             cmds.spawn_bundle(horizontal.clone()).with_children(|cmds| {
                                 cmds.spawn_bundle(long.clone()).insert(Name::new(name));

@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use bevy_ui_navigation::{
+use bevy_ui_navigation::prelude::{
     DefaultNavigationPlugins, FocusState, Focusable, NavEvent, NavRequestSystem,
 };
 

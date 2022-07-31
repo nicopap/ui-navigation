@@ -1,36 +1,59 @@
 //! Navigation events and requests.
 //!
-//! The navigation system works through bevy's `Events` system. Basically, it is
-//! a system with one input and two outputs:
-//! * Input [`Events<NavRequst>`](https://docs.rs/bevy/0.8.0/bevy/app/struct.Events.html),
-//!   tells the navigation system what to do. Your app should have a system
-//!   that writes to a [`EventWriter<NavRequest>`](https://docs.rs/bevy/0.8.0/bevy/app/struct.EventWriter.html)
-//!   based on inputs or internal game state. Usually, the default input systems specified
-//!   in [`crate::systems`] do that for you. But you can add your own requests
-//!   on top of the ones the default systems send. For example to unlock the UI with
-//!   [`NavRequest::Free`].
-//! * Output [`Focusable`](crate::Focusable) components. The navigation system
-//!   updates the focusables component according to the focus state of the
-//!   navigation system. See examples directory for how to read those
-//! * Output [`EventReader<NavEvent>`](https://docs.rs/bevy/0.8.0/bevy/app/struct.EventReader.html),
+//! The navigation system works through bevy's `Events` system.
+//! It is a system with one input and two outputs:
+//! * Input `EventWriter<NavRequest>`, tells the navigation system what to do.
+//!   Your app should have a system that writes to a `EventWriter<NavRequest>`
+//!   based on inputs or internal game state.
+//!   Bevy provides default systems in `bevy_ui`.
+//!   But you can add your own requests on top of the ones the default systems send.
+//!   For example to unlock the UI with [`NavRequest::Free`].
+//! * Output [`Focusable`] components.
+//!   The navigation system updates the focusables component
+//!   according to the focus state of the navigation system.
+//!   See `examples/cursor_navigation` directory for usage clues.
+//! * Output `EventReader<NavEvent>`,
 //!   contains specific information about what the navigation system is doing.
-use bevy::ecs::entity::Entity;
-use bevy::math::Vec2;
+//!
+//! [`Focusable`]: crate::resolve::Focusable
+use bevy::{
+    ecs::{
+        entity::Entity,
+        event::EventReader,
+        query::{QueryItem, ReadOnlyWorldQuery, WorldQuery},
+        system::Query,
+    },
+    math::Vec2,
+};
 use non_empty_vec::NonEmpty;
 
 /// Requests to send to the navigation system to update focus.
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum NavRequest {
-    /// Move in 2d in provided direction.
+    /// Move in in provided direction according to the plugin's [navigation strategy].
+    ///
+    /// Typically used by gamepads.
+    ///
+    /// [navigation strategy]: crate::resolve::MenuNavigationStrategy.
     Move(Direction),
-    /// Move within the encompassing [`NavMenu::BoundScope`](crate::NavMenu::BoundScope).
+    /// Move within the encompassing [`MenuSetting::scope`].
+    ///
+    /// [`MenuSetting::scope`]: crate::prelude::MenuSetting::scope
     ScopeMove(ScopeDirection),
-    /// Enter submenu if any [`NavMenu::reachable_from`](crate::NavMenu::reachable_from)
-    /// the currently focused entity.
+    /// Activate the currently focused [`Focusable`].
+    ///
+    /// If a menu is _[reachable from]_
+    ///
+    /// [`Focusable`]: crate::prelude::Focusable
+    /// [reachable from]: crate::menu::MenuBuilder::NamedParent
     Action,
-    /// Leave this submenu to enter the one it is [`reachable_from`](crate::NavMenu::reachable_from).
+    /// Leave this submenu to enter the one it is _[reachable from]_.
+    ///
+    /// [reachable from]: crate::menu::MenuBuilder::NamedParent
     Cancel,
-    /// Move the focus to any arbitrary [`Focusable`](crate::Focusable) entity.
+    /// Move the focus to any arbitrary [`Focusable`] entity.
+    ///
+    /// [`Focusable`]: crate::resolve::Focusable
     FocusOn(Entity),
     /// Unlocks the navigation system.
     ///
@@ -39,7 +62,9 @@ pub enum NavRequest {
     Free,
 }
 
-/// Direction for movement in [`NavMenu::BoundScope`](crate::NavMenu::BoundScope) menus.
+/// Direction for movement in [`MenuSetting::scope`] menus.
+///
+/// [`MenuSetting::scope`]: crate::menu::MenuSetting
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum ScopeDirection {
     Next,
@@ -55,7 +80,8 @@ pub enum Direction {
     West,
 }
 impl Direction {
-    pub(crate) fn is_in(&self, reference: Vec2, other: Vec2) -> bool {
+    /// Is `other` in direction `self` from `reference`?
+    pub fn is_in(&self, reference: Vec2, other: Vec2) -> bool {
         let coord = other - reference;
         use Direction::*;
         match self {
@@ -77,10 +103,18 @@ pub enum NavEvent {
     /// Tells the app which element is the first one to be focused.
     ///
     /// This will be sent whenever the number of focused elements go from 0 to 1.
-    /// Meaning: whenever you spawn a new UI with [`crate::Focusable`] elements.
+    /// Meaning: whenever you spawn a new UI with [`Focusable`] elements.
+    ///
+    /// The order of selection when no [`Focusable`] is focused yet is as follow:
+    /// - The prioritized `Focusable` of the root menu
+    /// - Any prioritized `Focusable`
+    /// - Any `Focusable` in the root menu
+    /// - Any `Focusable`
+    ///
+    /// [`Focusable`]: crate::resolve::Focusable
     InitiallyFocused(Entity),
 
-    /// Focus changed
+    /// Focus changed.
     ///
     /// ## Notes
     ///
@@ -100,32 +134,115 @@ pub enum NavEvent {
     },
     /// The [`NavRequest`] didn't lead to any change in focus.
     NoChanges {
-        /// The list of active elements from the focused one to the last
-        /// active which is affected by the focus change
+        /// The active elements from the focused one to the last
+        /// active which is affected by the focus change.
         from: NonEmpty<Entity>,
-        /// The [`NavRequest`] that didn't do anything
+        /// The [`NavRequest`] that didn't do anything.
         request: NavRequest,
     },
-    /// A [lock focusable](crate::Focusable::lock) has been triggered
+    /// A [lock focusable] has been triggered.
     ///
     /// Once the navigation plugin enters a locked state, the only way to exit
     /// it is to send a [`NavRequest::Free`].
+    ///
+    /// [lock focusable]: crate::resolve::Focusable::lock
     Locked(Entity),
 
-    /// A [lock focusable](crate::Focusable::lock) has been triggered
+    /// A [lock focusable] has been released.
     ///
-    /// Once the navigation plugin enters a locked state, the only way to exit
-    /// it is to send a [`NavRequest::Free`].
+    /// The navigation system was in a locked state triggered by `Entity`,
+    /// is now unlocked, and receiving events again.
+    ///
+    /// [lock focusable]: crate::resolve::Focusable::lock
     Unlocked(Entity),
 }
 impl NavEvent {
-    /// Convenience function to construct a `FocusChanged` with a single `to`
+    /// Create a `FocusChanged` with a single `to`
     ///
     /// Usually the `NavEvent::FocusChanged.to` field has a unique value.
     pub(crate) fn focus_changed(to: Entity, from: NonEmpty<Entity>) -> NavEvent {
         NavEvent::FocusChanged {
             from,
             to: NonEmpty::new(to),
+        }
+    }
+
+    /// Whether this event is a [`NavEvent::NoChanges`]
+    /// triggered by a [`NavRequest::Action`]
+    /// if `entity` is the currently focused element.
+    pub fn is_activated(&self, entity: Entity) -> bool {
+        matches!(self, NavEvent::NoChanges { from,  request: NavRequest::Action } if *from.first() == entity)
+    }
+}
+
+/// Extend [`EventReader<NavEvent>`] with methods
+/// to simplify working with [`NavEvent`]s.
+///
+/// See the [`NavEventReader`] documentation for details.
+///
+/// [`EventReader<NavEvent>`]: EventReader
+pub trait NavEventReaderExt<'w, 's> {
+    /// Create a [`NavEventReader`] from this event reader.
+    fn nav_iter(&mut self) -> NavEventReader<'w, 's, '_>;
+}
+impl<'w, 's> NavEventReaderExt<'w, 's> for EventReader<'w, 's, NavEvent> {
+    fn nav_iter(&mut self) -> NavEventReader<'w, 's, '_> {
+        NavEventReader { event_reader: self }
+    }
+}
+
+/// A wrapper for `EventReader<NavEvent>` to simplify dealing with [`NavEvent`]s.
+pub struct NavEventReader<'w, 's, 'a> {
+    event_reader: &'a mut EventReader<'w, 's, NavEvent>,
+}
+
+impl<'w, 's, 'a> NavEventReader<'w, 's, 'a> {
+    /// Iterate over [`NavEvent::NoChanges`] focused entity
+    /// triggered by `request` type requests.
+    pub fn with_request(&mut self, request: NavRequest) -> impl Iterator<Item = Entity> + '_ {
+        self.event_reader
+            .iter()
+            .filter_map(move |nav_event| match nav_event {
+                NavEvent::NoChanges {
+                    from,
+                    request: event_request,
+                } if *event_request == request => Some(*from.first()),
+                _ => None,
+            })
+    }
+    /// Iterate over _activated_ [`Focusable`]s.
+    ///
+    /// A [`Focusable`] is _activated_ when a [`NavRequest::Action`] is sent
+    /// while it is focused, and it doesn't lead to a new menu.
+    ///
+    /// [`Focusable`]: crate::resolve::Focusable
+    pub fn activated(&mut self) -> impl Iterator<Item = Entity> + '_ {
+        self.with_request(NavRequest::Action)
+    }
+
+    /// Iterate over query items of _activated_ focusables.
+    ///
+    /// See [`Self::activated`] for meaning of _"activated"_.
+    pub fn activated_in_query<'b, 'c: 'b, Q: ReadOnlyWorldQuery, F: WorldQuery>(
+        &'b mut self,
+        query: &'c Query<Q, F>,
+    ) -> impl Iterator<Item = QueryItem<Q>> + 'b {
+        query.iter_many(self.activated())
+    }
+
+    /// Run `for_each` with result of `query` for each _activated_ entity.
+    ///
+    /// Unlike [`Self::activated_in_query`] this works with mutable queries.
+    /// see [`Self::activated`] for meaning of _"activated"_.
+    pub fn activated_in_query_foreach_mut<Q: WorldQuery, F: WorldQuery>(
+        &mut self,
+        query: &mut Query<Q, F>,
+        mut for_each: impl FnMut(QueryItem<Q>),
+    ) {
+        for entity in self.activated() {
+            if let Ok(item) = query.get_mut(entity) {
+                for_each(item);
+            }
         }
     }
 }

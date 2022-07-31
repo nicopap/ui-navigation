@@ -1,9 +1,10 @@
 //! System for the navigation tree and default input systems to get started.
 use crate::{
     events::{Direction, NavRequest, ScopeDirection},
-    resolve::{max_by_in_iter, ScreenBoundaries},
-    Focusable, Focused, Rect,
+    resolve::{Focusable, Focused, ScreenBoundaries},
 };
+
+use bevy::utils::FloatOrd;
 use bevy::{ecs::system::SystemParam, prelude::*};
 
 /// Control default ui navigation input buttons
@@ -116,7 +117,7 @@ macro_rules! mapping {
 /// The button mapping may be controlled through the [`InputMapping`] resource.
 /// You may however need to customize the behavior of this system (typically
 /// when integrating in the game) in this case, you should write your own
-/// system that sends [`NavRequest`](crate::NavRequest) events
+/// system that sends [`NavRequest`](crate::events::NavRequest) events
 pub fn default_gamepad_input(
     mut nav_cmds: EventWriter<NavRequest>,
     has_focused: Query<(), With<Focused>>,
@@ -187,7 +188,7 @@ pub fn default_gamepad_input(
 /// The button mapping may be controlled through the [`InputMapping`] resource.
 /// You may however need to customize the behavior of this system (typically
 /// when integrating in the game) in this case, you should write your own
-/// system that sends [`NavRequest`](crate::NavRequest) events.
+/// system that sends [`NavRequest`](crate::events::NavRequest) events.
 pub fn default_keyboard_input(
     has_focused: Query<(), With<Focused>>,
     keyboard: Res<Input<KeyCode>>,
@@ -261,11 +262,12 @@ where
     T: ScreenSize + Component,
 {
     let world_at = query.cursor_pos(at)?;
-    let under_mouse = query
+    query
         .entities
         .iter()
-        .filter(|query_elem| is_in_node(world_at, query_elem));
-    max_by_in_iter(under_mouse, |elem| elem.2.translation().z).map(|elem| elem.0)
+        .filter(|query_elem| is_in_node(world_at, query_elem))
+        .max_by_key(|elem| FloatOrd(elem.2.translation().z))
+        .map(|elem| elem.0)
 }
 
 fn cursor_pos(windows: &Windows) -> Option<Vec2> {
@@ -294,7 +296,7 @@ impl ScreenSize for Node {
 ///
 /// You may however need to customize the behavior of this system (typically
 /// when integrating in the game) in this case, you should write your own
-/// system that sends [`NavRequest`](crate::NavRequest) events. You may use
+/// system that sends [`NavRequest`](crate::events::NavRequest) events. You may use
 /// [`ui_focusable_at`] to tell which focusable is currently being hovered.
 #[cfg(feature = "bevy_ui")]
 #[allow(clippy::too_many_arguments)]
@@ -328,7 +330,7 @@ pub fn default_mouse_input(
 ///
 /// You may however need to customize the behavior of this system (typically
 /// when integrating in the game) in this case, you should write your own
-/// system that sends [`NavRequest`](crate::NavRequest) events. You may use
+/// system that sends [`NavRequest`](crate::events::NavRequest) events. You may use
 /// [`ui_focusable_at`] to tell which focusable is currently being hovered.
 #[allow(clippy::too_many_arguments)]
 pub fn generic_default_mouse_input<T: ScreenSize + Component>(
@@ -373,9 +375,9 @@ pub fn generic_default_mouse_input<T: ScreenSize + Component>(
         let under_mouse = focusables
             .entities
             .iter()
-            .filter(|query_elem| is_in_node(world_cursor_pos, query_elem));
-        let under_mouse =
-            max_by_in_iter(under_mouse, |elem| elem.2.translation().z).map(|elem| elem.0);
+            .filter(|query_elem| is_in_node(world_cursor_pos, query_elem))
+            .max_by_key(|elem| FloatOrd(elem.2.translation().z))
+            .map(|elem| elem.0);
         let to_target = match under_mouse {
             Some(c) => c,
             None => return,
@@ -408,7 +410,7 @@ pub fn update_boundaries(
         let target_info = cam.target.get_render_target_info(&windows, &images)?;
         let new_boundaries = ScreenBoundaries {
             position: Vec2::ZERO,
-            screen_edge: Rect {
+            screen_edge: crate::resolve::Rect {
                 max: target_info.physical_size.as_vec2(),
                 min: Vec2::ZERO,
             },
