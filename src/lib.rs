@@ -27,7 +27,8 @@
 [`NavRequest`]: events::NavRequest
 [`NavRequest::Action`]: events::NavRequest::Action
 [`NavRequest::FocusOn`]: events::NavRequest::FocusOn
-[`NavRequest::Free`]: events::NavRequest::Free
+[`NavRequest::Free`]: events::NavRequest::Unlock
+[`NavRequest::Unlock`]: events::NavRequest::Unlock
 [`NavRequest::ScopeMove`]: events::NavRequest::ScopeMove
 [`NavRequestSystem`]: NavRequestSystem
 */

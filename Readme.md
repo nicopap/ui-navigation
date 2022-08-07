@@ -495,6 +495,10 @@ A usage demo is available in [the `marking.rs` example][example-marking].
   * **Breaking**: moved the `insert_tree_menus` and `resolve_named_menus` systems to
     `CoreStage::PostUpdate`, which fixes a variety of bugs and unspecified behaviors with
     regard to adding menus and selecting the first focused element.
+* `0.20.0`: Improve lock system
+  * **Breaking**: Rename `NavRequest::Free` → `NavRequest::Unlock` for consistency.
+  * **Breaking**: `NavEvent::Unlocked` now contains a [`LockReason`] rather than an `Entity`.
+  * Add `NavRequest::Lock` request to block navigation through a request.
 
 [diff-18-19]: https://github.com/nicopap/ui-navigation/compare/v0.18.0...v0.19.0
 [`ButtonBundle`]: https://docs.rs/bevy/0.8.0/bevy/ui/entity/struct.ButtonBundle.html
@@ -528,18 +532,20 @@ A usage demo is available in [the `marking.rs` example][example-marking].
 [`NavRequest`]: https://docs.rs/bevy-ui-navigation/0.19.0/bevy_ui_navigation/events/enum.NavRequest.html
 [`NavRequest::Action`]: https://docs.rs/bevy-ui-navigation/0.19.0/bevy_ui_navigation/events/enum.NavRequest.html#variant.Action
 [`NavRequest::FocusOn`]: https://docs.rs/bevy-ui-navigation/0.19.0/bevy_ui_navigation/events/enum.NavRequest.html#variant.FocusOn
-[`NavRequest::Free`]: https://docs.rs/bevy-ui-navigation/0.19.0/bevy_ui_navigation/events/enum.NavRequest.html#variant.Free
+[`NavRequest::Free`]: https://docs.rs/bevy-ui-navigation/0.19.0/bevy_ui_navigation/events/enum.NavRequest.html#variant.Unlock
+[`NavRequest::Unlock`]: https://docs.rs/bevy-ui-navigation/0.19.0/bevy_ui_navigation/events/enum.NavRequest.html#variant.Unlock
 [`NavRequest::ScopeMove`]: https://docs.rs/bevy-ui-navigation/0.19.0/bevy_ui_navigation/events/enum.NavRequest.html#variant.ScopeMove
 [`NavRequestSystem`]: https://docs.rs/bevy-ui-navigation/0.19.0/bevy_ui_navigation/struct.NavRequestSystem.html
 [rfc41]: https://github.com/nicopap/rfcs/blob/ui-navigation/rfcs/41-ui-navigation.md
 [`ScreenBoundaries`]: https://docs.rs/bevy-ui-navigation/0.19.0/bevy_ui_navigation/custom/struct.ScreenBoundaries.html
+[`LockReason`]: https://docs.rs/bevy-ui-navigation/0.20.0/bevy_ui_navigation/prelude/enum.LockReason.html
 
 
 ### Version matrix
 
 | bevy | latest supporting version      |
 |------|--------|
-| 0.8  | 0.19.0 |
+| 0.8  | 0.20.0 |
 | 0.7  | 0.18.0 |
 | 0.6  | 0.14.0 |
 

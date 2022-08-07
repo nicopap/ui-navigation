@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use bevy_ui_navigation::prelude::{
-    DefaultNavigationPlugins, FocusState, Focusable, NavEvent, NavRequestSystem,
+    DefaultNavigationPlugins, FocusState, Focusable, NavEvent, NavRequest, NavRequestSystem,
 };
 
 /// This example illustrates how to make a button "lock". To lock the UI, press
@@ -9,14 +9,18 @@ use bevy_ui_navigation::prelude::{
 /// focused.
 ///
 /// To leave lock mode, press 'escape' on keyboard or 'start' on controller.
-/// This will emit a `NavRequest::Free` in the default input systems. Allowing
+/// This will emit a `NavRequest::Unlock` in the default input systems. Allowing
 /// the focus to change again.
+///
+/// It is also possible to lock focus using the `NavRequest::Lock` request.
+/// Here, we emit one when the "l" key is pressed.
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(DefaultNavigationPlugins)
         .init_resource::<Images>()
         .add_startup_system(setup)
+        .add_system(extra_lock_key.before(NavRequestSystem))
         .add_system(button_system.after(NavRequestSystem))
         .add_system(print_nav_events.after(NavRequestSystem))
         .run();
@@ -25,6 +29,12 @@ fn main() {
 fn print_nav_events(mut events: EventReader<NavEvent>) {
     for event in events.iter() {
         println!("{:?}", event);
+    }
+}
+
+fn extra_lock_key(mut requests: EventWriter<NavRequest>, input: Res<Input<KeyCode>>) {
+    if input.just_pressed(KeyCode::L) {
+        requests.send(NavRequest::Lock);
     }
 }
 

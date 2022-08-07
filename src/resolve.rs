@@ -233,25 +233,37 @@ pub enum FocusState {
     Inert,
 }
 
+/// The reason why the navigation system is locked.
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum LockReason {
+    /// Navigation was locked by activating a [lock focusable].
+    ///
+    /// [lock focusable] Focusable::lock
+    Focusable(Entity),
+
+    /// Navigation was locked by sending a [`NavRequest::Lock`].
+    NavRequest,
+}
+
 /// The navigation system's lock.
 ///
 /// When locked, the navigation system doesn't process any [`NavRequest`].
-/// It only waits on a [`NavRequest::Free`] event. It will then continue
+/// It only waits on a [`NavRequest::Unlock`] event. It will then continue
 /// processing new requests.
 pub struct NavLock {
-    entity: Option<Entity>,
+    lock_reason: Option<LockReason>,
 }
 impl NavLock {
     pub(crate) fn new() -> Self {
-        Self { entity: None }
+        Self { lock_reason: None }
     }
-    /// The [`Entity`] that triggered the lock.
-    pub fn entity(&self) -> Option<Entity> {
-        self.entity
+    /// The reason why navigation is locked, `None` if currently unlocked.
+    pub fn reason(&self) -> Option<LockReason> {
+        self.lock_reason
     }
     /// Whether the navigation system is locked.
     pub fn is_locked(&self) -> bool {
-        self.entity.is_some()
+        self.lock_reason.is_some()
     }
 }
 
@@ -291,7 +303,7 @@ pub enum FocusAction {
     /// If we receive [`NavRequest::Action`]
     /// while this [`Focusable`] is focused,
     /// the navigation system will freeze
-    /// until [`NavRequest::Free`] is received,
+    /// until [`NavRequest::Unlock`] is received,
     /// sending a [`NavEvent::Unlocked`].
     ///
     /// This is useful to implement widgets with complex controls
@@ -487,6 +499,14 @@ fn resolve<STGY: MenuNavigationStrategy>(
         };
     }
     match request {
+        Lock => {
+            if lock.is_locked() {
+                return NavEvent::NoChanges { from, request };
+            }
+            let reason = LockReason::NavRequest;
+            lock.lock_reason = Some(reason);
+            NavEvent::Locked(reason)
+        }
         Move(direction) => {
             let (parent, cycles) = match parent_menu(focused, queries) {
                 Some(val) if !val.2.is_2d() => return NavEvent::NoChanges { from, request },
@@ -520,8 +540,9 @@ fn resolve<STGY: MenuNavigationStrategy>(
                         return resolve(focused, NavRequest::Cancel, queries, lock, from, strategy);
                     }
                     FocusAction::Lock => {
-                        lock.entity = Some(focused);
-                        return NavEvent::Locked(focused);
+                        let reason = LockReason::Focusable(focused);
+                        lock.lock_reason = Some(reason);
+                        return NavEvent::Locked(reason);
                     }
                     FocusAction::Normal => {}
                 }
@@ -558,11 +579,11 @@ fn resolve<STGY: MenuNavigationStrategy>(
                 NavEvent::FocusChanged { from, to }
             }
         }
-        Free => {
-            if let Some(lock_entity) = lock.entity.take() {
+        Unlock => {
+            if let Some(lock_entity) = lock.lock_reason.take() {
                 NavEvent::Unlocked(lock_entity)
             } else {
-                warn!("Received a NavRequest::Free while not locked");
+                warn!("Received a NavRequest::Unlock while not locked");
                 NavEvent::NoChanges { from, request }
             }
         }
@@ -633,7 +654,7 @@ pub(crate) fn listen_nav_requests<STGY: SystemParam>(
 
     let no_focused = "Tried to execute a NavRequest when no focusables exist, NavRequest does nothing if there isn't any navigation to do.";
     for request in requests.iter() {
-        if lock.is_locked() && *request != NavRequest::Free {
+        if lock.is_locked() && *request != NavRequest::Unlock {
             continue;
         }
         let focused = if let Some(e) = queries.p0().focused() {
