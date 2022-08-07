@@ -59,12 +59,10 @@ struct Materials {
 impl FromWorld for Materials {
     fn from_world(world: &mut World) -> Self {
         let assets = world.get_resource::<AssetServer>().unwrap();
-        let rarrow = assets.load("rarrow.png").into();
-        let circle = assets.load("green_circle.png").into();
         Materials {
             background: Color::BLACK,
-            rarrow,
-            circle,
+            rarrow: assets.load("rarrow.png").into(),
+            circle: assets.load("green_circle.png").into(),
         }
     }
 }
@@ -76,6 +74,7 @@ fn button_system(mut interaction_query: Query<(&Focusable, &mut UiColor), Change
             FocusState::Active => Color::GOLD,
             FocusState::Prioritized => Color::GRAY,
             FocusState::Inert => Color::DARK_GRAY,
+            FocusState::Blocked => Color::ANTIQUE_WHITE,
         };
         *material = color.into();
     }
@@ -175,6 +174,9 @@ fn setup(mut commands: Commands, materials: Res<Materials>, mut game: ResMut<Gam
                             button.insert(Focusable::cancel()).with_children(|cmds| {
                                 cmds.spawn_bundle(circle.clone());
                             });
+                        }
+                        if j == 2 && i == 1 {
+                            button.insert(Focusable::new().blocked());
                         }
                         if j == 4 {
                             let to_add = button

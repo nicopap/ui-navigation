@@ -6,6 +6,7 @@
 [entity-id]: bevy::ecs::system::EntityCommands::id
 [`FocusableButtonBundle`]: components::FocusableButtonBundle
 [`Focusable::cancel`]: resolve::Focusable::cancel
+[`Focusable::block`]: resolve::Focusable::block
 [`Focusable::dormant`]: resolve::Focusable::dormant
 [`Focusable`]: resolve::Focusable
 [`Focusable::lock`]: resolve::Focusable::lock
@@ -188,6 +189,7 @@ where
             .add_event::<events::NavEvent>()
             .insert_resource(resolve::NavLock::new())
             .add_system(resolve::set_first_focused.before(NavRequestSystem))
+            .add_system(resolve::consistent_menu.before(NavRequestSystem))
             .add_system(resolve::listen_nav_requests::<STGY>.label(NavRequestSystem))
             // PostUpdate because we want the Menus to be setup correctly before the
             // next call to `set_first_focused`, which depends on the Menu tree layout

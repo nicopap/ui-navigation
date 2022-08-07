@@ -82,7 +82,7 @@ fn button_system(mut interaction_query: Query<(&Focusable, &mut UiColor), Change
             FocusState::Focused => Color::ORANGE,
             FocusState::Active => Color::GOLD,
             FocusState::Prioritized => Color::GRAY,
-            FocusState::Inert => Color::BLACK,
+            FocusState::Inert | FocusState::Blocked => Color::BLACK,
         };
         *material = color.into();
     }

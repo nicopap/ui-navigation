@@ -28,7 +28,32 @@ fn main() {
         // IMPORTANT: setting the button appearance update system after the
         // NavRequestSystem makes everything much snappier, highly recommended.
         .add_system(button_system.after(NavRequestSystem))
+        .add_system(block_some_focusables.before(NavRequestSystem))
         .run();
+}
+
+fn block_some_focusables(
+    mut focusables: Query<&mut Focusable>,
+    mut blocked_index: Local<usize>,
+    time: Res<Time>,
+) {
+    let delta = time.delta_seconds_f64();
+    let current_time = time.seconds_since_startup();
+    let at_interval = |t: f64| current_time % t < delta;
+
+    if at_interval(3.0) {
+        let mut skipped = focusables.iter_mut().skip(*blocked_index);
+        if skipped.len() == 0 {
+            *blocked_index = 0;
+        }
+        *blocked_index += 3;
+        for mut to_unblock in skipped.by_ref().take(3) {
+            to_unblock.unblock();
+        }
+        for mut to_block in skipped.take(3) {
+            to_block.block();
+        }
+    }
 }
 
 fn button_system(mut interaction_query: Query<(&Focusable, &mut UiColor), Changed<Focusable>>) {
@@ -38,6 +63,7 @@ fn button_system(mut interaction_query: Query<(&Focusable, &mut UiColor), Change
             FocusState::Active => Color::GOLD,
             FocusState::Prioritized => Color::GRAY,
             FocusState::Inert => Color::DARK_GRAY,
+            FocusState::Blocked => Color::ANTIQUE_WHITE,
         };
         *material = color.into();
     }

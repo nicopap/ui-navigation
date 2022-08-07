@@ -1,7 +1,7 @@
 //! System for the navigation tree and default input systems to get started.
 use crate::{
     events::{Direction, NavRequest, ScopeDirection},
-    resolve::{Focusable, Focused, ScreenBoundaries},
+    resolve::{FocusState, Focusable, Focused, ScreenBoundaries},
 };
 
 use bevy::utils::FloatOrd;
@@ -236,7 +236,16 @@ pub fn default_keyboard_input(
 /// used to compute UI focusable physical positions in mouse input systems.
 #[derive(SystemParam)]
 pub struct NodePosQuery<'w, 's, T: Component> {
-    entities: Query<'w, 's, (Entity, &'static T, &'static GlobalTransform), With<Focusable>>,
+    entities: Query<
+        'w,
+        's,
+        (
+            Entity,
+            &'static T,
+            &'static GlobalTransform,
+            &'static Focusable,
+        ),
+    >,
     boundaries: Option<Res<'w, ScreenBoundaries>>,
 }
 impl<'w, 's, T: Component> NodePosQuery<'w, 's, T> {
@@ -246,7 +255,10 @@ impl<'w, 's, T: Component> NodePosQuery<'w, 's, T> {
     }
 }
 
-fn is_in_node<T: ScreenSize>(at: Vec2, (_, node, trans): &(Entity, &T, &GlobalTransform)) -> bool {
+fn is_in_node<T: ScreenSize>(
+    at: Vec2,
+    (_, node, trans, _): &(Entity, &T, &GlobalTransform, &Focusable),
+) -> bool {
     let ui_pos = trans.translation().truncate();
     let node_half_size = node.size() / 2.0;
     let min = ui_pos - node_half_size;
@@ -375,6 +387,7 @@ pub fn generic_default_mouse_input<T: ScreenSize + Component>(
         let under_mouse = focusables
             .entities
             .iter()
+            .filter(|query_elem| query_elem.3.state() != FocusState::Blocked)
             .filter(|query_elem| is_in_node(world_cursor_pos, query_elem))
             .max_by_key(|elem| FloatOrd(elem.2.translation().z))
             .map(|elem| elem.0);

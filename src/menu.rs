@@ -108,24 +108,32 @@ impl TryFrom<&MenuBuilder> for Option<Entity> {
 /// when entering a menu,
 /// you should mark one of the children of this menu with [`Focusable::prioritized`].
 ///
-/// # Invariants
+/// # Limitations
 ///
-/// **You need to follow those rules (invariants) to avoid panics**:
-/// 1. A `MenuSetting` must have **at least one** [`Focusable`] child in the UI
-///    hierarchy.
-/// 2. There must **not** be a menu loop. i.e.: a way to go from menu A to menu B and
-///    then from menu B to menu A while never going back.
+/// Menu navigation relies heavily on the bevy hierarchy being consistent.
+/// You might get inconsistent state under the folowing conditions:
+///
+/// - You despawned an entity in the [`FocusState::Active`] state
+/// - You changed the parent of a [`Focusable`] member of a menu to a new menu.
+///         
+/// The navigation system might still work as expected,
+/// however, [`Focusable::state`] may be missleading
+/// for the length of one frame.
 ///
 /// # Panics
 ///
-/// Thankfully, programming errors are caught early and you'll probably get a
-/// panic fairly quickly if you don't follow the invariants.
-/// * Invariant (1) panics as soon as you add the menu without focusable
-///   children.
-/// * Invariant (2) panics if the focus goes into a menu loop.
+/// **Menu loops will cause a panic**.
+/// A menu loop is a way to go from menu A to menu B and
+/// then from menu B to menu A while never going back.
+///
+/// Don't worry though, menu loops are really hard to make by accident,
+/// and it will only panic if you use a `NavRequest::FocusOn(entity)`
+/// where `entity` is inside a menu loop.
 ///
 /// [`NavRequest`]: crate::prelude::NavRequest
 /// [`Focusable`]: crate::prelude::Focusable
+/// [`FocusState::Active`]: crate::prelude::FocusState::Active
+/// [`Focusable::state`]: crate::prelude::Focusable::state
 /// [`Focusable::prioritized`]: crate::prelude::Focusable::prioritized
 /// [`NavRequest::ScopeMove`]: crate::prelude::NavRequest::ScopeMove
 /// [`NavRequest`]: crate::prelude::NavRequest

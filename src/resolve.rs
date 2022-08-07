@@ -40,6 +40,7 @@ use std::num::NonZeroUsize;
 
 use bevy::hierarchy::{Children, Parent};
 use bevy::log::warn;
+use bevy::prelude::Changed;
 use bevy::{
     ecs::{
         event::{EventReader, EventWriter},
@@ -103,7 +104,7 @@ pub struct ScreenBoundaries {
 #[derive(SystemParam)]
 pub(crate) struct ChildQueries<'w, 's> {
     children: Query<'w, 's, &'static Children>,
-    is_focusable: Query<'w, 's, With<Focusable>>,
+    is_focusable: Query<'w, 's, &'static Focusable>,
     is_menu: Query<'w, 's, With<MenuSetting>>,
 }
 
@@ -132,7 +133,7 @@ pub(crate) struct NavQueries<'w, 's> {
 }
 impl<'w, 's> NavQueries<'w, 's> {
     fn focused(&self) -> Option<Entity> {
-        use FocusState::{Focused, Prioritized};
+        use FocusState::{Blocked, Focused, Prioritized};
         let menu_prioritized =
             |menu: &TreeMenu| menu.focus_parent.is_none().then(|| menu.active_child);
         let any_prioritized =
@@ -148,9 +149,13 @@ impl<'w, 's> NavQueries<'w, 's> {
                 .menus
                 .iter()
                 .find_map(|(entity, menu, _)| menu.focus_parent.is_none().then(|| entity))?;
-            Some(*self.children.focusables_of(root_menu).first())
+            self.children.focusables_of(root_menu).first().copied()
         };
-        let fallback = || self.focusables.iter().next().map(|(entity, _)| entity);
+        let fallback = || {
+            self.focusables
+                .iter()
+                .find_map(|(entity, focus)| (focus.state() != Blocked).then(|| entity))
+        };
         self.focusables
             .iter()
             .find_map(|(e, focus)| (focus.state == Focused).then(|| e))
@@ -227,6 +232,12 @@ pub enum FocusState {
     /// It's the "breadcrumb" of buttons to activate to reach
     /// the currently focused element from the root menu.
     Active,
+
+    /// Prevents all interactions with this [`Focusable`].
+    ///
+    /// This is equivalent to removing the `Focusable` component
+    /// from the entity, but without the latency.
+    Blocked,
 
     /// None of the above:
     /// This [`Focusable`] is neither `Prioritized`, `Focused` or `Active`.
@@ -320,6 +331,9 @@ pub enum FocusAction {
 /// A `Focusable` can execute a variety of [`FocusAction`]
 /// when receiving [`NavRequest::Action`],
 /// the default one is [`FocusAction::Normal`].
+///
+/// **Note**: You should avoid updating manually the state of [`Focusable`]s.
+/// You should instead use [`NavRequest`] to manipulate and change focus.
 #[derive(Component, Clone, Debug)]
 pub struct Focusable {
     pub(crate) state: FocusState,
@@ -338,6 +352,7 @@ impl Focusable {
     pub fn new() -> Self {
         Self::default()
     }
+
     /// The [`FocusState`] of this `Focusable`.
     pub fn state(&self) -> FocusState {
         self.state
@@ -346,31 +361,108 @@ impl Focusable {
     pub fn action(&self) -> FocusAction {
         self.action
     }
-    /// Create a "cancel" focusable, see [`FocusAction::Cancel`].
+
+    /// A "cancel" focusable, see [`FocusAction::Cancel`].
     pub fn cancel() -> Self {
         Focusable {
             state: FocusState::Inert,
             action: FocusAction::Cancel,
         }
     }
-    /// Create a "lock" focusable, see [`FocusAction::Lock`].
+    /// A "lock" focusable, see [`FocusAction::Lock`].
     pub fn lock() -> Self {
         Focusable {
             state: FocusState::Inert,
             action: FocusAction::Lock,
         }
     }
-    /// Create a focusable that will get highlighted in priority when none are set yet.
+    /// A focusable that will get highlighted in priority when none are set yet.
     ///
     /// **WARNING**: Only use this when creating the UI.
     /// Any of the following state is unspecified
     /// and will likely result in broken behavior:
     /// * Having multiple prioritized `Focusable`s in the same menu.
     /// * Updating an already existing `Focusable` with this.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use bevy_ui_navigation::prelude::Focusable;
+    /// # use bevy_ui_navigation::components::FocusableButtonBundle;
+    /// # use bevy::prelude::*;
+    /// fn setup(mut commands: Commands) {
+    ///     commands.spawn_bundle(FocusableButtonBundle {
+    ///         focus: Focusable::new().prioritized(),
+    ///         ..default()
+    ///     });
+    /// }
+    /// ```
     pub fn prioritized(self) -> Self {
         Self {
             state: FocusState::Prioritized,
             ..self
+        }
+    }
+
+    /// A [`FocusState::Blocked`] focusable.
+    ///
+    /// This focusable will not be able to take focus until
+    /// [`Focusable::unblock`] is called on it.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use bevy_ui_navigation::prelude::Focusable;
+    /// # use bevy_ui_navigation::components::FocusableButtonBundle;
+    /// # use bevy::prelude::*;
+    /// fn setup(mut commands: Commands) {
+    ///     commands.spawn_bundle(FocusableButtonBundle {
+    ///         focus: Focusable::new().blocked(),
+    ///         ..default()
+    ///     });
+    /// }
+    /// ```
+    pub fn blocked(self) -> Self {
+        Self {
+            state: FocusState::Blocked,
+            ..self
+        }
+    }
+
+    /// Prevent this [`Focusable`] from gaining focus until it is unblocked.
+    ///
+    /// **Note**: Due to the way focus is handled, this does nothing
+    /// when the [`Focusable::state`] is [`FocusState::Active`]
+    /// or [`FocusState::Focused`].
+    ///
+    /// Returns `true` if `self` has succesfully been blocked
+    /// (its [`Focusable::state`] was either `Inert` or `Prioritized`).
+    ///
+    /// # Limitations
+    ///
+    /// - If all the children of a menu are blocked, when activating the menu's
+    ///   parent, the block state of the last active focusable will be ignored.
+    /// - When `FocusOn` to an focusable in a menu reachable from an blocked
+    ///   focusable, its block state will be ignored.
+    pub fn block(&mut self) -> bool {
+        use FocusState::{Blocked, Inert, Prioritized};
+        let blockable = matches!(self.state(), Inert | Prioritized);
+        if blockable {
+            self.state = Blocked;
+        }
+        blockable
+    }
+
+    /// Allow this [`Focusable`] to gain focus again,
+    /// setting it to [`FocusState::Inert`].
+    ///
+    /// Returns `true` if `self`'s state was [`FocusState::Blocked`].
+    pub fn unblock(&mut self) -> bool {
+        if self.state() == FocusState::Blocked {
+            self.state = FocusState::Inert;
+            true
+        } else {
+            false
         }
     }
 }
@@ -459,10 +551,10 @@ fn resolve_scope(
     focused: Entity,
     direction: events::ScopeDirection,
     cycles: bool,
-    siblings: &NonEmpty<Entity>,
+    siblings: &[Entity],
 ) -> Option<&Entity> {
     let focused_index = siblings.iter().position(|e| *e == focused)?;
-    let new_index = resolve_index(focused_index, cycles, direction, siblings.len().get() - 1);
+    let new_index = resolve_index(focused_index, cycles, direction, siblings.len() - 1);
     new_index.and_then(|i| siblings.get(i))
 }
 
@@ -471,7 +563,8 @@ fn resolve<STGY: MenuNavigationStrategy>(
     focused: Entity,
     request: NavRequest,
     queries: &NavQueries,
-    lock: &mut NavLock,
+    // this is to avoid triggering change detection if not updated.
+    lock: &mut ResMut<NavLock>,
     from: Vec<Entity>,
     strategy: &STGY,
 ) -> NavEvent {
@@ -516,10 +609,10 @@ fn resolve<STGY: MenuNavigationStrategy>(
             let siblings = match parent {
                 Some(parent) => queries.children.focusables_of(parent),
                 None => {
-                    let focusables: Vec<_> = queries.focusables.iter().map(|tpl| tpl.0).collect();
-                    NonEmpty::try_from(focusables).expect(
-                        "There must be at least one `Focusable` when sending a `NavRequest`!",
-                    )
+                    let unblocked = |(e, focusable): (Entity, &Focusable)| {
+                        (focusable.state() != FocusState::Blocked).then(|| e)
+                    };
+                    queries.focusables.iter().filter_map(unblocked).collect()
                 }
             };
             let to = strategy.resolve_2d(focused, direction, cycles, &siblings);
@@ -598,6 +691,8 @@ pub(crate) fn insert_tree_menus(
 ) {
     use FocusState::{Active, Focused, Prioritized};
     let mut inserts = Vec::new();
+    let no_focus_msg = "Within a menu built with MenuBuilder, there must be at least one entity \
+         with the Focusable component, none were found";
     for (entity, builder) in &builders {
         let children = queries.children.focusables_of(entity);
         let child = children
@@ -606,7 +701,7 @@ pub(crate) fn insert_tree_menus(
                 let (_, focusable) = queries.focusables.get(*e).ok()?;
                 matches!(focusable.state, Prioritized | Active | Focused).then_some(e)
             })
-            .unwrap_or_else(|| children.first());
+            .unwrap_or_else(|| children.first().expect(no_focus_msg));
         if let Ok(focus_parent) = builder.try_into() {
             let menu = TreeMenu {
                 focus_parent,
@@ -638,6 +733,29 @@ pub(crate) fn set_first_focused(
     }
 }
 
+pub(crate) fn consistent_menu(
+    updated_focusables: Query<(Entity, &Focusable), Changed<Focusable>>,
+    children: ChildQueries,
+    mut menus: Query<(Entity, &mut TreeMenu)>,
+) {
+    for (entity, updated) in &updated_focusables {
+        if updated.state() != FocusState::Blocked {
+            continue;
+        }
+        for (menu_entity, mut menu) in &mut menus {
+            if menu.active_child != entity {
+                continue;
+            }
+            if let Some(new_active) = children.focusables_of(menu_entity).first().copied() {
+                menu.active_child = new_active;
+            }
+            // We found the unique menu that leads to the changed entity
+            // continue to check for next changed focusable.
+            break;
+        }
+    }
+}
+
 /// Listen to [`NavRequest`] and update the state of [`Focusable`] entities
 /// when relevant.
 pub(crate) fn listen_nav_requests<STGY: SystemParam>(
@@ -652,7 +770,10 @@ pub(crate) fn listen_nav_requests<STGY: SystemParam>(
 {
     use FocusState as Fs;
 
-    let no_focused = "Tried to execute a NavRequest when no focusables exist, NavRequest does nothing if there isn't any navigation to do.";
+    let no_focused = "Tried to execute a NavRequest \
+            when no focusables exist, \
+            NavRequest does nothing if \
+            there isn't any navigation to do.";
     for request in requests.iter() {
         if lock.is_locked() && *request != NavRequest::Unlock {
             continue;
@@ -713,23 +834,24 @@ pub(crate) fn parent_menu(
 
 impl<'w, 's> ChildQueries<'w, 's> {
     /// All sibling [`Focusable`]s within a single [`TreeMenu`].
-    pub(crate) fn focusables_of(&self, menu: Entity) -> NonEmpty<Entity> {
-        let ret = self.focusables_of_helper(menu);
-        NonEmpty::try_from(ret)
-            .expect("A MenuSetting MUST AT LEAST HAVE ONE Focusable child, found one without")
+    pub(crate) fn focusables_of(&self, menu: Entity) -> Vec<Entity> {
+        self.focusables_of_helper(menu)
     }
 
     fn focusables_of_helper(&self, menu: Entity) -> Vec<Entity> {
+        use FocusState::Blocked;
         match self.children.get(menu).ok() {
             Some(direct_children) => {
-                let focusables = direct_children
-                    .iter()
-                    .filter(|e| self.is_focusable.get(**e).is_ok())
-                    .cloned();
+                let is_focusable = |e: &&Entity| {
+                    self.is_focusable
+                        .get(**e)
+                        .map_or(false, |f| f.state() != Blocked)
+                };
+                let focusables = direct_children.iter().filter(is_focusable).cloned();
                 let transitive_focusables = direct_children
                     .iter()
-                    .filter(|e| self.is_focusable.get(**e).is_err())
-                    .filter(|e| self.is_menu.get(**e).is_err())
+                    .filter(|e| !self.is_focusable.contains(**e))
+                    .filter(|e| !self.is_menu.contains(**e))
                     .flat_map(|e| self.focusables_of_helper(*e));
                 focusables.chain(transitive_focusables).collect()
             }

@@ -499,6 +499,7 @@ A usage demo is available in [the `marking.rs` example][example-marking].
   * **Breaking**: Rename `NavRequest::Free` → `NavRequest::Unlock` for consistency.
   * **Breaking**: `NavEvent::Unlocked` now contains a [`LockReason`] rather than an `Entity`.
   * Add `NavRequest::Lock` request to block navigation through a request.
+  * Add a way to spawn and set focusables as not focusable at all with [`Focusable::block`].
 
 [diff-18-19]: https://github.com/nicopap/ui-navigation/compare/v0.18.0...v0.19.0
 [`ButtonBundle`]: https://docs.rs/bevy/0.8.0/bevy/ui/entity/struct.ButtonBundle.html
@@ -512,6 +513,7 @@ A usage demo is available in [the `marking.rs` example][example-marking].
 [example-ultimate]: https://github.com/nicopap/ui-navigation/blob/v0.19.0/examples/ultimate_menu_navigation.rs
 [`FocusableButtonBundle`]: https://docs.rs/bevy-ui-navigation/0.19.0/bevy_ui_navigation/components/struct.FocusableButtonBundle.html
 [`Focusable::cancel`]: https://docs.rs/bevy-ui-navigation/0.19.0/bevy_ui_navigation/prelude/struct.Focusable.html#method.cancel
+[`Focusable::block`]: https://docs.rs/bevy-ui-navigation/0.19.0/bevy_ui_navigation/prelude/struct.Focusable.html#method.block
 [`Focusable::prioritized`]: https://docs.rs/bevy-ui-navigation/0.19.0/bevy_ui_navigation/prelude/struct.Focusable.html#method.prioritized
 [`Focusable`]: https://docs.rs/bevy-ui-navigation/0.19.0/bevy_ui_navigation/prelude/struct.Focusable.html
 [`Focusable::lock`]: https://docs.rs/bevy-ui-navigation/0.19.0/bevy_ui_navigation/prelude/struct.Focusable.html#method.lock
