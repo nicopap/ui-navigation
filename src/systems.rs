@@ -67,6 +67,8 @@ pub struct InputMapping {
     pub key_free: KeyCode,
     /// Mouse button for [`NavRequest::Action`]
     pub mouse_action: MouseButton,
+    /// Whether mouse hover gives focus to [`Focusable`] elements.
+    pub focus_follows_mouse: bool,
 }
 impl Default for InputMapping {
     fn default() -> Self {
@@ -100,6 +102,7 @@ impl Default for InputMapping {
             key_previous: KeyCode::Q,
             key_free: KeyCode::Escape,
             mouse_action: MouseButton::Left,
+            focus_follows_mouse: false,
         }
     }
 }
@@ -354,6 +357,7 @@ pub fn generic_default_mouse_input<T: ScreenSize + Component>(
     mut nav_cmds: EventWriter<NavRequest>,
     mut last_pos: Local<Vec2>,
 ) {
+    let no_focusable_msg = "Entity with `Focused` component must also have a `Focusable` component";
     let cursor_pos = match cursor_pos(&windows) {
         Some(c) => c,
         None => return,
@@ -363,25 +367,30 @@ pub fn generic_default_mouse_input<T: ScreenSize + Component>(
         None => return,
     };
     let released = mouse.just_released(input_mapping.mouse_action);
+    let pressed = mouse.pressed(input_mapping.mouse_action);
     let focused = focused.get_single();
+
     // Return early if cursor didn't move since last call
     let camera_moved = focusables.boundaries.map_or(false, |b| b.is_changed());
-    if !released && *last_pos == cursor_pos && !camera_moved {
+    let mouse_moved = *last_pos != cursor_pos;
+    if (!released && !pressed) && !mouse_moved && !camera_moved {
         return;
     } else {
         *last_pos = cursor_pos;
     }
-    let not_hovering_focused = |focused: &Entity| {
-        let focused = focusables
-            .entities
-            .get(*focused)
-            .expect("Entity with `Focused` component must also have a `Focusable` component");
-        !is_in_node(world_cursor_pos, &focused)
+    // we didn't do it earlier so that we can leave early when the camera didn't move
+    let pressed = input_mapping.focus_follows_mouse || pressed;
+
+    let hovering_focused = |focused| {
+        let focused = focusables.entities.get(focused).expect(no_focusable_msg);
+        is_in_node(world_cursor_pos, &focused)
     };
     // If the currently hovered node is the focused one, there is no need to
     // find which node we are hovering and to switch focus to it (since we are
     // already focused on it)
-    if focused.iter().all(not_hovering_focused) {
+    let hovering = focused.map_or(false, hovering_focused);
+    let set_focused = (pressed || released) && !hovering;
+    if set_focused {
         // We only run this code when we really need it because we iterate over all
         // focusables, which can eat a lot of CPU.
         let under_mouse = focusables
@@ -396,7 +405,8 @@ pub fn generic_default_mouse_input<T: ScreenSize + Component>(
             None => return,
         };
         nav_cmds.send(NavRequest::FocusOn(to_target));
-    } else if released {
+    }
+    if released && (set_focused || hovering) {
         nav_cmds.send(NavRequest::Action);
     }
 }

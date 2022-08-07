@@ -500,6 +500,12 @@ A usage demo is available in [the `marking.rs` example][example-marking].
   * **Breaking**: `NavEvent::Unlocked` now contains a [`LockReason`] rather than an `Entity`.
   * Add `NavRequest::Lock` request to block navigation through a request.
   * Add a way to spawn and set focusables as not focusable at all with [`Focusable::block`].
+  * **Breaking**: The default mouse input system
+    now by default does not immediately focus on hovered elements.
+    This is more in line with conventional UI libraries.
+    To keep the old behavior, set the `InputMapping.focus_follows_mouse` field to `true`.
+    If you want to have graphical effects on hover, please define your own hover system.
+    [Here is how it was done in the bevy merge PR][pr-hover].
 
 [diff-18-19]: https://github.com/nicopap/ui-navigation/compare/v0.18.0...v0.19.0
 [`ButtonBundle`]: https://docs.rs/bevy/0.8.0/bevy/ui/entity/struct.ButtonBundle.html
@@ -541,7 +547,7 @@ A usage demo is available in [the `marking.rs` example][example-marking].
 [rfc41]: https://github.com/nicopap/rfcs/blob/ui-navigation/rfcs/41-ui-navigation.md
 [`ScreenBoundaries`]: https://docs.rs/bevy-ui-navigation/0.19.0/bevy_ui_navigation/custom/struct.ScreenBoundaries.html
 [`LockReason`]: https://docs.rs/bevy-ui-navigation/0.20.0/bevy_ui_navigation/prelude/enum.LockReason.html
-
+[pr-hover]: https://github.com/nicopap/bevy/blob/0530d03b514e5e1e3d42a89283b5e6d050e9c265/crates/bevy_ui/src/focus.rs#L190-L223
 
 ### Version matrix
 
