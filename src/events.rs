@@ -231,6 +231,23 @@ impl<'w, 's, 'a> NavEventReader<'w, 's, 'a> {
         self.with_request(NavRequest::Action)
     }
 
+    /// Iterate over [`NavEvent`]s, associating them
+    /// with the "relevant" entity of the event.
+    pub fn types(&mut self) -> impl Iterator<Item = (&NavEvent, Entity)> + '_ {
+        use NavEvent::{FocusChanged, InitiallyFocused, Locked, NoChanges, Unlocked};
+        self.event_reader.iter().filter_map(|event| {
+            let entity = match event {
+                NoChanges { from, .. } => Some(*from.first()),
+                InitiallyFocused(initial) => Some(*initial),
+                FocusChanged { from, .. } => Some(*from.first()),
+                Locked(LockReason::Focusable(from)) => Some(*from),
+                Unlocked(LockReason::Focusable(from)) => Some(*from),
+                _ => None,
+            };
+            entity.map(|e| (event, e))
+        })
+    }
+
     /// Iterate over query items of _activated_ focusables.
     ///
     /// See [`Self::activated`] for meaning of _"activated"_.
