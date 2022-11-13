@@ -24,10 +24,13 @@ fn main() {
 }
 
 #[derive(Component)]
-struct IdleColor(UiColor);
+struct IdleColor(BackgroundColor);
 
 fn button_system(
-    mut interaction_query: Query<(&Focusable, &mut UiColor, &IdleColor), Changed<Focusable>>,
+    mut interaction_query: Query<
+        (&Focusable, &mut BackgroundColor, &IdleColor),
+        Changed<Focusable>,
+    >,
 ) {
     for (focusable, mut material, IdleColor(idle_color)) in interaction_query.iter_mut() {
         if let FocusState::Focused = focusable.state() {
@@ -53,7 +56,7 @@ fn non_stop_move(
     mut last_direction: Local<MyDirection>,
 ) {
     let delta = time.delta_seconds_f64();
-    let current_time = time.seconds_since_startup();
+    let current_time = time.elapsed_seconds_f64();
     let at_interval = |t: f64| current_time % t < delta;
     if input.just_pressed(KeyCode::K) {
         *enabled = !*enabled;
@@ -77,9 +80,9 @@ fn non_stop_move(
 fn setup(mut commands: Commands) {
     let top = 310;
     let as_rainbow = |i: u32| Color::hsl((i as f32 / top as f32) * 360.0, 0.9, 0.8);
-    commands.spawn_bundle(Camera2dBundle::default());
+    commands.spawn(Camera2dBundle::default());
     commands
-        .spawn_bundle(NodeBundle {
+        .spawn(NodeBundle {
             style: Style {
                 // position_type: PositionType::Absolute,
                 size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
@@ -95,10 +98,10 @@ fn setup(mut commands: Commands) {
             }
         });
 }
-fn spawn_button(commands: &mut ChildBuilder, color: UiColor, max: u32, i: u32, j: u32) {
+fn spawn_button(commands: &mut ChildBuilder, color: BackgroundColor, max: u32, i: u32, j: u32) {
     let width = 90.0 / max as f32;
-    commands
-        .spawn_bundle(ButtonBundle {
+    commands.spawn((
+        ButtonBundle {
             style: Style {
                 size: Size::new(Val::Percent(width), Val::Percent(width)),
 
@@ -110,9 +113,10 @@ fn spawn_button(commands: &mut ChildBuilder, color: UiColor, max: u32, i: u32, j
                 position_type: PositionType::Absolute,
                 ..Default::default()
             },
-            color,
+            background_color: color,
             ..Default::default()
-        })
-        .insert(Focusable::default())
-        .insert(IdleColor(color));
+        },
+        Focusable::default(),
+        IdleColor(color),
+    ));
 }

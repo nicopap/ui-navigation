@@ -45,7 +45,7 @@ use bevy::{
     ecs::{
         event::{EventReader, EventWriter},
         prelude::{Commands, Component, Entity, ParamSet, Query, ResMut, With, Without},
-        system::{StaticSystemParam, SystemParam, SystemParamItem},
+        system::{Resource, StaticSystemParam, SystemParam, SystemParamItem},
     },
     math::Vec2,
 };
@@ -94,7 +94,7 @@ pub struct Rect {
     pub max: Vec2,
     pub min: Vec2,
 }
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Resource)]
 pub struct ScreenBoundaries {
     pub position: Vec2,
     pub screen_edge: Rect,
@@ -135,9 +135,9 @@ impl<'w, 's> NavQueries<'w, 's> {
     fn focused(&self) -> Option<Entity> {
         use FocusState::{Blocked, Focused, Prioritized};
         let menu_prioritized =
-            |menu: &TreeMenu| menu.focus_parent.is_none().then(|| menu.active_child);
+            |menu: &TreeMenu| menu.focus_parent.is_none().then_some(menu.active_child);
         let any_prioritized =
-            |(e, focus): (Entity, &Focusable)| (focus.state == Prioritized).then(|| e);
+            |(e, focus): (Entity, &Focusable)| (focus.state == Prioritized).then_some(e);
         let any_prioritized = || self.focusables.iter().find_map(any_prioritized);
         let root_prioritized = || {
             self.menus
@@ -148,17 +148,17 @@ impl<'w, 's> NavQueries<'w, 's> {
             let root_menu = self
                 .menus
                 .iter()
-                .find_map(|(entity, menu, _)| menu.focus_parent.is_none().then(|| entity))?;
+                .find_map(|(entity, menu, _)| menu.focus_parent.is_none().then_some(entity))?;
             self.children.focusables_of(root_menu).first().copied()
         };
         let fallback = || {
             self.focusables
                 .iter()
-                .find_map(|(entity, focus)| (focus.state() != Blocked).then(|| entity))
+                .find_map(|(entity, focus)| (focus.state() != Blocked).then_some(entity))
         };
         self.focusables
             .iter()
-            .find_map(|(e, focus)| (focus.state == Focused).then(|| e))
+            .find_map(|(e, focus)| (focus.state == Focused).then_some(e))
             .or_else(root_prioritized)
             .or_else(any_prioritized)
             .or_else(any_in_root)
@@ -261,6 +261,7 @@ pub enum LockReason {
 /// When locked, the navigation system doesn't process any [`NavRequest`].
 /// It only waits on a [`NavRequest::Unlock`] event. It will then continue
 /// processing new requests.
+#[derive(Resource)]
 pub struct NavLock {
     lock_reason: Option<LockReason>,
 }
@@ -610,7 +611,7 @@ fn resolve<STGY: MenuNavigationStrategy>(
                 Some(parent) => queries.children.focusables_of(parent),
                 None => {
                     let unblocked = |(e, focusable): (Entity, &Focusable)| {
-                        (focusable.state() != FocusState::Blocked).then(|| e)
+                        (focusable.state() != FocusState::Blocked).then_some(e)
                     };
                     queries.focusables.iter().filter_map(unblocked).collect()
                 }

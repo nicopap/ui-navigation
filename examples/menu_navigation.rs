@@ -37,6 +37,7 @@ fn main() {
         .run();
 }
 
+#[derive(Resource)]
 struct Gameui {
     from: Vec<Entity>,
     to: Entity,
@@ -50,6 +51,7 @@ impl Gameui {
     }
 }
 
+#[derive(Resource)]
 struct Materials {
     background: Color,
     rarrow: UiImage,
@@ -67,7 +69,9 @@ impl FromWorld for Materials {
     }
 }
 
-fn button_system(mut interaction_query: Query<(&Focusable, &mut UiColor), Changed<Focusable>>) {
+fn button_system(
+    mut interaction_query: Query<(&Focusable, &mut BackgroundColor), Changed<Focusable>>,
+) {
     for (focus, mut material) in interaction_query.iter_mut() {
         let color = match focus.state() {
             FocusState::Focused => Color::ORANGE_RED,
@@ -112,13 +116,13 @@ fn menu(materials: &Materials) -> NodeBundle {
     };
     NodeBundle {
         style,
-        color: materials.background.into(),
+        background_color: materials.background.into(),
         ..Default::default()
     }
 }
 fn setup(mut commands: Commands, materials: Res<Materials>, mut game: ResMut<Gameui>) {
     // ui camera
-    commands.spawn_bundle(Camera2dBundle::default());
+    commands.spawn(Camera2dBundle::default());
 
     let size_fn = |width, height| Size::new(Val::Percent(width), Val::Percent(height));
     let style = Style {
@@ -146,33 +150,33 @@ fn setup(mut commands: Commands, materials: Res<Materials>, mut game: ResMut<Gam
         ..Default::default()
     };
 
-    commands.spawn_bundle(bundle).with_children(|commands| {
+    commands.spawn(bundle).with_children(|commands| {
         let mut next_menu_button: Option<Entity> = None;
         for j in 0..5 {
             commands
-                .spawn_bundle(menu(&materials))
-                // Note: when next_menu_button is None,
-                // `with_parent(next_menu_button)` represents the root menu
-                .insert_bundle((
+                .spawn((
+                    menu(&materials),
+                    // Note: when next_menu_button is None,
+                    // `with_parent(next_menu_button)` represents the root menu
                     MenuSetting::new().wrapping(),
                     MenuBuilder::from(next_menu_button),
                 ))
                 .with_children(|commands| {
                     for i in 0..4 {
-                        let mut button = commands.spawn_bundle(button());
+                        let mut button = commands.spawn(button());
                         button.insert(Focusable::default());
                         if j == 0 && i == 3 {
                             game.to = button.id();
                         }
                         if j == i {
                             button.with_children(|commands| {
-                                commands.spawn_bundle(rarrow.clone());
+                                commands.spawn(rarrow.clone());
                             });
                             next_menu_button = Some(button.id());
                         }
                         if j == 3 && i == 1 {
                             button.insert(Focusable::cancel()).with_children(|cmds| {
-                                cmds.spawn_bundle(circle.clone());
+                                cmds.spawn(circle.clone());
                             });
                         }
                         if j == 2 && i == 1 {
@@ -181,7 +185,7 @@ fn setup(mut commands: Commands, materials: Res<Materials>, mut game: ResMut<Gam
                         if j == 4 {
                             let to_add = button
                                 .with_children(|commands| {
-                                    commands.spawn_bundle(circle.clone());
+                                    commands.spawn(circle.clone());
                                 })
                                 .id();
                             game.from.push(to_add);

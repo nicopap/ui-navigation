@@ -8,6 +8,7 @@ use bevy::utils::FloatOrd;
 use bevy::{ecs::system::SystemParam, prelude::*};
 
 /// Control default ui navigation input buttons
+#[derive(Resource)]
 pub struct InputMapping {
     /// Whether to use keybaord keys for navigation (instead of just actions).
     pub keyboard_navigation: bool,
@@ -296,7 +297,7 @@ pub trait ScreenSize {
 #[cfg(feature = "bevy_ui")]
 impl ScreenSize for Node {
     fn size(&self) -> Vec2 {
-        self.size
+        self.size()
     }
 }
 

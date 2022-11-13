@@ -38,7 +38,7 @@ fn block_some_focusables(
     time: Res<Time>,
 ) {
     let delta = time.delta_seconds_f64();
-    let current_time = time.seconds_since_startup();
+    let current_time = time.elapsed_seconds_f64();
     let at_interval = |t: f64| current_time % t < delta;
 
     if at_interval(3.0) {
@@ -56,7 +56,9 @@ fn block_some_focusables(
     }
 }
 
-fn button_system(mut interaction_query: Query<(&Focusable, &mut UiColor), Changed<Focusable>>) {
+fn button_system(
+    mut interaction_query: Query<(&Focusable, &mut BackgroundColor), Changed<Focusable>>,
+) {
     for (focus, mut material) in interaction_query.iter_mut() {
         let color = match focus.state() {
             FocusState::Focused => Color::ORANGE_RED,
@@ -74,13 +76,12 @@ fn setup(mut commands: Commands) {
     use FlexWrap::Wrap;
     use JustifyContent::{FlexStart, SpaceBetween};
     // ui camera
-    commands.spawn_bundle(Camera2dBundle::default());
+    commands.spawn(Camera2dBundle::default());
 
-    let red: UiColor = Color::RED.into();
-    let blue: UiColor = Color::BLUE.into();
-    let green: UiColor = Color::GREEN.into();
-    let gray: UiColor = Color::rgba(0.9, 0.9, 0.9, 0.3).into();
-    let transparent: UiColor = Color::NONE.into();
+    let red: BackgroundColor = Color::RED.into();
+    let blue: BackgroundColor = Color::BLUE.into();
+    let green: BackgroundColor = Color::GREEN.into();
+    let gray: BackgroundColor = Color::rgba(0.9, 0.9, 0.9, 0.3).into();
 
     let pct = Val::Percent;
     let px = Val::Px;
@@ -91,7 +92,6 @@ fn setup(mut commands: Commands) {
             margin: UiRect::all(px(2.0)),
             ..default()
         },
-        color: transparent,
         ..default()
     };
     let horizontal = NodeBundle {
@@ -102,7 +102,6 @@ fn setup(mut commands: Commands) {
             margin: UiRect::all(px(2.0)),
             ..default()
         },
-        color: transparent,
         ..default()
     };
     let square = FocusableButtonBundle::from(ButtonBundle {
@@ -164,7 +163,7 @@ fn setup(mut commands: Commands) {
             size: Size::new(pct(100.0), pct(100.0)),
             ..default()
         },
-        color: Color::rgb(1.0, 0.3, 0.9).into(),
+        background_color: Color::rgb(1.0, 0.3, 0.9).into(),
         ..default()
     };
 
@@ -181,69 +180,69 @@ fn setup(mut commands: Commands) {
     // identifier to our focusables so that they are refereable by `MenuSetting`s
     // afterward.
     commands
-        .spawn_bundle(vertical.clone())
-        .insert(Style {
-            size: Size::new(pct(100.0), pct(100.0)),
-            ..vertical.style.clone()
-        })
-        // The tab menu should be navigated with `NavRequest::ScopeMove` hence the `.scope()`
-        //             vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-        .insert_bundle((MenuSetting::new().wrapping().scope(), MenuBuilder::Root))
+        .spawn((
+            vertical.clone(),
+            Style {
+                size: Size::new(pct(100.0), pct(100.0)),
+                ..vertical.style.clone()
+            },
+            // The tab menu should be navigated with `NavRequest::ScopeMove` hence the `.scope()`
+            MenuSetting::new().wrapping().scope(),
+            MenuBuilder::Root,
+        ))
         .with_children(|cmds| {
-            cmds.spawn_bundle(horizontal.clone())
-                .insert(Style {
+            cmds.spawn((
+                horizontal.clone(),
+                Style {
                     justify_content: FlexStart,
                     flex_basis: pct(10.0),
                     ..horizontal.style.clone()
-                })
-                .with_children(|cmds| {
-                    // adding a `Name` component let us refer to those entities
-                    // later without having to store their `Entity` ids anywhere.
-                    cmds.spawn_bundle(tab_square.clone()).insert(named("red"));
-                    cmds.spawn_bundle(tab_square.clone()).insert(named("green"));
-                    cmds.spawn_bundle(tab_square).insert(named("blue"));
-                });
-            cmds.spawn_bundle(column_box).with_children(|cmds| {
-                cmds.spawn_bundle(column.clone())
-                    // refers to the "red" `tab_square`
-                    //                 vvvvvvvvvvv
-                    .insert_bundle(menu("red"))
-                    .insert(red)
+                },
+            ))
+            .with_children(|cmds| {
+                // adding a `Name` component let us refer to those entities
+                // later without having to store their `Entity` ids anywhere.
+                cmds.spawn((tab_square.clone(), named("red")));
+                cmds.spawn((tab_square.clone(), named("green")));
+                cmds.spawn((tab_square, named("blue")));
+            });
+            cmds.spawn(column_box).with_children(|cmds| {
+                cmds.spawn((column.clone(), menu("red"), red))
                     .with_children(|cmds| {
-                        cmds.spawn_bundle(vertical.clone()).with_children(|cmds| {
-                            cmds.spawn_bundle(long.clone()).insert(named("select1"));
-                            cmds.spawn_bundle(long.clone()).insert(named("select2"));
+                        cmds.spawn(vertical.clone()).with_children(|cmds| {
+                            cmds.spawn((long.clone(), named("select1")));
+                            cmds.spawn((long.clone(), named("select2")));
                         });
-                        cmds.spawn_bundle(horizontal.clone())
-                            .insert(Style {
+                        cmds.spawn((
+                            horizontal.clone(),
+                            cycle_menu("select1"),
+                            gray,
+                            Style {
                                 flex_wrap: Wrap,
                                 ..horizontal.style.clone()
-                            })
-                            .insert_bundle(cycle_menu("select1"))
-                            .insert(gray)
-                            .with_children(|cmds| {
-                                for _ in 0..20 {
-                                    cmds.spawn_bundle(square.clone());
-                                }
-                            });
-                        cmds.spawn_bundle(horizontal.clone())
-                            .insert(Style {
+                            },
+                        ))
+                        .with_children(|cmds| {
+                            for _ in 0..20 {
+                                cmds.spawn(square.clone());
+                            }
+                        });
+                        cmds.spawn((
+                            horizontal.clone(),
+                            cycle_menu("select2"),
+                            gray,
+                            Style {
                                 flex_wrap: Wrap,
                                 ..horizontal.style.clone()
-                            })
-                            .insert_bundle(cycle_menu("select2"))
-                            .insert(gray)
-                            .with_children(|cmds| {
-                                for _ in 0..8 {
-                                    cmds.spawn_bundle(square.clone());
-                                }
-                            });
+                            },
+                        ))
+                        .with_children(|cmds| {
+                            for _ in 0..8 {
+                                cmds.spawn(square.clone());
+                            }
+                        });
                     });
-                cmds.spawn_bundle(column.clone())
-                    // refers to the "green" `tab_square`
-                    //             vvvvvvvvvvvvv
-                    .insert_bundle(menu("green"))
-                    .insert(green)
+                cmds.spawn((column.clone(), menu("green"), green))
                     .with_children(|cmds| {
                         for i in 0..8 {
                             let name = format!("green_{i}");
@@ -255,32 +254,26 @@ fn setup(mut commands: Commands) {
                             } else {
                                 (MenuSetting::new(), MenuBuilder::from_named(name.clone()))
                             };
-                            cmds.spawn_bundle(horizontal.clone()).with_children(|cmds| {
-                                cmds.spawn_bundle(long.clone()).insert(Name::new(name));
-                                cmds.spawn_bundle(horizontal.clone())
-                                    .insert_bundle(child_bundle)
-                                    .insert(gray)
+                            cmds.spawn(horizontal.clone()).with_children(|cmds| {
+                                cmds.spawn((long.clone(), Name::new(name)));
+                                cmds.spawn((horizontal.clone(), child_bundle, gray))
                                     .with_children(|cmds| {
                                         for _ in 0..i % 6 + 1 {
-                                            cmds.spawn_bundle(square.clone());
+                                            cmds.spawn(square.clone());
                                         }
                                     });
                             });
                         }
                     });
-                cmds.spawn_bundle(column.clone())
-                    // refers to the "blue" `tab_square`
-                    //             vvvvvvvvvvvv
-                    .insert_bundle(menu("blue"))
-                    .insert(blue)
+                cmds.spawn((column.clone(), menu("blue"), blue))
                     .with_children(|cmds| {
-                        cmds.spawn_bundle(vertical.clone()).with_children(|cmds| {
-                            cmds.spawn_bundle(vertical).with_children(|cmds| {
+                        cmds.spawn(vertical.clone()).with_children(|cmds| {
+                            cmds.spawn(vertical).with_children(|cmds| {
                                 for _ in 0..6 {
-                                    cmds.spawn_bundle(long.clone());
+                                    cmds.spawn(long.clone());
                                 }
                             });
-                            cmds.spawn_bundle(colored_square);
+                            cmds.spawn(colored_square);
                         });
                     });
             });

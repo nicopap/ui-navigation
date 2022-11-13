@@ -21,7 +21,9 @@ fn main() {
         .run();
 }
 
-fn button_system(mut interaction_query: Query<(&Focusable, &mut UiColor), Changed<Focusable>>) {
+fn button_system(
+    mut interaction_query: Query<(&Focusable, &mut BackgroundColor), Changed<Focusable>>,
+) {
     for (focusable, mut material) in interaction_query.iter_mut() {
         if let FocusState::Focused = focusable.state() {
             *material = Color::ORANGE_RED.into();
@@ -38,7 +40,7 @@ fn print_nav_events(mut events: EventReader<NavEvent>) {
 
 fn setup(mut commands: Commands) {
     // ui camera
-    commands.spawn_bundle(Camera2dBundle::default());
+    commands.spawn(Camera2dBundle::default());
     let positions = [
         Vec2::new(10.0, 10.0),
         Vec2::new(15.0, 50.0),
@@ -51,7 +53,7 @@ fn setup(mut commands: Commands) {
         Vec2::new(50.0, 90.0),
     ];
     commands
-        .spawn_bundle(NodeBundle {
+        .spawn(NodeBundle {
             style: Style {
                 position_type: PositionType::Absolute,
                 size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
@@ -71,18 +73,19 @@ fn spawn_button(position: Vec2, commands: &mut ChildBuilder) {
         top: Val::Percent(position.y),
         ..Default::default()
     };
-    commands
-        .spawn_bundle(ButtonBundle {
+    commands.spawn((
+        ButtonBundle {
             style: Style {
                 size: Size::new(Val::Px(95.0), Val::Px(65.0)),
                 position,
                 position_type: PositionType::Absolute,
                 ..Default::default()
             },
-            color: Color::DARK_GRAY.into(),
+            background_color: Color::DARK_GRAY.into(),
             ..Default::default()
-        })
+        },
         // vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
         // 2. Add the `Focusable` component to the navigable Entity
-        .insert(Focusable::default());
+        Focusable::default(),
+    ));
 }

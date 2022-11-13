@@ -76,7 +76,9 @@ fn print_menus(
     }
 }
 
-fn button_system(mut interaction_query: Query<(&Focusable, &mut UiColor), Changed<Focusable>>) {
+fn button_system(
+    mut interaction_query: Query<(&Focusable, &mut BackgroundColor), Changed<Focusable>>,
+) {
     for (focus, mut material) in interaction_query.iter_mut() {
         let color = match focus.state() {
             FocusState::Focused => Color::ORANGE,
@@ -92,13 +94,13 @@ fn setup(mut commands: Commands) {
     use FlexDirection::{ColumnReverse, Row};
     use Val::{Percent as Pct, Px};
     // ui camera
-    commands.spawn_bundle(Camera2dBundle::default());
+    commands.spawn(Camera2dBundle::default());
 
     // First argument to `bndl!` is the color of the node, second is the Style
     macro_rules! bndl {
         ($color:expr, {$($style:tt)*} ) => (
             NodeBundle {
-                color: ($color as Color).into(),
+                background_color: ($color as Color).into(),
                 style: Style {
                     $($style)*
                     align_items: AlignItems::Center,
@@ -144,30 +146,29 @@ fn setup(mut commands: Commands) {
             [$k, $k, $k, $k, $k, $k, $k, $k, $k]
         };
     }
-    let bts: [Entity; 9] = nine![commands
-        .spawn_bundle(button.clone())
-        .insert(Focusable::default())
-        .id()];
+    let bts: [Entity; 9] = nine![commands.spawn((button.clone(), Focusable::default())).id()];
     // create a cell in a column, with three navigable buttons
     macro_rules! spawn_cell {
         ($cmds: expr) => {{
-            $cmds.spawn_bundle(cell.clone()).with_children(|cmds| {
+            $cmds.spawn(cell.clone()).with_children(|cmds| {
                 let focus = || Focusable::default();
-                cmds.spawn_bundle(button.clone()).insert(focus());
-                cmds.spawn_bundle(button.clone()).insert(focus());
-                cmds.spawn_bundle(button.clone()).insert(focus());
+                cmds.spawn((button.clone(), focus()));
+                cmds.spawn((button.clone(), focus()));
+                cmds.spawn((button.clone(), focus()));
             })
         }};
     }
     let (red, green, blue) = (Color::RED, Color::GREEN, Color::BLUE);
     // spawn the whole UI tree
-    commands.spawn_bundle(root).with_children(|cmds| {
-        cmds.spawn_bundle(keyboard)
-            // Add root menu                                       vvvvvvvvvvvvvvvvv
-            .insert_bundle((MenuSetting::new().wrapping().scope(), MenuBuilder::Root))
-            .push_children(&bts);
+    commands.spawn(root).with_children(|cmds| {
+        cmds.spawn((
+            keyboard,
+            MenuSetting::new().wrapping().scope(),
+            MenuBuilder::Root, // Add root menu
+        ))
+        .push_children(&bts);
 
-        cmds.spawn_bundle(billboard).with_children(|cmds| {
+        cmds.spawn(billboard).with_children(|cmds| {
             // Note: each colored column has a different type, but
             // within each column there are three menus (Top, Middle, Bottom)
             //
@@ -176,24 +177,24 @@ fn setup(mut commands: Commands) {
             //
             // `wrap` = `MenuSetting::Wrapping2d`, see type alias on top of this
             // function.
-            cmds.spawn_bundle(column(red)).with_children(|cmds| {
+            cmds.spawn(column(red)).with_children(|cmds| {
                 let menu = |row: LeftColMenu| (wrap, reachable_from(bts[row.i()]), NavMarker(row));
-                spawn_cell!(cmds).insert_bundle(menu(LeftColMenu::Top));
-                spawn_cell!(cmds).insert_bundle(menu(LeftColMenu::Middle));
-                spawn_cell!(cmds).insert_bundle(menu(LeftColMenu::Bottom));
+                spawn_cell!(cmds).insert(menu(LeftColMenu::Top));
+                spawn_cell!(cmds).insert(menu(LeftColMenu::Middle));
+                spawn_cell!(cmds).insert(menu(LeftColMenu::Bottom));
             });
-            cmds.spawn_bundle(column(green)).with_children(|cmds| {
+            cmds.spawn(column(green)).with_children(|cmds| {
                 let menu =
                     |row: CenterColMenu| (wrap, reachable_from(bts[row.i()]), NavMarker(row));
-                spawn_cell!(cmds).insert_bundle(menu(CenterColMenu::Top));
-                spawn_cell!(cmds).insert_bundle(menu(CenterColMenu::Middle));
-                spawn_cell!(cmds).insert_bundle(menu(CenterColMenu::Bottom));
+                spawn_cell!(cmds).insert(menu(CenterColMenu::Top));
+                spawn_cell!(cmds).insert(menu(CenterColMenu::Middle));
+                spawn_cell!(cmds).insert(menu(CenterColMenu::Bottom));
             });
-            cmds.spawn_bundle(column(blue)).with_children(|cmds| {
+            cmds.spawn(column(blue)).with_children(|cmds| {
                 let menu = |row: RightColMenu| (wrap, reachable_from(bts[row.i()]), NavMarker(row));
-                spawn_cell!(cmds).insert_bundle(menu(RightColMenu::Top));
-                spawn_cell!(cmds).insert_bundle(menu(RightColMenu::Middle));
-                spawn_cell!(cmds).insert_bundle(menu(RightColMenu::Bottom));
+                spawn_cell!(cmds).insert(menu(RightColMenu::Top));
+                spawn_cell!(cmds).insert(menu(RightColMenu::Middle));
+                spawn_cell!(cmds).insert(menu(RightColMenu::Bottom));
             });
         });
     });

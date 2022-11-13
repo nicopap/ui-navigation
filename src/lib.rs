@@ -46,10 +46,10 @@ pub mod systems;
 
 use std::marker::PhantomData;
 
-use bevy::app::prelude::*;
+use bevy::app::{prelude::*, PluginGroupBuilder};
 use bevy::ecs::{
-    prelude::Component,
-    schedule::{ParallelSystemDescriptorCoercion, SystemLabel},
+    prelude::{Component, IntoSystemDescriptor},
+    schedule::SystemLabel,
     system::{SystemParam, SystemParamItem},
 };
 
@@ -215,8 +215,9 @@ where
 pub struct DefaultNavigationPlugins;
 #[cfg(feature = "bevy_ui")]
 impl PluginGroup for DefaultNavigationPlugins {
-    fn build(&mut self, group: &mut bevy::app::PluginGroupBuilder) {
-        group.add(NavigationPlugin::new());
-        group.add(systems::DefaultNavigationSystems);
+    fn build(self) -> PluginGroupBuilder {
+        PluginGroupBuilder::start::<Self>()
+            .add(NavigationPlugin::new())
+            .add(systems::DefaultNavigationSystems)
     }
 }

@@ -20,7 +20,7 @@ use bevy::{
     ecs::{
         entity::Entity,
         event::EventReader,
-        query::{QueryItem, ReadOnlyWorldQuery, WorldQuery},
+        query::{ReadOnlyWorldQuery, WorldQuery},
         system::Query,
     },
     math::Vec2,
@@ -251,10 +251,10 @@ impl<'w, 's, 'a> NavEventReader<'w, 's, 'a> {
     /// Iterate over query items of _activated_ focusables.
     ///
     /// See [`Self::activated`] for meaning of _"activated"_.
-    pub fn activated_in_query<'b, 'c: 'b, Q: ReadOnlyWorldQuery, F: WorldQuery>(
+    pub fn activated_in_query<'b, 'c: 'b, Q: ReadOnlyWorldQuery, F: ReadOnlyWorldQuery>(
         &'b mut self,
         query: &'c Query<Q, F>,
-    ) -> impl Iterator<Item = QueryItem<Q>> + 'b {
+    ) -> impl Iterator<Item = Q::Item<'c>> + 'b {
         query.iter_many(self.activated())
     }
 
@@ -262,10 +262,10 @@ impl<'w, 's, 'a> NavEventReader<'w, 's, 'a> {
     ///
     /// Unlike [`Self::activated_in_query`] this works with mutable queries.
     /// see [`Self::activated`] for meaning of _"activated"_.
-    pub fn activated_in_query_foreach_mut<Q: WorldQuery, F: WorldQuery>(
+    pub fn activated_in_query_foreach_mut<Q: WorldQuery, F: ReadOnlyWorldQuery>(
         &mut self,
         query: &mut Query<Q, F>,
-        mut for_each: impl FnMut(QueryItem<Q>),
+        mut for_each: impl FnMut(Q::Item<'_>),
     ) {
         for entity in self.activated() {
             if let Ok(item) = query.get_mut(entity) {

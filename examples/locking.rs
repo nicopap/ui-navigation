@@ -40,7 +40,10 @@ fn extra_lock_key(mut requests: EventWriter<NavRequest>, input: Res<Input<KeyCod
 
 #[allow(clippy::type_complexity)]
 fn button_system(
-    mut interaction_query: Query<(&Focusable, &mut UiColor), (Changed<Focusable>, With<Button>)>,
+    mut interaction_query: Query<
+        (&Focusable, &mut BackgroundColor),
+        (Changed<Focusable>, With<Button>),
+    >,
 ) {
     for (focus, mut material) in interaction_query.iter_mut() {
         if let FocusState::Focused = focus.state() {
@@ -51,6 +54,7 @@ fn button_system(
     }
 }
 
+#[derive(Resource)]
 struct Images {
     lock: UiImage,
 }
@@ -66,9 +70,9 @@ impl FromWorld for Images {
 fn setup(mut commands: Commands, imgs: Res<Images>) {
     let center_pct = |v: usize| Val::Percent((v as f32) * 25.0 + 25.0);
     // ui camera
-    commands.spawn_bundle(Camera2dBundle::default());
+    commands.spawn(Camera2dBundle::default());
     commands
-        .spawn_bundle(NodeBundle {
+        .spawn(NodeBundle {
             style: Style {
                 position_type: PositionType::Absolute,
                 size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
@@ -85,13 +89,13 @@ fn setup(mut commands: Commands, imgs: Res<Images>) {
                         ..Default::default()
                     };
                     let bundle = button_bundle(position);
-                    let mut button_cmds = commands.spawn_bundle(bundle);
+                    let mut button_cmds = commands.spawn(bundle);
                     if x == 1 && y == 1 {
                         // We set the center button as "lock", pressing Action
                         // while it is focused will block the navigation system
                         //                 vvvvvvvvvvvvvvvvv
                         button_cmds.insert(Focusable::lock()).with_children(|cmds| {
-                            cmds.spawn_bundle(ImageBundle {
+                            cmds.spawn(ImageBundle {
                                 image: imgs.lock.clone(),
                                 ..Default::default()
                             });
@@ -103,7 +107,7 @@ fn setup(mut commands: Commands, imgs: Res<Images>) {
             }
         });
 }
-fn button_bundle(position: UiRect<Val>) -> ButtonBundle {
+fn button_bundle(position: UiRect) -> ButtonBundle {
     ButtonBundle {
         style: Style {
             size: Size::new(Val::Px(95.0), Val::Px(65.0)),
@@ -111,7 +115,7 @@ fn button_bundle(position: UiRect<Val>) -> ButtonBundle {
             position_type: PositionType::Absolute,
             ..Default::default()
         },
-        color: Color::DARK_GRAY.into(),
+        background_color: Color::DARK_GRAY.into(),
         ..Default::default()
     }
 }

@@ -18,7 +18,7 @@
 //! * [`ParentName`], the *by-name* marker: marks a [`TreeMenuSeed`] as needing
 //!   its [`focus_parent`](TreeMenuSeed::focus_parent) to be updated by
 //!   [`crate::named::resolve_named_menus`] with the [`Focusable`](crate::Focusable) which
-//!   [`Name`](https://docs.rs/bevy/0.8.0/bevy/core/struct.Name.html) matches
+//!   [`Name`](https://docs.rs/bevy/0.9.0/bevy/core/struct.Name.html) matches
 //!   the one in [`ParentName`]. If for whatever reason that update doesn't
 //!   happen, [`crate::resolve::insert_tree_menus`] will panic.
 //! * [`NavMarker<T>`], the *automarking* marker: marks a [`NavMenu`] as
@@ -112,7 +112,7 @@ impl TreeMenuSeed {
 }
 
 /// Component to specify creation of a [`TreeMenu`] refering to their parent
-/// focusable by [`Name`](https://docs.rs/bevy/0.8.0/bevy/core/struct.Name.html)
+/// focusable by [`Name`](https://docs.rs/bevy/0.9.0/bevy/core/struct.Name.html)
 ///
 /// It is used in [`crate::named::resolve_named_menus`] to figure out the
 /// `Entity` id of the named parent of the [`TreeMenuSeed`] and set its
@@ -145,7 +145,7 @@ pub(crate) struct NavMarker<T>(pub(crate) T);
 ///   call [`marking`](MenuSeed::marking) on it.
 /// * Specify which entity will be the parents of this [`NavMenu`], see
 ///   [`NavMenu::reachable_from`] or [`NavMenu::reachable_from_named`] if you don't
-///   have access to the [`Entity`](https://docs.rs/bevy/0.8.0/bevy/ecs/entity/struct.Entity.html)
+///   have access to the [`Entity`](https://docs.rs/bevy/0.9.0/bevy/ecs/entity/struct.Entity.html)
 ///   for the parent [`Focusable`](crate::Focusable)
 ///
 /// If you want to specify which [`Focusable`](crate::Focusable) should be
@@ -246,7 +246,7 @@ impl MenuSeed {
 }
 
 /// Bundle to specify creation of a [`NavMenu`] refering to their parent
-/// focusable by [`Name`](https://docs.rs/bevy/0.8.0/bevy/core/struct.Name.html)
+/// focusable by [`Name`](https://docs.rs/bevy/0.9.0/bevy/core/struct.Name.html)
 ///
 /// This is useful if, for example, you just want to spawn your UI without
 /// keeping track of entity ids of buttons that leads to submenus.
@@ -337,7 +337,7 @@ impl NavMenu {
     }
 
     /// Spawn this menu as reachable from a [`Focusable`](crate::Focusable) with a
-    /// [`Name`](https://docs.rs/bevy/0.8.0/bevy/core/struct.Name.html)
+    /// [`Name`](https://docs.rs/bevy/0.9.0/bevy/core/struct.Name.html)
     /// component.
     ///
     /// This is useful if, for example, you just want to spawn your UI without
