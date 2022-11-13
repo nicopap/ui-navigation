@@ -93,8 +93,8 @@ impl Direction {
         let coord = other - reference;
         use Direction::*;
         match self {
-            South => coord.y < coord.x && coord.y < -coord.x,
-            North => coord.y > coord.x && coord.y > -coord.x,
+            North => coord.y < coord.x && coord.y < -coord.x,
+            South => coord.y > coord.x && coord.y > -coord.x,
             East => coord.y < coord.x && coord.y > -coord.x,
             West => coord.y > coord.x && coord.y < -coord.x,
         }

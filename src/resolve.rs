@@ -533,8 +533,8 @@ impl<'w, 's> MenuNavigationStrategy for UiProjectionQuery<'w, 's> {
                 let scale = boundaries.scale;
                 let focused_pos = match direction {
                     // NOTE: up/down axises are inverted in bevy
-                    North => Vec2::new(focused_pos.x, y - scale * edge.min.y),
-                    South => Vec2::new(focused_pos.x, y + scale * edge.max.y),
+                    South => Vec2::new(focused_pos.x, y - scale * edge.min.y),
+                    North => Vec2::new(focused_pos.x, y + scale * edge.max.y),
                     East => Vec2::new(x - edge.min.x * scale, focused_pos.y),
                     West => Vec2::new(x + edge.max.x * scale, focused_pos.y),
                 };
