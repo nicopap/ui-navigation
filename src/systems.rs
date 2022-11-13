@@ -236,7 +236,7 @@ pub fn default_keyboard_input(
     without_movement.iter().for_each(send_command);
 }
 
-/// [`SystemParam`](https://docs.rs/bevy/0.7.0/bevy/ecs/system/trait.SystemParam.html)
+/// [`SystemParam`](https://docs.rs/bevy/0.9.0/bevy/ecs/system/trait.SystemParam.html)
 /// used to compute UI focusable physical positions in mouse input systems.
 #[derive(SystemParam)]
 pub struct NodePosQuery<'w, 's, T: Component> {
@@ -287,7 +287,13 @@ where
 }
 
 fn cursor_pos(windows: &Windows) -> Option<Vec2> {
-    windows.get_primary().and_then(|w| w.cursor_position())
+    windows.get_primary().and_then(|window| {
+        let pos = window.cursor_position()?;
+        Some(Vec2 {
+            y: window.height() - pos.y,
+            ..pos
+        })
+    })
 }
 
 pub trait ScreenSize {
