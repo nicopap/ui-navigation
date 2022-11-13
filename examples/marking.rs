@@ -91,7 +91,7 @@ fn button_system(
 }
 
 fn setup(mut commands: Commands) {
-    use FlexDirection::{ColumnReverse, Row};
+    use FlexDirection::{Column, Row};
     use Val::{Percent as Pct, Px};
     // ui camera
     commands.spawn(Camera2dBundle::default());
@@ -122,13 +122,13 @@ fn setup(mut commands: Commands) {
     // root menu to access each `cell`
     let keyboard = bndl!(Color::DARK_GRAY, {
         size: Size::new(Px(50.0 * 3.2), Px(50.0 * 3.2)),
-        flex_direction: ColumnReverse,
+        flex_direction: Column,
         flex_wrap: FlexWrap::Wrap,
     });
     // black container
     let billboard = bndl!(Color::BLACK, { flex_direction: Row, margin: good_margin, });
     // colored columns
-    let column = |color| bndl!(color, { flex_direction: ColumnReverse, margin: good_margin, });
+    let column = |color| bndl!(color, { flex_direction: Column, margin: good_margin, });
     // each row of a column
     let cell = bndl!(Color::rgba(1.0, 1.0, 1.0, 0.2), {
         flex_direction: Row,

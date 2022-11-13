@@ -72,7 +72,7 @@ fn button_system(
 }
 
 fn setup(mut commands: Commands) {
-    use FlexDirection::{ColumnReverse, Row};
+    use FlexDirection::{Column, Row};
     use FlexWrap::Wrap;
     use JustifyContent::{FlexStart, SpaceBetween};
     // ui camera
@@ -87,7 +87,7 @@ fn setup(mut commands: Commands) {
     let px = Val::Px;
     let vertical = NodeBundle {
         style: Style {
-            flex_direction: ColumnReverse,
+            flex_direction: Column,
             size: Size::new(pct(100.0), pct(100.0)),
             margin: UiRect::all(px(2.0)),
             ..default()
@@ -141,11 +141,12 @@ fn setup(mut commands: Commands) {
             padding: UiRect::all(px(30.0)),
             ..default()
         },
+        background_color: Color::WHITE.into(),
         ..default()
     };
     let column = NodeBundle {
         style: Style {
-            flex_direction: ColumnReverse,
+            flex_direction: Column,
             size: Size::new(pct(33.0), pct(100.0)),
             padding: UiRect::all(px(10.0)),
             margin: UiRect {
@@ -182,67 +183,61 @@ fn setup(mut commands: Commands) {
     commands
         .spawn((
             vertical.clone(),
-            Style {
-                size: Size::new(pct(100.0), pct(100.0)),
-                ..vertical.style.clone()
-            },
             // The tab menu should be navigated with `NavRequest::ScopeMove` hence the `.scope()`
             MenuSetting::new().wrapping().scope(),
             MenuBuilder::Root,
         ))
+        .insert(Style {
+            size: Size::new(pct(100.0), pct(100.0)),
+            ..vertical.style.clone()
+        })
         .with_children(|cmds| {
-            cmds.spawn((
-                horizontal.clone(),
-                Style {
+            cmds.spawn(horizontal.clone())
+                .insert(Style {
                     justify_content: FlexStart,
                     flex_basis: pct(10.0),
                     ..horizontal.style.clone()
-                },
-            ))
-            .with_children(|cmds| {
-                // adding a `Name` component let us refer to those entities
-                // later without having to store their `Entity` ids anywhere.
-                cmds.spawn((tab_square.clone(), named("red")));
-                cmds.spawn((tab_square.clone(), named("green")));
-                cmds.spawn((tab_square, named("blue")));
-            });
+                })
+                .with_children(|cmds| {
+                    // adding a `Name` component let us refer to those entities
+                    // later without having to store their `Entity` ids anywhere.
+                    cmds.spawn((tab_square.clone(), named("red")));
+                    cmds.spawn((tab_square.clone(), named("green")));
+                    cmds.spawn((tab_square, named("blue")));
+                });
             cmds.spawn(column_box).with_children(|cmds| {
-                cmds.spawn((column.clone(), menu("red"), red))
+                cmds.spawn((column.clone(), menu("red")))
+                    .insert(red)
                     .with_children(|cmds| {
                         cmds.spawn(vertical.clone()).with_children(|cmds| {
                             cmds.spawn((long.clone(), named("select1")));
                             cmds.spawn((long.clone(), named("select2")));
                         });
-                        cmds.spawn((
-                            horizontal.clone(),
-                            cycle_menu("select1"),
-                            gray,
-                            Style {
+                        cmds.spawn((horizontal.clone(), cycle_menu("select1")))
+                            .insert(gray)
+                            .insert(Style {
                                 flex_wrap: Wrap,
                                 ..horizontal.style.clone()
-                            },
-                        ))
-                        .with_children(|cmds| {
-                            for _ in 0..20 {
-                                cmds.spawn(square.clone());
-                            }
-                        });
-                        cmds.spawn((
-                            horizontal.clone(),
-                            cycle_menu("select2"),
-                            gray,
-                            Style {
+                            })
+                            .with_children(|cmds| {
+                                for _ in 0..20 {
+                                    cmds.spawn(square.clone());
+                                }
+                            });
+                        cmds.spawn((horizontal.clone(), cycle_menu("select2")))
+                            .insert(gray)
+                            .insert(Style {
                                 flex_wrap: Wrap,
                                 ..horizontal.style.clone()
-                            },
-                        ))
-                        .with_children(|cmds| {
-                            for _ in 0..8 {
-                                cmds.spawn(square.clone());
-                            }
-                        });
+                            })
+                            .with_children(|cmds| {
+                                for _ in 0..8 {
+                                    cmds.spawn(square.clone());
+                                }
+                            });
                     });
-                cmds.spawn((column.clone(), menu("green"), green))
+                cmds.spawn((column.clone(), menu("green")))
+                    .insert(green)
                     .with_children(|cmds| {
                         for i in 0..8 {
                             let name = format!("green_{i}");
@@ -256,7 +251,8 @@ fn setup(mut commands: Commands) {
                             };
                             cmds.spawn(horizontal.clone()).with_children(|cmds| {
                                 cmds.spawn((long.clone(), Name::new(name)));
-                                cmds.spawn((horizontal.clone(), child_bundle, gray))
+                                cmds.spawn((horizontal.clone(), child_bundle))
+                                    .insert(gray)
                                     .with_children(|cmds| {
                                         for _ in 0..i % 6 + 1 {
                                             cmds.spawn(square.clone());
@@ -265,7 +261,8 @@ fn setup(mut commands: Commands) {
                             });
                         }
                     });
-                cmds.spawn((column.clone(), menu("blue"), blue))
+                cmds.spawn((column.clone(), menu("blue")))
+                    .insert(blue)
                     .with_children(|cmds| {
                         cmds.spawn(vertical.clone()).with_children(|cmds| {
                             cmds.spawn(vertical).with_children(|cmds| {
