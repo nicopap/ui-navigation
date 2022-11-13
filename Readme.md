@@ -153,7 +153,7 @@ use bevy::prelude::*;
 use bevy_ui_navigation::prelude::{FocusState, Focusable};
 
 fn button_system(
-    mut focusables: Query<(&Focusable, &mut UiColor), Changed<Focusable>>,
+    mut focusables: Query<(&Focusable, &mut BackgroundColor), Changed<Focusable>>,
 ) {
     for (focus, mut color) in focusables.iter_mut() {
         let new_color = if matches!(focus.state(), FocusState::Focused) {
@@ -256,7 +256,7 @@ The high level usage of [`MenuBuilder`] is as follow:
    * Add a [`Name("opt_btn_name")`][Name] component in addition to the
      [`Focusable`] component to your options button.
    * Pre-spawn the options button and store somewhere it's [`Entity` id][entity-id]
-     (`let opt_btn = commands.spawn_bundle(FocusableButtonBundle).id();`)
+     (`let opt_btn = commands.spawn(FocusableButtonBundle).id();`)
 3. to the `NodeBundle` containing all the options menu [`Focusable`] entities,
    you add the following component:
    * [`MenuBuilder::from_named("opt_btn_name")`][MenuBuilder::reachable_from_named]
@@ -283,11 +283,11 @@ fn spawn_menu(mut cmds: Commands, save_files: Vec<SaveFile>) {
         ..Default::default()
     };
     let button = FocusableButtonBundle::from(ButtonBundle {
-        color: Color::rgb(1.0, 0.3, 1.0).into(),
+        background_color: Color::rgb(1.0, 0.3, 1.0).into(),
         ..Default::default()
     });
     let mut spawn = |bundle: &FocusableButtonBundle, name: &'static str| {
-          cmds.spawn_bundle(bundle.clone()).insert(Name::new(name)).id()
+          cmds.spawn(bundle.clone()).insert(Name::new(name)).id()
     };
     let options = spawn(&button, "options");
     let graphics_option = spawn(&button, "graphics");
@@ -298,28 +298,28 @@ fn spawn_menu(mut cmds: Commands, save_files: Vec<SaveFile>) {
     let load = spawn(&button, "load");
 
     // Spawn the game menu
-    cmds.spawn_bundle(menu_node.clone())
-        // Root Menu                        vvvvvvvvvvvvvvvvv
-        .insert_bundle((MenuSetting::new(), MenuBuilder::Root))
+    cmds.spawn(menu_node.clone())
+        // Root Menu                 vvvvvvvvvvvvvvvvv
+        .insert((MenuSetting::new(), MenuBuilder::Root))
         .push_children(&[options, game, quit, load]);
 
     // Spawn the load menu
-    cmds.spawn_bundle(menu_node.clone())
+    cmds.spawn(menu_node.clone())
         // Sub menu accessible through the load button
-        //                                  vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-        .insert_bundle((MenuSetting::new(), MenuBuilder::EntityParent(load)))
+        //                           vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+        .insert((MenuSetting::new(), MenuBuilder::EntityParent(load)))
         .with_children(|cmds| {
             // can only access the save file UI nodes from the load menu
             for file in save_files.iter() {
-                cmds.spawn_bundle(file.bundle()).insert(Focusable::default());
+                cmds.spawn(file.bundle()).insert(Focusable::default());
             }
         });
 
     // Spawn the options menu
-    cmds.spawn_bundle(menu_node)
+    cmds.spawn(menu_node)
         // Sub menu accessible through the "options" button
-        //                                  vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-        .insert_bundle((MenuSetting::new(), MenuBuilder::from_named("options")))
+        //                           vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+        .insert((MenuSetting::new(), MenuBuilder::from_named("options")))
         .push_children(&[graphics_option, audio_options, input_options]);
 }
 ```
