@@ -583,3 +583,8 @@ Copyright © 2022 Nicola Papale
 
 This software is licensed under either MIT or Apache 2.0 at your leisure. See
 licenses directory for details.
+
+### Font
+
+The font in `font.ttf` is derived from Adobe SourceSans, licensed
+under the SIL OFL. see file at `licenses/SIL Open Font License.txt`.

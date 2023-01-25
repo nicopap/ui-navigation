@@ -197,10 +197,15 @@ where
             // The user is most likely to spawn his UI in the Update stage, so it makes
             // sense to react to changes in the PostUpdate stage.
             .add_system_to_stage(
-                CoreStage::PostUpdate,
+                CoreStage::PreUpdate,
                 named::resolve_named_menus.before(resolve::insert_tree_menus),
             )
-            .add_system_to_stage(CoreStage::PostUpdate, resolve::insert_tree_menus);
+            .add_system_to_stage(CoreStage::PreUpdate, resolve::insert_tree_menus)
+            .add_startup_system_to_stage(
+                StartupStage::PostStartup,
+                named::resolve_named_menus.before(resolve::insert_tree_menus),
+            )
+            .add_startup_system_to_stage(StartupStage::PostStartup, resolve::insert_tree_menus);
     }
 }
 

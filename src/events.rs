@@ -55,6 +55,11 @@ pub enum NavRequest {
     Cancel,
     /// Move the focus to any arbitrary [`Focusable`] entity.
     ///
+    /// Note that resolving a `FocusOn` request is expensive,
+    /// make sure you do not spam `FocusOn` messages in your input systems.
+    /// Avoid sending FocusOn messages when you know the target entity is
+    /// already focused.
+    ///
     /// [`Focusable`]: crate::resolve::Focusable
     FocusOn(Entity),
     /// Locks the navigation system.
