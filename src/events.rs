@@ -80,16 +80,22 @@ pub enum NavRequest {
 /// [`MenuSetting::scope`]: crate::menu::MenuSetting
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum ScopeDirection {
+    /// The next focusable in menu, usually goes right.
     Next,
+    /// The previous focusable in menu, usually goes left.
     Previous,
 }
 
 /// 2d direction to move in normal menus
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Direction {
+    /// Down.
     South,
+    /// Up.
     North,
+    /// Right.
     East,
+    /// Left.
     West,
 }
 impl Direction {

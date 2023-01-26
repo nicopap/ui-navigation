@@ -296,7 +296,11 @@ fn cursor_pos(windows: &Windows) -> Option<Vec2> {
     })
 }
 
+/// Something that has a size on screen.
+///
+/// Used for default mouse picking behavior on `bevy_ui`.
 pub trait ScreenSize {
+    /// The size of the thing on screen.
     fn size(&self) -> Vec2;
 }
 

@@ -168,15 +168,28 @@ impl MenuSetting {
     pub(crate) fn is_scope(&self) -> bool {
         self.scope
     }
+    /// Create a new non-wrapping, non-scopped [`MenuSetting`],
+    /// those are the default values.
+    ///
+    /// # Example
+    ///
+    /// To create a wrapping/scopped menu, you can use:
+    /// ```
+    /// MenuSetting::new().wrapping().scope()
+    /// ```
     pub fn new() -> Self {
         Self::default()
     }
-    // Set `wrapping` to true.
+    /// Set [`wrapping`] to true.
+    ///
+    /// [`wrapping`]: Self::wrapping
     pub fn wrapping(mut self) -> Self {
         self.wrapping = true;
         self
     }
-    // Set `scope` to true.
+    /// Set `scope` to true.
+    ///
+    /// [`scope`]: Self::scope
     pub fn scope(mut self) -> Self {
         self.scope = true;
         self
