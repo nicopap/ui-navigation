@@ -33,6 +33,7 @@
 [`NavRequest::ScopeMove`]: events::NavRequest::ScopeMove
 [`NavRequestSystem`]: NavRequestSystem
 */
+#![forbid(missing_docs)]
 #![doc = include_str!("../Readme.md")]
 mod commands;
 #[cfg(feature = "bevy_ui")]
@@ -92,6 +93,7 @@ pub mod custom {
 pub struct NavMarkerPropagationPlugin<T>(PhantomData<T>);
 impl<T> NavMarkerPropagationPlugin<T> {
     #[allow(clippy::new_without_default)]
+    /// Create a new [`NavMarkerPropagationPlugin`].
     pub fn new() -> Self {
         NavMarkerPropagationPlugin(PhantomData)
     }
@@ -173,9 +175,12 @@ pub struct NavRequestSystem;
 #[derive(Default)]
 pub struct GenericNavigationPlugin<STGY>(PhantomData<fn() -> STGY>);
 #[cfg(feature = "bevy_ui")]
+/// A default [`GenericNavigationPlugin`] for `bevy_ui`.
 pub type NavigationPlugin<'w, 's> = GenericNavigationPlugin<UiProjectionQuery<'w, 's>>;
 
 impl<STGY: resolve::MenuNavigationStrategy> GenericNavigationPlugin<STGY> {
+    /// Create a new [`GenericNavigationPlugin`] with the provided `STGY`,
+    /// see also [`resolve::MenuNavigationStrategy`].
     pub fn new() -> Self {
         Self(PhantomData)
     }

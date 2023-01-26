@@ -19,7 +19,6 @@
 //! * [`ChildQueries::focusables_of`]
 //! * [`child_menu`]
 //! * [`focus_deep`]
-//! * [`root_path`]
 //! * [`MenuNavigationStrategy::resolve_2d`]
 //! * [`resolve_scope`]
 //!
@@ -91,17 +90,30 @@ pub trait MenuNavigationStrategy {
     ) -> Option<&'a Entity>;
 }
 
+/// A rectangle to specify the [`ScreenBoundaries`],
+/// useful for 2d navigation wrapping.
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "bevy_reflect", derive(Reflect))]
 pub struct Rect {
+    /// The higher `x,y` coordinate of the `Rect`.
     pub max: Vec2,
+    /// The lower `x,y` coordinate of the `Rect`.
     pub min: Vec2,
 }
+/// Specify the boundaries of the screen when using 2d wrapping navigation.
+///
+/// This will be used in the default [`MenuNavigationStrategy`].
+///
+/// **NOTE**: This is deprecated since `bevy_ui` doesn't support moving
+/// the UI camera anymore.
 #[derive(Debug, Clone, Copy, Resource)]
 #[cfg_attr(feature = "bevy_reflect", derive(Reflect))]
 pub struct ScreenBoundaries {
+    /// Position of the camera.
     pub position: Vec2,
+    /// The borders of the camera.
     pub screen_edge: Rect,
+    /// The zoom level of the camera.
     pub scale: f32,
 }
 
