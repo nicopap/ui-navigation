@@ -9,7 +9,7 @@ categories = ["game-development", "accessibility", "gui"]
 repository = "https://github.com/nicopap/ui-navigation"
 homepage = "https://github.com/nicopap/ui-navigation"
 exclude = ["assets", ".github"]
-version = "0.23.0"
+version = "0.23.1"
 edition = "2021"
 
 [features]
@@ -31,4 +31,4 @@ bevy = { version = "0.9", default-features = false, features = [
 ] }
 
 [package.metadata.docs.rs]
-cargo-args = ["-Zunstable-options", "-Zrustdoc-scrape-examples=examples"]
+cargo-args = ["-Zunstable-options", "-Zrustdoc-scrape-examples"]
