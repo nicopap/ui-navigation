@@ -41,6 +41,8 @@ use std::num::NonZeroUsize;
 use bevy::hierarchy::{Children, Parent};
 use bevy::log::warn;
 use bevy::prelude::Changed;
+#[cfg(feature = "bevy_reflect")]
+use bevy::reflect::{FromReflect, Reflect};
 use bevy::{
     ecs::{
         event::{EventReader, EventWriter},
@@ -90,11 +92,13 @@ pub trait MenuNavigationStrategy {
 }
 
 #[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "bevy_reflect", derive(Reflect))]
 pub struct Rect {
     pub max: Vec2,
     pub min: Vec2,
 }
 #[derive(Debug, Clone, Copy, Resource)]
+#[cfg_attr(feature = "bevy_reflect", derive(Reflect))]
 pub struct ScreenBoundaries {
     pub position: Vec2,
     pub screen_edge: Rect,
@@ -290,6 +294,7 @@ impl<'w, 's> MutQueries<'w, 's> {
 
 /// State of a [`Focusable`].
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[cfg_attr(feature = "bevy_reflect", derive(Reflect))]
 pub enum FocusState {
     /// An entity that was previously [`FocusState::Active`]
     /// from a branch of the menu tree that is currently not _focused_.
@@ -331,6 +336,7 @@ pub enum FocusState {
 
 /// The reason why the navigation system is locked.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[cfg_attr(feature = "bevy_reflect", derive(Reflect, FromReflect))]
 pub enum LockReason {
     /// Navigation was locked by activating a [lock focusable].
     ///
@@ -347,6 +353,7 @@ pub enum LockReason {
 /// It only waits on a [`NavRequest::Unlock`] event. It will then continue
 /// processing new requests.
 #[derive(Resource)]
+#[cfg_attr(feature = "bevy_reflect", derive(Reflect))]
 pub struct NavLock {
     lock_reason: Option<LockReason>,
 }
@@ -372,6 +379,7 @@ impl NavLock {
 /// and the `TreeMenu` component will be inserted
 /// by the [`insert_tree_menus`] system.
 #[derive(Debug, Component, Clone)]
+#[cfg_attr(feature = "bevy_reflect", derive(Reflect))]
 pub(crate) struct TreeMenu {
     /// The [`Focusable`] that sends to this `MenuSetting`
     /// when receiving [`NavRequest::Action`].
@@ -383,6 +391,7 @@ pub(crate) struct TreeMenu {
 /// The actions triggered by a [`Focusable`].
 #[derive(Copy, Clone, PartialEq, Eq, Default, Debug)]
 #[non_exhaustive]
+#[cfg_attr(feature = "bevy_reflect", derive(Reflect))]
 pub enum FocusAction {
     /// Acts like a standard navigation node.
     ///
@@ -421,6 +430,7 @@ pub enum FocusAction {
 /// **Note**: You should avoid updating manually the state of [`Focusable`]s.
 /// You should instead use [`NavRequest`] to manipulate and change focus.
 #[derive(Component, Clone, Debug)]
+#[cfg_attr(feature = "bevy_reflect", derive(Reflect))]
 pub struct Focusable {
     pub(crate) state: FocusState,
     action: FocusAction,

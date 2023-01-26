@@ -185,6 +185,13 @@ where
     for<'w, 's> SystemParamItem<'w, 's, STGY>: resolve::MenuNavigationStrategy,
 {
     fn build(&self, app: &mut App) {
+        #[cfg(feature = "bevy_reflect")]
+        app.register_type::<resolve::Focusable>()
+            .register_type::<resolve::FocusState>()
+            .register_type::<resolve::FocusAction>()
+            .register_type::<menu::MenuSetting>()
+            .register_type::<resolve::TreeMenu>();
+
         app.add_event::<events::NavRequest>()
             .add_event::<events::NavEvent>()
             .insert_resource(resolve::NavLock::new())

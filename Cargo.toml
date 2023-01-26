@@ -13,7 +13,8 @@ version = "0.22.0"
 edition = "2021"
 
 [features]
-default = ["bevy_ui"]
+default = ["bevy_ui", "bevy_reflect"]
+bevy_reflect = []
 bevy_ui = ["bevy/render"]
 
 [dependencies]
