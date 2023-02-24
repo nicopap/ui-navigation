@@ -499,7 +499,7 @@ impl Focusable {
     /// # use bevy_ui_navigation::components::FocusableButtonBundle;
     /// # use bevy::prelude::*;
     /// fn setup(mut commands: Commands) {
-    ///     commands.spawn_bundle(FocusableButtonBundle {
+    ///     commands.spawn(FocusableButtonBundle {
     ///         focus: Focusable::new().prioritized(),
     ///         ..default()
     ///     });
@@ -524,7 +524,7 @@ impl Focusable {
     /// # use bevy_ui_navigation::components::FocusableButtonBundle;
     /// # use bevy::prelude::*;
     /// fn setup(mut commands: Commands) {
-    ///     commands.spawn_bundle(FocusableButtonBundle {
+    ///     commands.spawn(FocusableButtonBundle {
     ///         focus: Focusable::new().blocked(),
     ///         ..default()
     ///     });

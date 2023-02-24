@@ -5,6 +5,7 @@ use crate::{
 };
 
 use bevy::utils::FloatOrd;
+use bevy::window::PrimaryWindow;
 use bevy::{ecs::system::SystemParam, prelude::*};
 
 /// Control default ui navigation input buttons
@@ -286,13 +287,11 @@ where
         .map(|elem| elem.0)
 }
 
-fn cursor_pos(windows: &Windows) -> Option<Vec2> {
-    windows.get_primary().and_then(|window| {
-        let pos = window.cursor_position()?;
-        Some(Vec2 {
-            y: window.height() - pos.y,
-            ..pos
-        })
+fn cursor_pos(window: &Window) -> Option<Vec2> {
+    let pos = window.cursor_position()?;
+    Some(Vec2 {
+        y: window.height() - pos.y,
+        ..pos
     })
 }
 
@@ -328,7 +327,7 @@ impl ScreenSize for Node {
 #[allow(clippy::too_many_arguments)]
 pub fn default_mouse_input(
     input_mapping: Res<InputMapping>,
-    windows: Res<Windows>,
+    windows: Query<&Window, With<PrimaryWindow>>,
     mouse: Res<Input<MouseButton>>,
     focusables: NodePosQuery<Node>,
     focused: Query<Entity, With<Focused>>,
@@ -361,7 +360,7 @@ pub fn default_mouse_input(
 #[allow(clippy::too_many_arguments)]
 pub fn generic_default_mouse_input<T: ScreenSize + Component>(
     input_mapping: Res<InputMapping>,
-    windows: Res<Windows>,
+    primary_window: Query<&Window, With<PrimaryWindow>>,
     mouse: Res<Input<MouseButton>>,
     focusables: NodePosQuery<T>,
     focused: Query<Entity, With<Focused>>,
@@ -369,7 +368,8 @@ pub fn generic_default_mouse_input<T: ScreenSize + Component>(
     mut last_pos: Local<Vec2>,
 ) {
     let no_focusable_msg = "Entity with `Focused` component must also have a `Focusable` component";
-    let cursor_pos = match cursor_pos(&windows) {
+    let Ok(window) = primary_window.get_single() else { return; };
+    let cursor_pos = match cursor_pos(window) {
         Some(c) => c,
         None => return,
     };
@@ -432,8 +432,6 @@ pub fn update_boundaries(
     mut commands: Commands,
     mut boundaries: Option<ResMut<ScreenBoundaries>>,
     cam: Query<(&Camera, Option<&UiCameraConfig>), Or<(Changed<Camera>, Changed<UiCameraConfig>)>>,
-    windows: Res<Windows>,
-    images: Res<Assets<Image>>,
 ) {
     // TODO: this assumes there is only a single camera with activated UI.
     let first_visible_ui_cam = |(cam, config): (_, Option<&UiCameraConfig>)| {
@@ -441,11 +439,11 @@ pub fn update_boundaries(
     };
     let mut update_boundaries = || {
         let cam = cam.iter().find_map(first_visible_ui_cam)?;
-        let target_info = cam.target.get_render_target_info(&windows, &images)?;
+        let physical_size = cam.physical_viewport_size()?;
         let new_boundaries = ScreenBoundaries {
             position: Vec2::ZERO,
             screen_edge: crate::resolve::Rect {
-                max: target_info.physical_size.as_vec2(),
+                max: physical_size.as_vec2(),
                 min: Vec2::ZERO,
             },
             scale: 1.0,

@@ -6,6 +6,7 @@ use bevy::prelude::*;
 use bevy::text::Text2dBounds;
 use bevy::utils::FloatOrd;
 use bevy::utils::HashMap;
+use bevy::window::PrimaryWindow;
 use bevy_ui_navigation::prelude::{
     FocusState, Focusable, Focused, MenuBuilder, MenuSetting, NavEvent, NavEventReaderExt,
     NavRequest, NavRequestSystem, NavigationPlugin,
@@ -45,7 +46,7 @@ fn main() {
                 .before(animate_system)
                 .after(upgrade_weapon),
         )
-        .add_system_to_stage(CoreStage::PostUpdate, mark_buttons)
+        .add_system(mark_buttons.in_base_set(CoreSet::PostUpdate))
         .add_system(upgrade_weapon.after(NavRequestSystem))
         .add_system(button_system.after(NavRequestSystem))
         .run();
@@ -194,7 +195,7 @@ fn is_in_sizeable(at: Vec2, transform: &GlobalTransform, sizeable: &impl ScreenS
 pub fn mouse_pointer_system(
     camera: Query<(&GlobalTransform, &Camera), With<Camera2d>>,
     camera_moving: Query<(), (Changed<GlobalTransform>, With<Camera2d>)>,
-    windows: Res<Windows>,
+    primary_query: Query<&Window, With<PrimaryWindow>>,
     mouse: Res<Input<MouseButton>>,
     focusables: Query<(&GlobalTransform, &Sprite, Entity), With<Focusable>>,
     focused: Query<Entity, With<Focused>>,
@@ -204,11 +205,7 @@ pub fn mouse_pointer_system(
     if camera_moving.iter().next().is_some() {
         return;
     }
-    let primary = windows.get_primary();
-    let window = match primary {
-        Some(w) => w,
-        None => return,
-    };
+    let Ok(window) = primary_query.get_single() else { return; };
     let cursor_pos = match window.cursor_position() {
         Some(c) => c,
         None => return,
@@ -549,7 +546,7 @@ fn spawn_button(
         ))
         .with_children(|commands| {
             commands.spawn(Text2dBundle {
-                text: Text::from_section(text, text_style).with_alignment(TextAlignment::CENTER),
+                text: Text::from_section(text, text_style).with_alignment(TextAlignment::Center),
                 transform: item_position(Vec2::ZERO),
                 ..default()
             });
@@ -602,7 +599,7 @@ fn spawn_weapon_upgrade_menu(
             // Weapon name
             commands.spawn(Text2dBundle {
                 text: Text::from_section(weapon.to_string(), text_style())
-                    .with_alignment(TextAlignment::CENTER),
+                    .with_alignment(TextAlignment::Center),
                 transform: item_position(
                     Vec2::Y * (MENU_HEIGHT / 2.0 - MENU_PADDING - FONT_SIZE / 2.0),
                 ),

@@ -47,12 +47,9 @@ pub mod systems;
 
 use std::marker::PhantomData;
 
-use bevy::app::{prelude::*, PluginGroupBuilder};
-use bevy::ecs::{
-    prelude::{Component, IntoSystemDescriptor},
-    schedule::SystemLabel,
-    system::{SystemParam, SystemParamItem},
-};
+use bevy::app::PluginGroupBuilder;
+use bevy::ecs::system::{SystemParam, SystemParamItem};
+use bevy::prelude::*;
 
 pub use non_empty_vec::NonEmpty;
 
@@ -153,7 +150,7 @@ impl<T: 'static + Sync + Send + Component + Clone> Plugin for NavMarkerPropagati
 /// [`NavRequest`]: prelude::NavRequest
 /// [`NavEvent`]: prelude::NavEvent
 /// [`Focusable`]: prelude::Focusable
-#[derive(Clone, Debug, Hash, PartialEq, Eq, SystemLabel)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, SystemSet)]
 pub struct NavRequestSystem;
 
 /// The navigation plugin.
@@ -202,22 +199,13 @@ where
             .insert_resource(resolve::NavLock::new())
             .add_system(resolve::set_first_focused.before(NavRequestSystem))
             .add_system(resolve::consistent_menu.before(NavRequestSystem))
-            .add_system(resolve::listen_nav_requests::<STGY>.label(NavRequestSystem))
-            // PostUpdate because we want the Menus to be setup correctly before the
-            // next call to `set_first_focused`, which depends on the Menu tree layout
-            // existing already to chose a "intuitively correct" first focusable.
-            // The user is most likely to spawn his UI in the Update stage, so it makes
-            // sense to react to changes in the PostUpdate stage.
-            .add_system_to_stage(
-                CoreStage::PreUpdate,
-                named::resolve_named_menus.before(resolve::insert_tree_menus),
+            .add_system(resolve::listen_nav_requests::<STGY>.in_set(NavRequestSystem))
+            .add_system(
+                named::resolve_named_menus
+                    .before(resolve::insert_tree_menus)
+                    .in_base_set(CoreSet::PreUpdate),
             )
-            .add_system_to_stage(CoreStage::PreUpdate, resolve::insert_tree_menus)
-            .add_startup_system_to_stage(
-                StartupStage::PostStartup,
-                named::resolve_named_menus.before(resolve::insert_tree_menus),
-            )
-            .add_startup_system_to_stage(StartupStage::PostStartup, resolve::insert_tree_menus);
+            .add_system(resolve::insert_tree_menus.in_base_set(CoreSet::PreUpdate));
     }
 }
 

@@ -278,10 +278,9 @@ impl<'w, 's, 'a> NavEventReader<'w, 's, 'a> {
         query: &mut Query<Q, F>,
         mut for_each: impl FnMut(Q::Item<'_>),
     ) {
-        for entity in self.activated() {
-            if let Ok(item) = query.get_mut(entity) {
-                for_each(item);
-            }
+        let mut iter = query.iter_many_mut(self.activated());
+        while let Some(item) = iter.fetch_next() {
+            for_each(item)
         }
     }
 }
