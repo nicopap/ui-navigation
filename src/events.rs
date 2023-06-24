@@ -38,10 +38,12 @@ pub enum NavRequest {
     ///
     /// [navigation strategy]: crate::resolve::MenuNavigationStrategy.
     Move(Direction),
+
     /// Move within the encompassing [`MenuSetting::scope`].
     ///
     /// [`MenuSetting::scope`]: crate::prelude::MenuSetting::scope
     ScopeMove(ScopeDirection),
+
     /// Activate the currently focused [`Focusable`].
     ///
     /// If a menu is _[reachable from]_
@@ -49,10 +51,12 @@ pub enum NavRequest {
     /// [`Focusable`]: crate::prelude::Focusable
     /// [reachable from]: crate::menu::MenuBuilder::NamedParent
     Action,
+
     /// Leave this submenu to enter the one it is _[reachable from]_.
     ///
     /// [reachable from]: crate::menu::MenuBuilder::NamedParent
     Cancel,
+
     /// Move the focus to any arbitrary [`Focusable`] entity.
     ///
     /// Note that resolving a `FocusOn` request is expensive,
@@ -62,6 +66,7 @@ pub enum NavRequest {
     ///
     /// [`Focusable`]: crate::resolve::Focusable
     FocusOn(Entity),
+
     /// Locks the navigation system.
     ///
     /// A [`NavEvent::Locked`] will be emitted as a response if the
@@ -82,6 +87,7 @@ pub enum NavRequest {
 pub enum ScopeDirection {
     /// The next focusable in menu, usually goes right.
     Next,
+
     /// The previous focusable in menu, usually goes left.
     Previous,
 }
@@ -151,6 +157,7 @@ pub enum NavEvent {
         /// active which is affected by the focus change
         from: NonEmpty<Entity>,
     },
+
     /// The [`NavRequest`] didn't lead to any change in focus.
     NoChanges {
         /// The active elements from the focused one to the last

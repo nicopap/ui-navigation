@@ -366,7 +366,7 @@ pub enum LockReason {
 /// When locked, the navigation system doesn't process any [`NavRequest`].
 /// It only waits on a [`NavRequest::Unlock`] event. It will then continue
 /// processing new requests.
-#[derive(Resource)]
+#[derive(Resource, Debug)]
 #[cfg_attr(feature = "bevy_reflect", derive(Reflect), reflect(Resource))]
 pub struct NavLock {
     lock_reason: Option<LockReason>,

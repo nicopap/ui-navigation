@@ -35,6 +35,8 @@
 */
 #![forbid(missing_docs)]
 #![doc = include_str!("../Readme.md")]
+#![allow(clippy::unnecessary_lazy_evaluations)]
+
 mod commands;
 #[cfg(feature = "bevy_ui")]
 pub mod components;
