@@ -6,10 +6,13 @@ use crate::{
 
 use bevy::utils::FloatOrd;
 use bevy::window::PrimaryWindow;
+#[cfg(feature = "bevy_reflect")]
+use bevy::{ecs::reflect::ReflectResource, reflect::Reflect};
 use bevy::{ecs::system::SystemParam, prelude::*};
 
 /// Control default ui navigation input buttons
 #[derive(Resource)]
+#[cfg_attr(feature = "bevy_reflect", derive(Reflect), reflect(Resource))]
 pub struct InputMapping {
     /// Whether to use keybaord keys for navigation (instead of just actions).
     pub keyboard_navigation: bool,

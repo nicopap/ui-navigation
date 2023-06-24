@@ -5,7 +5,7 @@ use std::borrow::Cow;
 use bevy::core::Name;
 use bevy::ecs::{entity::Entity, prelude::Component};
 #[cfg(feature = "bevy_reflect")]
-use bevy::reflect::Reflect;
+use bevy::{ecs::reflect::ReflectComponent, reflect::Reflect};
 
 /// Add this component to a menu entity so that all [`Focusable`]s
 /// within that menus gets added the `T` component automatically.
@@ -141,7 +141,7 @@ impl TryFrom<&MenuBuilder> for Option<Entity> {
 /// [`NavRequest`]: crate::prelude::NavRequest
 #[doc(alias = "NavMenu")]
 #[derive(Clone, Default, Component, Debug, Copy, PartialEq)]
-#[cfg_attr(feature = "bevy_reflect", derive(Reflect))]
+#[cfg_attr(feature = "bevy_reflect", derive(Reflect), reflect(Component))]
 pub struct MenuSetting {
     /// Whether to wrap navigation.
     ///

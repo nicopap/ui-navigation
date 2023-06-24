@@ -37,9 +37,11 @@
 //! navigation resolution and mutably for updating them with the new navigation state.
 use std::num::NonZeroUsize;
 
+#[cfg(feature = "bevy_reflect")]
+use bevy::ecs::reflect::{ReflectComponent, ReflectResource};
 use bevy::hierarchy::{Children, Parent};
 use bevy::log::warn;
-use bevy::prelude::Changed;
+use bevy::prelude::{Changed, FromWorld};
 #[cfg(feature = "bevy_reflect")]
 use bevy::reflect::{FromReflect, Reflect};
 use bevy::{
@@ -92,7 +94,7 @@ pub trait MenuNavigationStrategy {
 
 /// A rectangle to specify the [`ScreenBoundaries`],
 /// useful for 2d navigation wrapping.
-#[derive(Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy)]
 #[cfg_attr(feature = "bevy_reflect", derive(Reflect))]
 pub struct Rect {
     /// The higher `x,y` coordinate of the `Rect`.
@@ -106,8 +108,8 @@ pub struct Rect {
 ///
 /// **NOTE**: This is deprecated since `bevy_ui` doesn't support moving
 /// the UI camera anymore.
-#[derive(Debug, Clone, Copy, Resource)]
-#[cfg_attr(feature = "bevy_reflect", derive(Reflect))]
+#[derive(Default, Debug, Clone, Copy, Resource)]
+#[cfg_attr(feature = "bevy_reflect", derive(Reflect), reflect(Resource))]
 pub struct ScreenBoundaries {
     /// Position of the camera.
     pub position: Vec2,
@@ -365,9 +367,17 @@ pub enum LockReason {
 /// It only waits on a [`NavRequest::Unlock`] event. It will then continue
 /// processing new requests.
 #[derive(Resource)]
-#[cfg_attr(feature = "bevy_reflect", derive(Reflect))]
+#[cfg_attr(feature = "bevy_reflect", derive(Reflect), reflect(Resource))]
 pub struct NavLock {
     lock_reason: Option<LockReason>,
+}
+impl FromWorld for NavLock {
+    // PLEASE DO NOT USE THIS.
+    //
+    // This only exists to satisfy `bevy_reflect`'s `ReflectResource` requirement.
+    fn from_world(_: &mut bevy::prelude::World) -> Self {
+        Self::new()
+    }
 }
 impl NavLock {
     pub(crate) fn new() -> Self {
@@ -391,13 +401,24 @@ impl NavLock {
 /// and the `TreeMenu` component will be inserted
 /// by the [`insert_tree_menus`] system.
 #[derive(Debug, Component, Clone)]
-#[cfg_attr(feature = "bevy_reflect", derive(Reflect))]
+#[cfg_attr(feature = "bevy_reflect", derive(Reflect), reflect(Component))]
 pub(crate) struct TreeMenu {
     /// The [`Focusable`] that sends to this `MenuSetting`
     /// when receiving [`NavRequest::Action`].
     pub(crate) focus_parent: Option<Entity>,
     /// The currently prioritized or active focusable in this menu.
     pub(crate) active_child: Entity,
+}
+impl FromWorld for TreeMenu {
+    // PLEASE DO NOT USE THIS.
+    //
+    // This only exists to satisfy `bevy_reflect`'s `ReflectResource` requirement.
+    fn from_world(_: &mut bevy::prelude::World) -> Self {
+        TreeMenu {
+            focus_parent: None,
+            active_child: Entity::PLACEHOLDER,
+        }
+    }
 }
 
 /// The actions triggered by a [`Focusable`].
@@ -442,7 +463,7 @@ pub enum FocusAction {
 /// **Note**: You should avoid updating manually the state of [`Focusable`]s.
 /// You should instead use [`NavRequest`] to manipulate and change focus.
 #[derive(Component, Clone, Debug)]
-#[cfg_attr(feature = "bevy_reflect", derive(Reflect))]
+#[cfg_attr(feature = "bevy_reflect", derive(Reflect), reflect(Component))]
 pub struct Focusable {
     pub(crate) state: FocusState,
     action: FocusAction,
