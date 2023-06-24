@@ -4,6 +4,7 @@ use bevy_ui_navigation::events::{Direction, NavRequest};
 use bevy_ui_navigation::prelude::{
     DefaultNavigationPlugins, FocusState, Focusable, NavRequestSystem,
 };
+use bevy_ui_navigation::systems::InputMapping;
 
 /// This example shows what happens when there is a lot of focusables on screen.
 /// It doesn't run well on debug builds, you should try running it with the `--release`
@@ -17,6 +18,7 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(DefaultNavigationPlugins)
+        .add_plugin(bevy_framepace::FramepacePlugin)
         .add_startup_system(setup)
         .add_system(button_system.after(NavRequestSystem))
         .add_system(non_stop_move.before(NavRequestSystem))
@@ -77,7 +79,9 @@ fn non_stop_move(
     }
 }
 
-fn setup(mut commands: Commands) {
+fn setup(mut commands: Commands, mut input_mapping: ResMut<InputMapping>) {
+    input_mapping.keyboard_navigation = true;
+    input_mapping.focus_follows_mouse = true;
     let top = 310;
     let as_rainbow = |i: u32| Color::hsl((i as f32 / top as f32) * 360.0, 0.9, 0.8);
     commands.spawn(Camera2dBundle::default());

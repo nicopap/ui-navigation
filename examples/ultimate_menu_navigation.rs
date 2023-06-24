@@ -4,6 +4,7 @@ use bevy_ui_navigation::components::FocusableButtonBundle;
 use bevy_ui_navigation::prelude::{
     DefaultNavigationPlugins, FocusState, Focusable, MenuBuilder, MenuSetting, NavRequestSystem,
 };
+use bevy_ui_navigation::systems::InputMapping;
 
 /// THE ULTIMATE MENU DEMONSTRATION
 ///
@@ -71,7 +72,9 @@ fn button_system(
     }
 }
 
-fn setup(mut commands: Commands) {
+fn setup(mut commands: Commands, mut input_mapping: ResMut<InputMapping>) {
+    input_mapping.keyboard_navigation = true;
+    input_mapping.focus_follows_mouse = true;
     use FlexDirection::{Column, Row};
     use FlexWrap::Wrap;
     use JustifyContent::{FlexStart, SpaceBetween};
@@ -88,7 +91,6 @@ fn setup(mut commands: Commands) {
     let vertical = NodeBundle {
         style: Style {
             flex_direction: Column,
-            size: Size::new(pct(100.0), pct(100.0)),
             margin: UiRect::all(px(2.0)),
             ..default()
         },
@@ -97,7 +99,6 @@ fn setup(mut commands: Commands) {
     let horizontal = NodeBundle {
         style: Style {
             flex_direction: Row,
-            size: Size::new(pct(100.0), pct(100.0)),
             justify_content: SpaceBetween,
             margin: UiRect::all(px(2.0)),
             ..default()
@@ -114,7 +115,8 @@ fn setup(mut commands: Commands) {
     });
     let long = FocusableButtonBundle::from(ButtonBundle {
         style: Style {
-            size: Size::new(pct(100.0), px(40.0)),
+            size: Size::height(px(40.0)),
+            flex_grow: 1.5,
             margin: UiRect::all(px(2.0)),
             ..default()
         },
@@ -136,8 +138,6 @@ fn setup(mut commands: Commands) {
     let column_box = NodeBundle {
         style: Style {
             flex_direction: Row,
-            flex_basis: pct(90.0),
-            size: Size::new(pct(100.0), pct(90.0)),
             padding: UiRect::all(px(30.0)),
             ..default()
         },
@@ -160,10 +160,6 @@ fn setup(mut commands: Commands) {
         ..default()
     };
     let colored_square = NodeBundle {
-        style: Style {
-            size: Size::new(pct(100.0), pct(100.0)),
-            ..default()
-        },
         background_color: Color::rgb(1.0, 0.3, 0.9).into(),
         ..default()
     };
@@ -171,6 +167,16 @@ fn setup(mut commands: Commands) {
     let menu = |name| (MenuSetting::new(), MenuBuilder::from_named(name));
     let cycle_menu = |name| (MenuSetting::new().wrapping(), MenuBuilder::from_named(name));
     let named = Name::new;
+
+    let red_grey_box = || NodeBundle {
+        style: Style {
+            flex_wrap: Wrap,
+            size: Size::height(pct(12.0)),
+            ..horizontal.style.clone()
+        },
+        background_color: gray,
+        ..horizontal.clone()
+    };
 
     // Note that bevy's native UI library IS NOT NICE TO WORK WITH. I
     // personally use `build_ui` from `bevy_ui_build_macros`, but for the sake
@@ -182,6 +188,7 @@ fn setup(mut commands: Commands) {
     // afterward.
     commands
         .spawn((
+            named("Root"),
             vertical.clone(),
             // The tab menu should be navigated with `NavRequest::ScopeMove` hence the `.scope()`
             MenuSetting::new().wrapping().scope(),
@@ -192,7 +199,7 @@ fn setup(mut commands: Commands) {
             ..vertical.style.clone()
         })
         .with_children(|cmds| {
-            cmds.spawn(horizontal.clone())
+            cmds.spawn((named("Tabs menu"), horizontal.clone()))
                 .insert(Style {
                     justify_content: FlexStart,
                     flex_basis: pct(10.0),
@@ -205,74 +212,74 @@ fn setup(mut commands: Commands) {
                     cmds.spawn((tab_square.clone(), named("green")));
                     cmds.spawn((tab_square, named("blue")));
                 });
-            cmds.spawn(column_box).with_children(|cmds| {
-                cmds.spawn((column.clone(), menu("red")))
-                    .insert(red)
-                    .with_children(|cmds| {
-                        cmds.spawn(vertical.clone()).with_children(|cmds| {
-                            cmds.spawn((long.clone(), named("select1")));
-                            cmds.spawn((long.clone(), named("select2")));
-                        });
-                        cmds.spawn((horizontal.clone(), cycle_menu("select1")))
-                            .insert(gray)
-                            .insert(Style {
-                                flex_wrap: Wrap,
-                                ..horizontal.style.clone()
-                            })
+            cmds.spawn((named("Columns box"), column_box))
+                .with_children(|cmds| {
+                    cmds.spawn((named("red menu"), column.clone(), menu("red")))
+                        .insert(red)
+                        .with_children(|cmds| {
+                            cmds.spawn((named("buttons"), vertical.clone()))
+                                .with_children(|cmds| {
+                                    cmds.spawn((long.clone(), named("select1")));
+                                    cmds.spawn((long.clone(), named("select2")));
+                                });
+                            cmds.spawn((
+                                red_grey_box(),
+                                named("select1 menu"),
+                                cycle_menu("select1"),
+                            ))
                             .with_children(|cmds| {
-                                for _ in 0..20 {
+                                for _ in 0..50 {
                                     cmds.spawn(square.clone());
                                 }
                             });
-                        cmds.spawn((horizontal.clone(), cycle_menu("select2")))
-                            .insert(gray)
-                            .insert(Style {
-                                flex_wrap: Wrap,
-                                ..horizontal.style.clone()
-                            })
+                            cmds.spawn((
+                                red_grey_box(),
+                                named("select2 menu"),
+                                cycle_menu("select2"),
+                            ))
                             .with_children(|cmds| {
                                 for _ in 0..8 {
                                     cmds.spawn(square.clone());
                                 }
                             });
-                    });
-                cmds.spawn((column.clone(), menu("green")))
-                    .insert(green)
-                    .with_children(|cmds| {
-                        for i in 0..8 {
-                            let name = format!("green_{i}");
-                            let child_bundle = if i % 2 == 0 {
-                                (
-                                    MenuSetting::new().wrapping(),
-                                    MenuBuilder::from_named(name.clone()),
-                                )
-                            } else {
-                                (MenuSetting::new(), MenuBuilder::from_named(name.clone()))
-                            };
-                            cmds.spawn(horizontal.clone()).with_children(|cmds| {
-                                cmds.spawn((long.clone(), Name::new(name)));
-                                cmds.spawn((horizontal.clone(), child_bundle))
-                                    .insert(gray)
-                                    .with_children(|cmds| {
-                                        for _ in 0..i % 6 + 1 {
-                                            cmds.spawn(square.clone());
-                                        }
-                                    });
-                            });
-                        }
-                    });
-                cmds.spawn((column.clone(), menu("blue")))
-                    .insert(blue)
-                    .with_children(|cmds| {
-                        cmds.spawn(vertical.clone()).with_children(|cmds| {
-                            cmds.spawn(vertical).with_children(|cmds| {
-                                for _ in 0..6 {
-                                    cmds.spawn(long.clone());
-                                }
-                            });
-                            cmds.spawn(colored_square);
                         });
-                    });
-            });
+                    cmds.spawn((named("green menu"), column.clone(), menu("green")))
+                        .insert(green)
+                        .with_children(|cmds| {
+                            for i in 0..8 {
+                                let name = format!("green_{i}");
+                                let child_bundle = if i % 2 == 0 {
+                                    (
+                                        MenuSetting::new().wrapping(),
+                                        MenuBuilder::from_named(name.clone()),
+                                    )
+                                } else {
+                                    (MenuSetting::new(), MenuBuilder::from_named(name.clone()))
+                                };
+                                cmds.spawn(horizontal.clone()).with_children(|cmds| {
+                                    cmds.spawn((long.clone(), Name::new(name)));
+                                    cmds.spawn((horizontal.clone(), child_bundle))
+                                        .insert(gray)
+                                        .with_children(|cmds| {
+                                            for _ in 0..i % 6 + 1 {
+                                                cmds.spawn(square.clone());
+                                            }
+                                        });
+                                });
+                            }
+                        });
+                    cmds.spawn((named("blue menu"), column.clone(), menu("blue")))
+                        .insert(blue)
+                        .with_children(|cmds| {
+                            cmds.spawn(vertical.clone()).with_children(|cmds| {
+                                cmds.spawn(vertical).with_children(|cmds| {
+                                    for _ in 0..6 {
+                                        cmds.spawn(long.clone());
+                                    }
+                                });
+                                cmds.spawn(colored_square);
+                            });
+                        });
+                });
         });
 }

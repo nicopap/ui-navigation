@@ -18,6 +18,7 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(DefaultNavigationPlugins)
+        .add_plugin(bevy_framepace::FramepacePlugin)
         .init_resource::<Images>()
         .add_startup_system(setup)
         .add_system(extra_lock_key.before(NavRequestSystem))

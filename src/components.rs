@@ -11,7 +11,6 @@ use crate::{
 #[derive(Default, Clone, Bundle)]
 pub struct FocusableButtonBundle {
     /// The bevy components.
-    #[bundle]
     pub button_bundle: ButtonBundle,
     /// The [`Focusable`] type.
     pub focus: Focusable,
@@ -40,7 +39,6 @@ pub struct MarkingMenuBundle<T: Component> {
     /// this menu.
     pub marker: NavMarker<T>,
     /// The bevy components.
-    #[bundle]
     pub node: NodeBundle,
 }
 /// A [`NodeBundle`] delimiting a menu.
@@ -55,7 +53,6 @@ pub struct MenuBundle {
     /// Specify from where this menu is reachable.
     pub builder: MenuBuilder,
     /// The bevy components.
-    #[bundle]
     pub node: NodeBundle,
 }
 impl MenuBundle {

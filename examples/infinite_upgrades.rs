@@ -17,6 +17,7 @@ use bevy_ui_navigation::systems::{default_gamepad_input, InputMapping};
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
+        .add_plugin(bevy_framepace::FramepacePlugin)
         // Add your own cursor navigation system
         // by using `NavigationPlugin::<MyOwnNavigationStrategy>::new()`
         // See the [`bevy_ui_navigation::MenuNavigationStrategy`] trait.
@@ -228,7 +229,7 @@ pub fn mouse_pointer_system(
     };
     let under_mouse = focusables
         .iter()
-        .filter(|(transform, sprite, _)| is_in_sizeable(world_cursor_pos, *transform, *sprite))
+        .filter(|(transform, sprite, _)| is_in_sizeable(world_cursor_pos, transform, *sprite))
         .max_by_key(|elem| FloatOrd(elem.0.translation().z))
         .map(|elem| elem.2);
     let to_target = match under_mouse {

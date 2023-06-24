@@ -1,8 +1,11 @@
 use bevy::prelude::*;
 
-use bevy_ui_navigation::prelude::{
-    DefaultNavigationPlugins, FocusState, Focusable, MenuBuilder, MenuSetting, NavEvent,
-    NavRequest, NavRequestSystem,
+use bevy_ui_navigation::{
+    prelude::{
+        DefaultNavigationPlugins, FocusState, Focusable, MenuBuilder, MenuSetting, NavEvent,
+        NavRequest, NavRequestSystem,
+    },
+    systems::InputMapping,
 };
 
 /// This example demonstrates a more complex menu system where you navigate
@@ -28,6 +31,7 @@ use bevy_ui_navigation::prelude::{
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
+        .add_plugin(bevy_framepace::FramepacePlugin)
         .add_plugins(DefaultNavigationPlugins)
         .init_resource::<Materials>()
         .insert_resource(Gameui::new())
@@ -120,7 +124,13 @@ fn menu(materials: &Materials) -> NodeBundle {
         ..Default::default()
     }
 }
-fn setup(mut commands: Commands, materials: Res<Materials>, mut game: ResMut<Gameui>) {
+fn setup(
+    mut commands: Commands,
+    materials: Res<Materials>,
+    mut game: ResMut<Gameui>,
+    mut input_mapping: ResMut<InputMapping>,
+) {
+    input_mapping.keyboard_navigation = true;
     // ui camera
     commands.spawn(Camera2dBundle::default());
 

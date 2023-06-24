@@ -9,7 +9,7 @@ categories = ["game-development", "accessibility", "gui"]
 repository = "https://github.com/nicopap/ui-navigation"
 homepage = "https://github.com/nicopap/ui-navigation"
 exclude = ["assets", ".github"]
-version = "0.24.0"
+version = "0.24.1"
 edition = "2021"
 
 [features]
@@ -23,9 +23,6 @@ non-empty-vec = { version = "0.2.2", default-features = false }
 
 [dev-dependencies]
 fastrand = "1.7"
-bevy = { version = "0.10", default-features = true, features = [
-  "x11",
-  "png",
-  "bevy_asset",
-  "bevy_gilrs",
-] }
+# bevy-inspector-egui = "0.18.3"
+bevy_framepace = "0.12.1"
+bevy = { version = "0.10", default-features = true }

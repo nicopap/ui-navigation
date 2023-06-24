@@ -43,6 +43,7 @@ column_type!(enum RightColMenu, 6);
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
+        .add_plugin(bevy_framepace::FramepacePlugin)
         // We must add the NavMarker plugin for each menu marker types we want
         .add_plugin(NavMarkerPropagationPlugin::<LeftColMenu>::new())
         .add_plugin(NavMarkerPropagationPlugin::<CenterColMenu>::new())

@@ -1,7 +1,8 @@
 use bevy::prelude::*;
 
-use bevy_ui_navigation::prelude::{
-    DefaultNavigationPlugins, FocusState, Focusable, NavEvent, NavRequestSystem,
+use bevy_ui_navigation::{
+    prelude::{DefaultNavigationPlugins, FocusState, Focusable, NavEvent, NavRequestSystem},
+    systems::InputMapping,
 };
 
 /// This example illustrates how to mark buttons as focusable and let
@@ -10,6 +11,7 @@ use bevy_ui_navigation::prelude::{
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
+        .add_plugin(bevy_framepace::FramepacePlugin)
         // vvvvvvvvvvvvvvvvvvvvvvvvvvv
         // 1: Add the DefaultNavigationPlugins
         .add_plugins(DefaultNavigationPlugins)
@@ -38,7 +40,9 @@ fn print_nav_events(mut events: EventReader<NavEvent>) {
     }
 }
 
-fn setup(mut commands: Commands) {
+fn setup(mut commands: Commands, mut input_mapping: ResMut<InputMapping>) {
+    input_mapping.keyboard_navigation = true;
+    input_mapping.focus_follows_mouse = true;
     // ui camera
     commands.spawn(Camera2dBundle::default());
     let positions = [
