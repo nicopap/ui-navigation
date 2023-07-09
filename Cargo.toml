@@ -18,11 +18,11 @@ bevy_reflect = []
 bevy_ui = ["bevy/bevy_ui", "bevy/bevy_render"]
 
 [dependencies]
-bevy = { version = "0.10", default-features = false, features = ["bevy_asset"] }
+bevy = { version = "0.11", default-features = false, features = ["bevy_asset"] }
 non-empty-vec = { version = "0.2.2", default-features = false }
 
 [dev-dependencies]
 fastrand = "1.7"
 # bevy-inspector-egui = "0.18.3"
-bevy_framepace = "0.12.1"
-bevy = { version = "0.10", default-features = true }
+# bevy_framepace = "0.12.1"
+bevy = { version = "0.11", default-features = true }

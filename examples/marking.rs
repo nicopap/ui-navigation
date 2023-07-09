@@ -42,16 +42,16 @@ column_type!(enum RightColMenu, 6);
 /// leftmost/rightmost buttons in the menus.
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
-        .add_plugin(bevy_framepace::FramepacePlugin)
-        // We must add the NavMarker plugin for each menu marker types we want
-        .add_plugin(NavMarkerPropagationPlugin::<LeftColMenu>::new())
-        .add_plugin(NavMarkerPropagationPlugin::<CenterColMenu>::new())
-        .add_plugin(NavMarkerPropagationPlugin::<RightColMenu>::new())
-        .add_plugins(DefaultNavigationPlugins)
-        .add_startup_system(setup)
-        .add_system(button_system.after(NavRequestSystem))
-        .add_system(print_menus.after(NavRequestSystem))
+        .add_plugins((
+            DefaultPlugins,
+            // We must add the NavMarker plugin for each menu marker types we want
+            NavMarkerPropagationPlugin::<LeftColMenu>::new(),
+            NavMarkerPropagationPlugin::<CenterColMenu>::new(),
+            NavMarkerPropagationPlugin::<RightColMenu>::new(),
+            DefaultNavigationPlugins,
+        ))
+        .add_systems(Startup, setup)
+        .add_systems(Update, (button_system, print_menus).after(NavRequestSystem))
         .run();
 }
 

@@ -24,13 +24,14 @@ use bevy::{
         system::Query,
     },
     math::Vec2,
+    prelude::Event,
 };
 use non_empty_vec::NonEmpty;
 
 use crate::resolve::LockReason;
 
 /// Requests to send to the navigation system to update focus.
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy, Event)]
 pub enum NavRequest {
     /// Move in in provided direction according to the plugin's [navigation strategy].
     ///
@@ -123,7 +124,7 @@ impl Direction {
 /// Useful if you want to react to [`NavEvent::NoChanges`] event, for example
 /// when a "start game" button is focused and the [`NavRequest::Action`] is
 /// pressed.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Event)]
 pub enum NavEvent {
     /// Tells the app which element is the first one to be focused.
     ///

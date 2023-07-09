@@ -43,7 +43,7 @@ use bevy::hierarchy::{Children, Parent};
 use bevy::log::warn;
 use bevy::prelude::{Changed, FromWorld};
 #[cfg(feature = "bevy_reflect")]
-use bevy::reflect::{FromReflect, Reflect};
+use bevy::reflect::Reflect;
 use bevy::{
     ecs::{
         event::{EventReader, EventWriter},
@@ -350,7 +350,7 @@ pub enum FocusState {
 
 /// The reason why the navigation system is locked.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-#[cfg_attr(feature = "bevy_reflect", derive(Reflect, FromReflect))]
+#[cfg_attr(feature = "bevy_reflect", derive(Reflect))]
 pub enum LockReason {
     /// Navigation was locked by activating a [lock focusable].
     ///

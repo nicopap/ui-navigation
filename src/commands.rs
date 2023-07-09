@@ -10,7 +10,7 @@ pub(crate) struct UpdateFocusable {
     new_state: FocusState,
 }
 impl Command for UpdateFocusable {
-    fn write(self, world: &mut World) {
+    fn apply(self, world: &mut World) {
         let mut entity = world.entity_mut(self.entity);
         if matches!(self.new_state, FocusState::Focused) {
             entity.insert(Focused);

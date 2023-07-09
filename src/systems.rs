@@ -468,14 +468,15 @@ pub struct DefaultNavigationSystems;
 impl Plugin for DefaultNavigationSystems {
     fn build(&self, app: &mut App) {
         use crate::NavRequestSystem;
-        app.init_resource::<InputMapping>()
-            .add_system(default_mouse_input.before(NavRequestSystem))
-            .add_system(default_gamepad_input.before(NavRequestSystem))
-            .add_system(default_keyboard_input.before(NavRequestSystem))
-            .add_system(
-                update_boundaries
-                    .before(NavRequestSystem)
-                    .before(default_mouse_input),
-            );
+        app.init_resource::<InputMapping>().add_systems(
+            Update,
+            (
+                update_boundaries.before(default_mouse_input),
+                default_mouse_input,
+                default_gamepad_input,
+                default_keyboard_input,
+            )
+                .before(NavRequestSystem),
+        );
     }
 }
