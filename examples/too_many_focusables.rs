@@ -16,12 +16,15 @@ use bevy_ui_navigation::systems::InputMapping;
 /// You can toggle automatic generation of NavRequest with the `K` key.
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
-        .add_plugins(DefaultNavigationPlugins)
-        .add_plugin(bevy_framepace::FramepacePlugin)
-        .add_startup_system(setup)
-        .add_system(button_system.after(NavRequestSystem))
-        .add_system(non_stop_move.before(NavRequestSystem))
+        .add_plugins((DefaultPlugins, DefaultNavigationPlugins))
+        .add_systems(Startup, setup)
+        .add_systems(
+            Update,
+            (
+                non_stop_move.before(NavRequestSystem),
+                button_system.after(NavRequestSystem),
+            ),
+        )
         .run();
 }
 
@@ -80,6 +83,7 @@ fn non_stop_move(
 }
 
 fn setup(mut commands: Commands, mut input_mapping: ResMut<InputMapping>) {
+    use Val::Percent as Pct;
     input_mapping.keyboard_navigation = true;
     input_mapping.focus_follows_mouse = true;
     let top = 310;
@@ -89,7 +93,8 @@ fn setup(mut commands: Commands, mut input_mapping: ResMut<InputMapping>) {
         .spawn(NodeBundle {
             style: Style {
                 // position_type: PositionType::Absolute,
-                size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
+                width: Pct(100.),
+                height: Pct(100.),
                 ..default()
             },
             ..default()
@@ -103,17 +108,15 @@ fn setup(mut commands: Commands, mut input_mapping: ResMut<InputMapping>) {
         });
 }
 fn spawn_button(commands: &mut ChildBuilder, color: BackgroundColor, max: u32, i: u32, j: u32) {
+    use Val::Percent as Pct;
     let width = 90.0 / max as f32;
     commands.spawn((
         ButtonBundle {
             style: Style {
-                size: Size::new(Val::Percent(width), Val::Percent(width)),
-
-                position: UiRect {
-                    bottom: Val::Percent((100.0 / max as f32) * i as f32),
-                    left: Val::Percent((100.0 / max as f32) * j as f32),
-                    ..default()
-                },
+                width: Pct(width),
+                height: Pct(width),
+                bottom: Pct((100.0 / max as f32) * i as f32),
+                left: Pct((100.0 / max as f32) * j as f32),
                 position_type: PositionType::Absolute,
                 ..Default::default()
             },

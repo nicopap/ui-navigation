@@ -16,8 +16,6 @@ use bevy_ui_navigation::systems::{default_gamepad_input, InputMapping};
 /// This example demonstrates how to generate on the fly focusables to navigate.
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
-        .add_plugin(bevy_framepace::FramepacePlugin)
         // Add your own cursor navigation system
         // by using `NavigationPlugin::<MyOwnNavigationStrategy>::new()`
         // See the [`bevy_ui_navigation::MenuNavigationStrategy`] trait.
@@ -29,27 +27,29 @@ fn main() {
         // Here we use the default one provided by `bevy_ui` because
         // it is already capable of handling navigation in 2d space
         // (even using `Sprite` over UI `Node`)
-        .add_plugin(NavigationPlugin::new())
+        .add_plugins((DefaultPlugins, NavigationPlugin::new()))
         // Since gamepad input already works for Sprite-based menus,
         // we add back the default gamepad input handling from `bevy_ui`.
         // default_gamepad_input depends on NavigationInputMapping so we
         // need to also add this resource back.
         .init_resource::<InputMapping>()
-        .add_system(default_gamepad_input.before(NavRequestSystem))
-        .add_system(mouse_pointer_system.before(NavRequestSystem))
+        .add_systems(
+            Update,
+            (
+                (default_gamepad_input, mouse_pointer_system).before(NavRequestSystem),
+                (
+                    (upgrade_weapon, button_system).after(NavRequestSystem),
+                    handle_menu_change,
+                    animate_system,
+                )
+                    .chain(),
+            ),
+        )
+        .add_systems(PostUpdate, mark_buttons)
+        .add_systems(Startup, setup)
         // Our systems.
         .init_resource::<MenuFont>()
         .init_resource::<MenuMap>()
-        .add_startup_system(setup)
-        .add_system(animate_system)
-        .add_system(
-            handle_menu_change
-                .before(animate_system)
-                .after(upgrade_weapon),
-        )
-        .add_system(mark_buttons.in_base_set(CoreSet::PostUpdate))
-        .add_system(upgrade_weapon.after(NavRequestSystem))
-        .add_system(button_system.after(NavRequestSystem))
         .run();
 }
 
@@ -207,34 +207,28 @@ pub fn mouse_pointer_system(
         return;
     }
     let Ok(window) = primary_query.get_single() else { return; };
-    let cursor_pos = match window.cursor_position() {
-        Some(c) => c,
-        None => return,
+    let Some(cursor_pos) = window.cursor_position() else {
+        return;
     };
-    let (camera_transform, camera) = match camera.iter().next() {
-        Some(c) => c,
-        None => return,
+    let Some((camera_transform, camera)) = camera.iter().next() else {
+        return;
     };
-
-    let window_size = Vec2::new(window.width(), window.height());
-    let ndc = (cursor_pos / window_size) * 2.0 - Vec2::ONE;
-    let ndc_to_world = camera_transform.compute_matrix() * camera.projection_matrix().inverse();
-    let world_pos = ndc_to_world.project_point3(ndc.extend(-1.0));
-    let world_cursor_pos: Vec2 = world_pos.truncate();
+    let Some(world_cursor_pos) = camera.viewport_to_world(camera_transform, cursor_pos) else {
+        return;
+    };
+    let world_cursor_pos = world_cursor_pos.get_point(0.0).truncate();
     let released = mouse.just_released(MouseButton::Left);
     let pressing = mouse.pressed(MouseButton::Left);
-    let focused = match focused.get_single() {
-        Ok(c) => c,
-        Err(_) => return,
+    let Ok(focused) = focused.get_single() else {
+        return;
     };
     let under_mouse = focusables
         .iter()
         .filter(|(transform, sprite, _)| is_in_sizeable(world_cursor_pos, transform, *sprite))
         .max_by_key(|elem| FloatOrd(elem.0.translation().z))
         .map(|elem| elem.2);
-    let to_target = match under_mouse {
-        Some(c) => c,
-        None => return,
+    let Some(to_target) = under_mouse else {
+        return;
     };
     let hover_focused = under_mouse == Some(focused);
     if (pressing || released) && !hover_focused {

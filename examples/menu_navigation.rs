@@ -30,14 +30,14 @@ use bevy_ui_navigation::{
 /// `FocusOn` request with a first row button as target.
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
-        .add_plugin(bevy_framepace::FramepacePlugin)
-        .add_plugins(DefaultNavigationPlugins)
+        .add_plugins((DefaultPlugins, DefaultNavigationPlugins))
         .init_resource::<Materials>()
         .insert_resource(Gameui::new())
-        .add_startup_system(setup)
-        .add_system(button_system.after(NavRequestSystem))
-        .add_system(handle_nav_events.after(NavRequestSystem))
+        .add_systems(Startup, setup)
+        .add_systems(
+            Update,
+            (button_system, handle_nav_events).after(NavRequestSystem),
+        )
         .run();
 }
 
@@ -109,9 +109,9 @@ fn handle_nav_events(
 }
 
 fn menu(materials: &Materials) -> NodeBundle {
-    let size_fn = |width, height| Size::new(Val::Percent(width), Val::Percent(height));
     let style = Style {
-        size: size_fn(20.0, 95.0),
+        width: Val::Percent(20.0),
+        height: Val::Percent(95.0),
         flex_direction: FlexDirection::Column,
         flex_wrap: FlexWrap::Wrap,
         justify_content: JustifyContent::Center,
@@ -134,11 +134,12 @@ fn setup(
     // ui camera
     commands.spawn(Camera2dBundle::default());
 
-    let size_fn = |width, height| Size::new(Val::Percent(width), Val::Percent(height));
+    let pct = Val::Percent;
     let style = Style {
         position_type: PositionType::Absolute,
         flex_direction: FlexDirection::Row,
-        size: size_fn(100.0, 100.0),
+        width: pct(100.),
+        height: pct(100.),
         ..Default::default()
     };
     let bundle = NodeBundle {
@@ -146,16 +147,17 @@ fn setup(
         ..Default::default()
     };
     let image_style = Style {
-        size: size_fn(100.0, 100.0),
+        width: pct(100.),
+        height: pct(100.),
         ..Default::default()
     };
-    let rarrow = ImageBundle {
+    let rarrow = || ImageBundle {
         style: image_style.clone(),
         image: materials.rarrow.clone(),
         ..Default::default()
     };
-    let circle = ImageBundle {
-        style: image_style,
+    let circle = || ImageBundle {
+        style: image_style.clone(),
         image: materials.circle.clone(),
         ..Default::default()
     };
@@ -180,13 +182,13 @@ fn setup(
                         }
                         if j == i {
                             button.with_children(|commands| {
-                                commands.spawn(rarrow.clone());
+                                commands.spawn(rarrow());
                             });
                             next_menu_button = Some(button.id());
                         }
                         if j == 3 && i == 1 {
                             button.insert(Focusable::cancel()).with_children(|cmds| {
-                                cmds.spawn(circle.clone());
+                                cmds.spawn(circle());
                             });
                         }
                         if j == 2 && i == 1 {
@@ -195,7 +197,7 @@ fn setup(
                         if j == 4 {
                             let to_add = button
                                 .with_children(|commands| {
-                                    commands.spawn(circle.clone());
+                                    commands.spawn(circle());
                                 })
                                 .id();
                             game.from.push(to_add);
@@ -206,10 +208,10 @@ fn setup(
     });
 }
 fn button() -> ButtonBundle {
-    let size_fn = |width, height| Size::new(Val::Percent(width), Val::Percent(height));
-    let size = size_fn(95.0, 12.0);
+    let pct = Val::Percent;
     let style = Style {
-        size,
+        width: pct(95.),
+        height: pct(12.),
         margin: UiRect::all(Val::Percent(3.0)),
         ..Default::default()
     };

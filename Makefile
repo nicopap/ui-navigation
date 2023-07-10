@@ -1,4 +1,4 @@
 check:
-	cargo clippy
+	cargo clippy --examples
 run:
 	cargo run --example layout

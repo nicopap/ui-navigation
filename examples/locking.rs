@@ -16,14 +16,16 @@ use bevy_ui_navigation::prelude::{
 /// Here, we emit one when the "l" key is pressed.
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
-        .add_plugins(DefaultNavigationPlugins)
-        .add_plugin(bevy_framepace::FramepacePlugin)
+        .add_plugins((DefaultPlugins, DefaultNavigationPlugins))
         .init_resource::<Images>()
-        .add_startup_system(setup)
-        .add_system(extra_lock_key.before(NavRequestSystem))
-        .add_system(button_system.after(NavRequestSystem))
-        .add_system(print_nav_events.after(NavRequestSystem))
+        .add_systems(Startup, setup)
+        .add_systems(
+            Update,
+            (
+                extra_lock_key.before(NavRequestSystem),
+                (print_nav_events, button_system).after(NavRequestSystem),
+            ),
+        )
         .run();
 }
 
@@ -69,14 +71,16 @@ impl FromWorld for Images {
 }
 
 fn setup(mut commands: Commands, imgs: Res<Images>) {
-    let center_pct = |v: usize| Val::Percent((v as f32) * 25.0 + 25.0);
+    use Val::Percent as Pct;
+    let center_pct = |v: usize| Pct((v as f32) * 25.0 + 25.0);
     // ui camera
     commands.spawn(Camera2dBundle::default());
     commands
         .spawn(NodeBundle {
             style: Style {
                 position_type: PositionType::Absolute,
-                size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
+                width: Pct(100.),
+                height: Pct(100.),
                 ..Default::default()
             },
             ..Default::default()
@@ -84,12 +88,7 @@ fn setup(mut commands: Commands, imgs: Res<Images>) {
         .with_children(|commands| {
             for x in 0..3 {
                 for y in 0..3 {
-                    let position = UiRect {
-                        left: center_pct(x),
-                        bottom: center_pct(y),
-                        ..Default::default()
-                    };
-                    let bundle = button_bundle(position);
+                    let bundle = button_bundle(center_pct(x), center_pct(y));
                     let mut button_cmds = commands.spawn(bundle);
                     if x == 1 && y == 1 {
                         // We set the center button as "lock", pressing Action
@@ -108,11 +107,13 @@ fn setup(mut commands: Commands, imgs: Res<Images>) {
             }
         });
 }
-fn button_bundle(position: UiRect) -> ButtonBundle {
+fn button_bundle(left: Val, bottom: Val) -> ButtonBundle {
     ButtonBundle {
         style: Style {
-            size: Size::new(Val::Px(95.0), Val::Px(65.0)),
-            position,
+            width: Val::Px(95.),
+            height: Val::Px(65.),
+            left,
+            bottom,
             position_type: PositionType::Absolute,
             ..Default::default()
         },

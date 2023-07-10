@@ -291,11 +291,7 @@ where
 }
 
 fn cursor_pos(window: &Window) -> Option<Vec2> {
-    let pos = window.cursor_position()?;
-    Some(Vec2 {
-        y: window.height() - pos.y,
-        ..pos
-    })
+    window.cursor_position()
 }
 
 /// Something that has a size on screen.

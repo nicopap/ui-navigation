@@ -23,13 +23,17 @@ use bevy_ui_navigation::systems::InputMapping;
 /// Navigation also works with controller
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
-        .add_plugins(DefaultNavigationPlugins)
-        .add_startup_system(setup)
+        .add_plugins((DefaultPlugins, DefaultNavigationPlugins))
+        .add_systems(Startup, setup)
         // IMPORTANT: setting the button appearance update system after the
         // NavRequestSystem makes everything much snappier, highly recommended.
-        .add_system(button_system.after(NavRequestSystem))
-        .add_system(block_some_focusables.before(NavRequestSystem))
+        .add_systems(
+            Update,
+            (
+                block_some_focusables.before(NavRequestSystem),
+                button_system.after(NavRequestSystem),
+            ),
+        )
         .run();
 }
 
@@ -107,7 +111,8 @@ fn setup(mut commands: Commands, mut input_mapping: ResMut<InputMapping>) {
     };
     let square = FocusableButtonBundle::from(ButtonBundle {
         style: Style {
-            size: Size::new(px(40.0), px(40.0)),
+            width: px(40.0),
+            height: px(40.0),
             margin: UiRect::all(px(2.0)),
             ..default()
         },
@@ -115,7 +120,7 @@ fn setup(mut commands: Commands, mut input_mapping: ResMut<InputMapping>) {
     });
     let long = FocusableButtonBundle::from(ButtonBundle {
         style: Style {
-            size: Size::height(px(40.0)),
+            height: px(40.0),
             flex_grow: 1.5,
             margin: UiRect::all(px(2.0)),
             ..default()
@@ -124,7 +129,8 @@ fn setup(mut commands: Commands, mut input_mapping: ResMut<InputMapping>) {
     });
     let tab_square = FocusableButtonBundle::from(ButtonBundle {
         style: Style {
-            size: Size::new(px(100.0), px(40.0)),
+            width: px(100.0),
+            height: px(40.0),
             margin: UiRect {
                 left: px(30.0),
                 right: px(30.0),
@@ -147,7 +153,8 @@ fn setup(mut commands: Commands, mut input_mapping: ResMut<InputMapping>) {
     let column = NodeBundle {
         style: Style {
             flex_direction: Column,
-            size: Size::new(pct(33.0), pct(100.0)),
+            width: pct(33.0),
+            height: pct(100.0),
             padding: UiRect::all(px(10.0)),
             margin: UiRect {
                 left: px(5.0),
@@ -171,7 +178,7 @@ fn setup(mut commands: Commands, mut input_mapping: ResMut<InputMapping>) {
     let red_grey_box = || NodeBundle {
         style: Style {
             flex_wrap: Wrap,
-            size: Size::height(pct(12.0)),
+            height: pct(12.0),
             ..horizontal.style.clone()
         },
         background_color: gray,
@@ -195,7 +202,8 @@ fn setup(mut commands: Commands, mut input_mapping: ResMut<InputMapping>) {
             MenuBuilder::Root,
         ))
         .insert(Style {
-            size: Size::new(pct(100.0), pct(100.0)),
+            width: pct(100.0),
+            height: pct(100.0),
             ..vertical.style.clone()
         })
         .with_children(|cmds| {

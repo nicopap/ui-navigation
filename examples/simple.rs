@@ -10,16 +10,19 @@ use bevy_ui_navigation::{
 /// See lines 15 and 89 for details.
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
-        .add_plugin(bevy_framepace::FramepacePlugin)
-        // vvvvvvvvvvvvvvvvvvvvvvvvvvv
         // 1: Add the DefaultNavigationPlugins
-        .add_plugins(DefaultNavigationPlugins)
-        .add_startup_system(setup)
-        // So that the UI _feels_ smooth, make sure to update the visual
-        // after the navigation system ran
-        .add_system(button_system.after(NavRequestSystem))
-        .add_system(print_nav_events.after(NavRequestSystem))
+        //                            vvvvvvvvvvvvvvvvvvvvvvvv
+        .add_plugins((DefaultPlugins, DefaultNavigationPlugins))
+        .add_systems(Startup, setup)
+        .add_systems(
+            Update,
+            (
+                // So that the UI _feels_ smooth, make sure to update the visual
+                // after the navigation system ran
+                button_system.after(NavRequestSystem),
+                print_nav_events.after(NavRequestSystem),
+            ),
+        )
         .run();
 }
 
@@ -60,7 +63,8 @@ fn setup(mut commands: Commands, mut input_mapping: ResMut<InputMapping>) {
         .spawn(NodeBundle {
             style: Style {
                 position_type: PositionType::Absolute,
-                size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
                 ..Default::default()
             },
             ..Default::default()
@@ -72,16 +76,13 @@ fn setup(mut commands: Commands, mut input_mapping: ResMut<InputMapping>) {
         });
 }
 fn spawn_button(position: Vec2, commands: &mut ChildBuilder) {
-    let position = UiRect {
-        left: Val::Percent(position.x),
-        top: Val::Percent(position.y),
-        ..Default::default()
-    };
     commands.spawn((
         ButtonBundle {
             style: Style {
-                size: Size::new(Val::Px(95.0), Val::Px(65.0)),
-                position,
+                width: Val::Px(95.0),
+                height: Val::Px(65.0),
+                left: Val::Percent(position.x),
+                top: Val::Percent(position.y),
                 position_type: PositionType::Absolute,
                 ..Default::default()
             },
