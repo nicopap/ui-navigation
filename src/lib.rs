@@ -38,6 +38,7 @@
 #![allow(clippy::unnecessary_lazy_evaluations)]
 
 mod commands;
+#[cfg(feature = "bevy_ui")]
 pub mod components;
 pub mod events;
 mod marker;
