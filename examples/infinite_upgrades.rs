@@ -1,3 +1,5 @@
+// TODO: use cuicui_layout for menu. After all the WHOLE POINT of
+// cuicui_layout_bevy_sprite is THIS.
 use std::fmt;
 
 use bevy::ecs::system::EntityCommands;

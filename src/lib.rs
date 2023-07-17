@@ -40,6 +40,8 @@
 mod commands;
 #[cfg(feature = "bevy_ui")]
 pub mod components;
+#[cfg(feature = "cuicui_dsl")]
+mod dsl;
 pub mod events;
 mod marker;
 pub mod menu;
@@ -59,6 +61,8 @@ use resolve::UiProjectionQuery;
 
 /// Default imports for `bevy_ui_navigation`.
 pub mod prelude {
+    #[cfg(feature = "cuicui_dsl")]
+    pub use crate::dsl::NavigationDsl;
     pub use crate::events::{NavEvent, NavEventReaderExt, NavRequest};
     pub use crate::menu::{MenuBuilder, MenuSetting};
     pub use crate::resolve::{
