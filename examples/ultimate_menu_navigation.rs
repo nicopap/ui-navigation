@@ -206,7 +206,7 @@ fn setup(mut commands: Commands, mut input_mapping: ResMut<InputMapping>) {
                 // adding a `Name` component (this is what `named "red"` does)
                 // let us refer to those entities later without having to store their
                 // `Entity` ids anywhere.
-                button(named "red", border(5, red));
+                button(Medium, named "red", border(5, red));
                 button(Medium, named "green", border(5, green));
                 button(Medium, named "blue", border(5, blue));
             }
