@@ -24,10 +24,10 @@ impl UltimateMenuDsl {
             cuicui_layout::Node::Box(Size {
                 width: match style {
                     ButtonStyle::Long => LeafRule::Parent(0.8),
-                    ButtonStyle::Medium => LeafRule::Fixed(90.0, false),
-                    ButtonStyle::Square => LeafRule::Fixed(30.0, false),
+                    ButtonStyle::Medium => LeafRule::Fixed(90.0),
+                    ButtonStyle::Square => LeafRule::Fixed(30.0),
                 },
-                height: LeafRule::Fixed(30.0, false),
+                height: LeafRule::Fixed(30.0),
             }),
         ))
         .id()
@@ -206,7 +206,7 @@ fn setup(mut commands: Commands, mut input_mapping: ResMut<InputMapping>) {
                 // adding a `Name` component (this is what `named "red"` does)
                 // let us refer to those entities later without having to store their
                 // `Entity` ids anywhere.
-                button(Medium, named "red", border(5, red));
+                button(named "red", border(5, red));
                 button(Medium, named "green", border(5, green));
                 button(Medium, named "blue", border(5, blue));
             }
