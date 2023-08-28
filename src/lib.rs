@@ -198,7 +198,8 @@ where
 {
     fn build(&self, app: &mut App) {
         #[cfg(feature = "bevy_reflect")]
-        app.register_type::<menu::MenuSetting>()
+        app.register_type::<menu::MenuBuilder>()
+            .register_type::<menu::MenuSetting>()
             .register_type::<resolve::Focusable>()
             .register_type::<resolve::FocusAction>()
             .register_type::<resolve::FocusState>()

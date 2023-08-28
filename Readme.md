@@ -10,7 +10,7 @@ A generic UI navigation algorithm for the
 
 ```toml
 [dependencies]
-bevy-ui-navigation = "0.28.0"
+bevy-ui-navigation = "0.29.0"
 ```
 
 The in-depth design specification is [available here][rfc41].
@@ -533,7 +533,8 @@ A usage demo is available in [the `marking.rs` example][example-marking].
 * `0.26.0`: **BREAKING**: Fix the `bevy_ui` feature. Ooops sorry.
 * `0.27.0`: Non-breaking: Add a `cuicui_dsl` `DslBundle` behind the `cuicui_dsl` feature flag.
 * `0.28.0`: Bump `cuicui_dsl` version to `0.8.1`.
-* **FUTURE**: `0.29.0` The goal is to split this crate so that it fits better
+* `0.30.0`: Refelct and register `MenuBuilder`.
+* **FUTURE**: `0.30.0` The goal is to split this crate so that it fits better
   with the rest of the bevy ecosystem. Future Plans involve
   Split the crate in 3 sub-crate, as described in the now [closed RFC][rfc41]:
     * A plugin to translate bevy_ui things into events
@@ -588,7 +589,7 @@ A usage demo is available in [the `marking.rs` example][example-marking].
 
 | bevy | latest supporting version      |
 |------|--------|
-| 0.11 | 0.28.0 |
+| 0.11 | 0.29.0 |
 | 0.10 | 0.24.1 |
 | 0.9  | 0.23.1 |
 | 0.8  | 0.21.0 |

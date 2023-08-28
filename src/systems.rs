@@ -367,7 +367,9 @@ pub fn generic_default_mouse_input<T: ScreenSize + Component>(
     mut last_pos: Local<Vec2>,
 ) {
     let no_focusable_msg = "Entity with `Focused` component must also have a `Focusable` component";
-    let Ok(window) = primary_window.get_single() else { return; };
+    let Ok(window) = primary_window.get_single() else {
+        return;
+    };
     let cursor_pos = match cursor_pos(window) {
         Some(c) => c,
         None => return,

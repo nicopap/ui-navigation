@@ -19,6 +19,7 @@ pub struct NavMarker<T: Component>(pub T);
 /// Note that `MenuBuilder` is replaced by a private component when encoutered.
 #[doc(alias = "NavMenu")]
 #[derive(Component, Debug, Clone)]
+#[cfg_attr(feature = "bevy_reflect", derive(Reflect), reflect(Component))]
 pub enum MenuBuilder {
     /// Create a menu as reachable from a [`Focusable`]
     /// with a [`Name`] component.
@@ -76,6 +77,13 @@ impl From<Option<Entity>> for MenuBuilder {
             Some(parent) => MenuBuilder::EntityParent(parent),
             None => MenuBuilder::Root,
         }
+    }
+}
+impl bevy::prelude::FromWorld for MenuBuilder {
+    /// This shouldn't be considered a good "default", this only exists
+    /// to make possible `ReflectComponent` derive.
+    fn from_world(_: &mut bevy::prelude::World) -> Self {
+        Self::Root
     }
 }
 impl TryFrom<&MenuBuilder> for Option<Entity> {

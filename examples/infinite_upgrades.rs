@@ -208,7 +208,9 @@ pub fn mouse_pointer_system(
     if camera_moving.iter().next().is_some() {
         return;
     }
-    let Ok(window) = primary_query.get_single() else { return; };
+    let Ok(window) = primary_query.get_single() else {
+        return;
+    };
     let Some(cursor_pos) = window.cursor_position() else {
         return;
     };
