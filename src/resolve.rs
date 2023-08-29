@@ -40,7 +40,7 @@ use std::num::NonZeroUsize;
 #[cfg(feature = "bevy_reflect")]
 use bevy::ecs::reflect::{ReflectComponent, ReflectResource};
 use bevy::hierarchy::{Children, Parent};
-use bevy::log::warn;
+use bevy::log::{debug, warn};
 use bevy::prelude::{Changed, FromWorld};
 #[cfg(feature = "bevy_reflect")]
 use bevy::reflect::Reflect;
@@ -834,11 +834,10 @@ pub(crate) fn insert_tree_menus(
                 focus_parent,
                 active_child: *child,
             };
-            inserts.push((entity, (menu,)));
-        } else {
-            warn!("Encountered a non-translated named menu builder");
+            inserts.push((entity, menu));
+            commands.entity(entity).remove::<MenuBuilder>();
+            debug!("Associated {entity:?} with a parent focusable.");
         }
-        commands.entity(entity).remove::<MenuBuilder>();
     }
     commands.insert_or_spawn_batch(inserts);
 }

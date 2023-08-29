@@ -36,6 +36,19 @@ pub enum MenuBuilder {
     /// to reach `MenuSetting` X from [`Focusable`] Y if there is a path from
     /// `MenuSetting` X to `Focusable` Y.
     ///
+    /// # Performance and edge cases
+    ///
+    /// `bevy-ui-navigation` tries to convert **each frame** every
+    /// `MenuBuilder::NamedParent` into a [`MenuBuilder::EntityParent`].
+    ///
+    /// It iterates every [`Focusable`] with a [`Name`] component until it finds
+    /// a match. And repeat the operation next frame if no match is found.
+    ///
+    /// This incurs a significant performance cost per unmatched `NamedParent`!
+    /// `bevy-ui-navigation` emits a **`WARN`** per second if it encounters
+    /// unmatched `NamedParent`s. Pay attention to this message if you don't
+    /// want to waste preciously CPU cycles.
+    ///
     /// [`Focusable`]: crate::prelude::Focusable
     NamedParent(Name),
 
@@ -67,6 +80,8 @@ pub enum MenuBuilder {
 }
 impl MenuBuilder {
     /// Create a [`MenuBuilder::NamedParent`] directly from `String` or `&str`.
+    ///
+    /// See [`MenuBuilder::NamedParent`] for caveats and quirks.
     pub fn from_named(parent: impl Into<Cow<'static, str>>) -> Self {
         Self::NamedParent(Name::new(parent))
     }

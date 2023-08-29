@@ -15,35 +15,47 @@
 //! so that you can associate their `id` with the proper submenu.
 //!
 //! [`TreeMenu`]: crate::resolve::TreeMenu
+use std::mem;
 
 use bevy::core::Name;
-use bevy::ecs::{
-    entity::Entity,
-    prelude::With,
-    system::{Commands, Query},
-};
+use bevy::ecs::prelude::*;
+use bevy::log::{debug, warn};
+use bevy::time::Time;
 
 use crate::{menu::MenuBuilder, resolve::Focusable};
 
 pub(crate) fn resolve_named_menus(
-    mut commands: Commands,
     mut unresolved: Query<(Entity, &mut MenuBuilder)>,
     named: Query<(Entity, &Name), With<Focusable>>,
+    time: Option<Res<Time>>,
 ) {
+    use MenuBuilder::{EntityParent, NamedParent, Root};
+    let each_second = || {
+        let Some(time) = &time else { return true };
+        time.elapsed_seconds_f64().fract() < time.delta_seconds_f64()
+    };
     for (entity, mut builder) in &mut unresolved {
-        if let MenuBuilder::NamedParent(parent_name) = builder.clone() {
-            match named.iter().find(|(_, n)| **n == parent_name) {
-                Some((focus_parent, _)) => {
-                    *builder = MenuBuilder::EntityParent(focus_parent);
-                }
-                None => {
-                    let name = parent_name.as_str();
-                    bevy::log::warn!(
-                        "Tried to spawn a menu with parent focusable {name}, but no\
-                         `Focusable` has a `Name` component with that value."
-                    );
-                    commands.entity(entity).remove::<MenuBuilder>();
-                }
+        let parent_name = match &mut *builder {
+            NamedParent(name) => mem::take(name),
+            // Already resolved / do not need to resolve name
+            EntityParent(_) | Root => continue,
+        };
+        let with_parent_name = |(e, n)| (&parent_name == n).then_some(e);
+        match named.iter().find_map(with_parent_name) {
+            Some(focus_parent) => {
+                debug!("Found parent focusable with name '{parent_name}' for menu {entity:?}");
+                *builder = MenuBuilder::EntityParent(focus_parent);
+            }
+            None if each_second() => {
+                warn!(
+                    "Tried to spawn menu {entity:?} with parent focusable \
+                    '{parent_name}', but no Focusable has a Name component \
+                    with that value."
+                );
+                *builder = NamedParent(parent_name);
+            }
+            None => {
+                *builder = NamedParent(parent_name);
             }
         }
     }
