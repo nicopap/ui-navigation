@@ -1,14 +1,16 @@
 //! System for the navigation tree and default input systems to get started.
 use crate::{
     events::{Direction, NavRequest, ScopeDirection},
-    resolve::{FocusState, Focusable, Focused, ScreenBoundaries},
+    resolve::{Focusable, Focused},
 };
 
-use bevy::utils::FloatOrd;
-use bevy::window::PrimaryWindow;
+#[cfg(feature = "bevy_ui")]
+use crate::resolve::ScreenBoundaries;
+use bevy::prelude::*;
 #[cfg(feature = "bevy_reflect")]
 use bevy::{ecs::reflect::ReflectResource, reflect::Reflect};
-use bevy::{ecs::system::SystemParam, prelude::*};
+#[cfg(feature = "pointer_focus")]
+use bevy_mod_picking::prelude::*;
 
 /// Control default ui navigation input buttons
 #[derive(Resource)]
@@ -70,8 +72,6 @@ pub struct InputMapping {
     pub key_previous: KeyCode,
     /// Keyboard key for [`NavRequest::Unlock`]
     pub key_free: KeyCode,
-    /// Mouse button for [`NavRequest::Action`]
-    pub mouse_action: MouseButton,
     /// Whether mouse hover gives focus to [`Focusable`] elements.
     pub focus_follows_mouse: bool,
 }
@@ -106,7 +106,6 @@ impl Default for InputMapping {
             key_next_alt: KeyCode::Tab,
             key_previous: KeyCode::Q,
             key_free: KeyCode::Escape,
-            mouse_action: MouseButton::Left,
             focus_follows_mouse: false,
         }
     }
@@ -240,189 +239,6 @@ pub fn default_keyboard_input(
     without_movement.iter().for_each(send_command);
 }
 
-/// [`SystemParam`](https://docs.rs/bevy/0.9.0/bevy/ecs/system/trait.SystemParam.html)
-/// used to compute UI focusable physical positions in mouse input systems.
-#[derive(SystemParam)]
-pub struct NodePosQuery<'w, 's, T: Component> {
-    entities: Query<
-        'w,
-        's,
-        (
-            Entity,
-            &'static T,
-            &'static GlobalTransform,
-            &'static Focusable,
-        ),
-    >,
-    boundaries: Option<Res<'w, ScreenBoundaries>>,
-}
-impl<'w, 's, T: Component> NodePosQuery<'w, 's, T> {
-    fn cursor_pos(&self, at: Vec2) -> Option<Vec2> {
-        let boundaries = self.boundaries.as_ref()?;
-        Some(at * boundaries.scale + boundaries.position)
-    }
-}
-
-fn is_in_node<T: ScreenSize>(
-    at: Vec2,
-    (_, node, trans, _): &(Entity, &T, &GlobalTransform, &Focusable),
-) -> bool {
-    let ui_pos = trans.translation().truncate();
-    let node_half_size = node.size() / 2.0;
-    let min = ui_pos - node_half_size;
-    let max = ui_pos + node_half_size;
-    (min.x..max.x).contains(&at.x) && (min.y..max.y).contains(&at.y)
-}
-
-/// Check which [`Focusable`] is at position `at` if any.
-///
-/// NOTE: returns `None` if there is no [`ScreenBoundaries`] resource.
-pub fn ui_focusable_at<T>(at: Vec2, query: &NodePosQuery<T>) -> Option<Entity>
-where
-    T: ScreenSize + Component,
-{
-    let world_at = query.cursor_pos(at)?;
-    query
-        .entities
-        .iter()
-        .filter(|query_elem| is_in_node(world_at, query_elem))
-        .max_by_key(|elem| FloatOrd(elem.2.translation().z))
-        .map(|elem| elem.0)
-}
-
-fn cursor_pos(window: &Window) -> Option<Vec2> {
-    window.cursor_position()
-}
-
-/// Something that has a size on screen.
-///
-/// Used for default mouse picking behavior on `bevy_ui`.
-pub trait ScreenSize {
-    /// The size of the thing on screen.
-    fn size(&self) -> Vec2;
-}
-
-#[cfg(feature = "bevy_ui")]
-impl ScreenSize for Node {
-    fn size(&self) -> Vec2 {
-        self.size()
-    }
-}
-
-/// A system to send mouse control events to the focus system
-///
-/// Unlike [`generic_default_mouse_input`], this system is gated by the
-/// `bevy_ui` feature. It relies on bevy/render specific types:
-/// `bevy::render::Camera` and `bevy::ui::Node`.
-///
-/// Which button to press to cause an action event is specified in the
-/// [`InputMapping`] resource.
-///
-/// You may however need to customize the behavior of this system (typically
-/// when integrating in the game) in this case, you should write your own
-/// system that sends [`NavRequest`](crate::events::NavRequest) events. You may use
-/// [`ui_focusable_at`] to tell which focusable is currently being hovered.
-#[cfg(feature = "bevy_ui")]
-#[allow(clippy::too_many_arguments)]
-pub fn default_mouse_input(
-    input_mapping: Res<InputMapping>,
-    windows: Query<&Window, With<PrimaryWindow>>,
-    mouse: Res<Input<MouseButton>>,
-    focusables: NodePosQuery<Node>,
-    focused: Query<Entity, With<Focused>>,
-    nav_cmds: EventWriter<NavRequest>,
-    last_pos: Local<Vec2>,
-) {
-    generic_default_mouse_input(
-        input_mapping,
-        windows,
-        mouse,
-        focusables,
-        focused,
-        nav_cmds,
-        last_pos,
-    );
-}
-
-/// A generic system to send mouse control events to the focus system
-///
-/// `T` must be a component assigned to `Focusable` elements that implements
-/// the [`ScreenSize`] trait.
-///
-/// Which button to press to cause an action event is specified in the
-/// [`InputMapping`] resource.
-///
-/// You may however need to customize the behavior of this system (typically
-/// when integrating in the game) in this case, you should write your own
-/// system that sends [`NavRequest`](crate::events::NavRequest) events. You may use
-/// [`ui_focusable_at`] to tell which focusable is currently being hovered.
-#[allow(clippy::too_many_arguments)]
-pub fn generic_default_mouse_input<T: ScreenSize + Component>(
-    input_mapping: Res<InputMapping>,
-    primary_window: Query<&Window, With<PrimaryWindow>>,
-    mouse: Res<Input<MouseButton>>,
-    focusables: NodePosQuery<T>,
-    focused: Query<Entity, With<Focused>>,
-    mut nav_cmds: EventWriter<NavRequest>,
-    mut last_pos: Local<Vec2>,
-) {
-    let no_focusable_msg = "Entity with `Focused` component must also have a `Focusable` component";
-    let Ok(window) = primary_window.get_single() else {
-        return;
-    };
-    let cursor_pos = match cursor_pos(window) {
-        Some(c) => c,
-        None => return,
-    };
-    let world_cursor_pos = match focusables.cursor_pos(cursor_pos) {
-        Some(c) => c,
-        None => return,
-    };
-    let released = mouse.just_released(input_mapping.mouse_action);
-    let pressed = mouse.pressed(input_mapping.mouse_action);
-    let focused = focused.get_single();
-
-    // Return early if cursor didn't move since last call
-    let camera_moved = focusables.boundaries.map_or(false, |b| b.is_changed());
-    let mouse_moved = *last_pos != cursor_pos;
-    if (!released && !pressed) && !mouse_moved && !camera_moved {
-        return;
-    } else {
-        *last_pos = cursor_pos;
-    }
-    // we didn't do it earlier so that we can leave early when the camera didn't move
-    let pressed = input_mapping.focus_follows_mouse || pressed;
-
-    let hovering_focused = |focused| {
-        let focused = focusables.entities.get(focused).expect(no_focusable_msg);
-        is_in_node(world_cursor_pos, &focused)
-    };
-    // If the currently hovered node is the focused one, there is no need to
-    // find which node we are hovering and to switch focus to it (since we are
-    // already focused on it)
-    let hovering = focused.map_or(false, hovering_focused);
-    let set_focused = (pressed || released) && !hovering;
-    if set_focused {
-        // We only run this code when we really need it because we iterate over all
-        // focusables, which can eat a lot of CPU.
-        let under_mouse = focusables
-            .entities
-            .iter()
-            .filter(|query_elem| query_elem.3.state() != FocusState::Blocked)
-            .filter(|query_elem| is_in_node(world_cursor_pos, query_elem))
-            .max_by_key(|elem| FloatOrd(elem.2.translation().z))
-            .map(|elem| elem.0);
-        let to_target = match under_mouse {
-            Some(c) => c,
-            None => return,
-        };
-        nav_cmds.send(NavRequest::FocusOn(to_target));
-    }
-    if released && (set_focused || hovering) {
-        nav_cmds.send(NavRequest::Action);
-    }
-}
-
 /// Update [`ScreenBoundaries`] resource when the UI camera change
 /// (assuming there is a unique one).
 ///
@@ -459,22 +275,89 @@ pub fn update_boundaries(
     update_boundaries();
 }
 
+#[cfg(feature = "pointer_focus")]
+fn send_request<E: EntityEvent>(
+    f: impl Fn(Query<&Focusable>, Res<ListenerInput<E>>, EventWriter<NavRequest>)
+        + Send
+        + Sync
+        + Copy
+        + 'static,
+) -> impl Fn() -> On<E> {
+    move || On::<E>::run(f)
+}
+
+/// Send [`NavRequest`]s when an [`Entity`] is clicked, as defined by
+/// [`bevy_mod_picking`].
+///
+/// # `bevy_mod_picking` features
+///
+/// `bevy-ui-navigation` inserts the [`DefaultPickingPlugins`].
+/// This means you can control how mouse picking works by… picking the
+/// feature flags that are most relevant to you:
+///
+/// Check the [`bevy_mod_picking` feature flags docs.rs page][bmp-features]
+/// for a list of features.
+///
+/// `bevy-ui-navigation` only enables `backed_bevy_ui`, when the `bevy_ui` flag
+/// is enabled.
+///
+/// Depend explicitly on `bevy_mod_picking` and enable the flags you want to
+/// extend the picking functionality to, well, 3D objects, sprites, anything
+/// really.
+///
+/// [bmp-features]: https://docs.rs/crate/bevy_mod_picking/0.15.0/features
+#[cfg(feature = "pointer_focus")]
+#[allow(clippy::type_complexity)]
+pub fn enable_click_request(
+    input_mapping: Res<InputMapping>,
+    to_add: Query<Entity, (With<Focusable>, Without<On<Pointer<Click>>>)>,
+    mut commands: Commands,
+) {
+    use crate::prelude::FocusState::Blocked;
+
+    let on_click = send_request::<Pointer<Click>>(|q, e, mut evs| {
+        // TODO(clean): This shouldn't be the responsability of the input system.
+        if matches!(q.get(e.listener()), Ok(f) if f.state() != Blocked) {
+            evs.send(NavRequest::FocusOn(e.listener()));
+            evs.send(NavRequest::Action);
+        }
+    });
+    let on_down = send_request::<Pointer<Down>>(|_, e, mut evs| {
+        evs.send(NavRequest::FocusOn(e.listener()));
+    });
+    let on_over = send_request::<Pointer<Over>>(|_, e, mut evs| {
+        evs.send(NavRequest::FocusOn(e.listener()));
+    });
+    if input_mapping.focus_follows_mouse {
+        let cmd_entry = |e| (e, (on_click(), on_down(), on_over()));
+        let batch_cmd: Vec<_> = to_add.iter().map(cmd_entry).collect();
+        if !batch_cmd.is_empty() {
+            commands.insert_or_spawn_batch(batch_cmd);
+        }
+    } else {
+        let cmd_entry = |e| (e, (on_click(), on_down()));
+        let batch_cmd: Vec<_> = to_add.iter().map(cmd_entry).collect();
+        if !batch_cmd.is_empty() {
+            commands.insert_or_spawn_batch(batch_cmd);
+        }
+    };
+}
+
 /// Default input systems for ui navigation.
-#[cfg(feature = "bevy_ui")]
 pub struct DefaultNavigationSystems;
-#[cfg(feature = "bevy_ui")]
 impl Plugin for DefaultNavigationSystems {
     fn build(&self, app: &mut App) {
         use crate::NavRequestSystem;
         app.init_resource::<InputMapping>().add_systems(
             Update,
-            (
-                update_boundaries.before(default_mouse_input),
-                default_mouse_input,
-                default_gamepad_input,
-                default_keyboard_input,
-            )
-                .before(NavRequestSystem),
+            (default_gamepad_input, default_keyboard_input).before(NavRequestSystem),
         );
+
+        #[cfg(feature = "bevy_ui")]
+        app.add_systems(Update, update_boundaries.before(NavRequestSystem));
+
+        #[cfg(feature = "pointer_focus")]
+        app.add_plugins(DefaultPickingPlugins)
+            .add_systems(PostUpdate, enable_click_request);
     }
 }

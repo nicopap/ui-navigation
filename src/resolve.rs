@@ -571,7 +571,7 @@ impl Focusable {
     ///
     /// - If all the children of a menu are blocked, when activating the menu's
     ///   parent, the block state of the last active focusable will be ignored.
-    /// - When `FocusOn` to an focusable in a menu reachable from an blocked
+    /// - When `FocusOn` to a focusable in a menu reachable from a blocked
     ///   focusable, its block state will be ignored.
     pub fn block(&mut self) -> bool {
         use FocusState::{Blocked, Inert, Prioritized};
@@ -616,6 +616,7 @@ impl Focusable {
 /// This means it might lead to a single frame of latency
 /// compared to using [`Focusable::state()`].
 #[derive(Component)]
+#[component(storage = "SparseSet")]
 #[non_exhaustive]
 pub struct Focused;
 
@@ -788,6 +789,10 @@ fn resolve<STGY: MenuNavigationStrategy>(
             }
         }
         FocusOn(new_to_focus) => {
+            let focusable = queries.focusables.get(new_to_focus);
+            if matches!(focusable, Ok((_, f)) if f.state() == Blocked) {
+                return NavEvent::NoChanges { from, request };
+            }
             // assumption here is that there is a common ancestor
             // though nothing really breaks if there isn't
             let mut from = queries.root_path(focused);
