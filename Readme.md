@@ -557,10 +557,10 @@ A usage demo is available in [the `marking.rs` example][example-marking].
 [doc-root]: https://docs.rs/bevy-ui-navigation/latest/bevy_ui_navigation/
 [`Entity`]: https://docs.rs/bevy/latest/bevy/ecs/entity/struct.Entity.html
 [entity-id]: https://docs.rs/bevy/latest/bevy/ecs/system/struct.EntityCommands.html#method.id
-[example-marking]: https://github.com/nicopap/ui-navigation/tree/vlatest/examples/marking.rs
-[examples]: https://github.com/nicopap/ui-navigation/tree/vlatest/examples
-[example-simple]: https://github.com/nicopap/ui-navigation/tree/vlatest/examples/simple.rs
-[example-ultimate]: https://github.com/nicopap/ui-navigation/blob/vlatest/examples/ultimate_menu_navigation.rs
+[example-marking]: https://github.com/nicopap/ui-navigation/tree/master/examples/marking.rs
+[examples]: https://github.com/nicopap/ui-navigation/tree/master/examples
+[example-simple]: https://github.com/nicopap/ui-navigation/tree/master/examples/simple.rs
+[example-ultimate]: https://github.com/nicopap/ui-navigation/blob/master/examples/ultimate_menu_navigation.rs
 [`FocusableButtonBundle`]: https://docs.rs/bevy-ui-navigation/latest/bevy_ui_navigation/components/struct.FocusableButtonBundle.html
 [`Focusable::cancel`]: https://docs.rs/bevy-ui-navigation/latest/bevy_ui_navigation/prelude/struct.Focusable.html#method.cancel
 [`Focusable::block`]: https://docs.rs/bevy-ui-navigation/latest/bevy_ui_navigation/prelude/struct.Focusable.html#method.block
