@@ -10,7 +10,7 @@ A generic UI navigation algorithm for the
 
 ```toml
 [dependencies]
-bevy-ui-navigation = "0.31.0"
+bevy-ui-navigation = "0.31.1"
 ```
 
 The in-depth design specification is [available here][rfc41].
@@ -549,6 +549,7 @@ A usage demo is available in [the `marking.rs` example][example-marking].
     (if you enable the `bevy_mod_picking/backend_egui` feature)
   * Removed all mouse-related systems and types in `systems`.
     * Consider using `bevy_mod_picking` instead.
+* `0.31.1`: Fix examples link in Readme.
 
 [the RFC PR]: https://github.com/bevyengine/bevy/pull/5378
 [diff-18-19]: https://github.com/nicopap/ui-navigation/compare/v0.18.0...v0.19.0
@@ -597,7 +598,7 @@ A usage demo is available in [the `marking.rs` example][example-marking].
 
 | bevy | latest supporting version      |
 |------|--------|
-| 0.11 | 0.31.0 |
+| 0.11 | 0.31.1 |
 | 0.10 | 0.24.1 |
 | 0.9  | 0.23.1 |
 | 0.8  | 0.21.0 |
