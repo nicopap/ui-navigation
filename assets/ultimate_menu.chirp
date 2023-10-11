@@ -1,0 +1,95 @@
+fn button(width_rule, button_text) {
+    Button(focus row rules(width_rule, 30px)) {
+        ButtonText(text(button_text))
+    }
+}
+fn square_button(text) { button!(30px, text) }
+fn medium_button(text) { button!(90px, text) }
+
+fn row_5() {
+    Entity(row rules(100%, 1.05*)) {
+        square_button!(1)
+        square_button!(2)
+        square_button!(3)
+        square_button!(4)
+        square_button!(5)
+    }
+}
+fn row_10() {
+    Entity(row rules(100%, 1.05*)) {
+        square_button!(1)
+        square_button!(2)
+        square_button!(3)
+        square_button!(4)
+        square_button!(5)
+        square_button!(6)
+        square_button!(7)
+        square_button!(8)
+        square_button!(9)
+        square_button!(10)
+    }
+}
+fn grid_5_3()  { Entity(column) { row_5!() row_5!() row_5!() } }
+fn grid_10_5() { Entity(column) { row_10!() row_10!() row_10!() row_10!() row_10!() } }
+
+fn green_row(name, width, neg_width) {
+    Entity(row rules(99%, 35px)) {
+        Button(focus named(name) row rules(width, 30px)) {
+            ButtonText(text("->"))
+        }
+        Entity(row menu(name) bg(#FFFFFF20) rules(neg_width, 100%) main_margin(3.)) {
+            Entity(width(0%))
+            square_button!(1)
+            square_button!(2)
+            square_button!(3)
+            Entity(width(0%))
+        }
+    }
+}
+Root(column screen_root distrib_start align_start bg(moccasin)) {
+    // The tab menu should be navigated with `NavRequest::ScopeMove` hence the `scope`.
+    TabMenu(layout(">dSaE") wrap menu_root scope rules(100%, 1*) bg(slategrey) main_margin(10)) {
+        TabMenuText(text("Scope menu:\nkeyboard(Q/E) or gamepad(LB/RB) from any submenu to navigate"))
+        // adding a `Name` component (this is what `named(Red)` does) let us refer
+        // to those entities later without having to store their `Entity` ids anywhere.
+        medium_button!(Red Column)(named(Red) border(5, red))
+        medium_button!(Green Column)(named(Green) border(5, green))
+        medium_button!(Blue Column)(named(Blue) border(5, blue))
+    }
+    ColumnsContainer(layout(">dSaS") rules(100%, 93%)) {
+        RedMenu(column menu("Red") bg(RED) rules(33.33%, 100%)) {
+            Entity(height(0%))
+            button!(80%, To wrapping submenu)(named(Red1))
+            button!(80%, To non-wrapping submenu)(named(Red2))
+            Grid1(column rules(75%, 35%)) {
+                Grid1Text(text("Wrapping submenu: Use arrow keys or gamepad\ndirections, left of leftmost goes right"))
+                grid_5_3!()(named(Red1Menu) menu("Red1") wrap bg(#FFFFFF20) rules(100%, 81%) margins(10, 10))
+            }
+            Grid2(column rules(90%, 50%)) {
+                Grid2Text(text("Non-wrapping submenu:"))
+                grid_10_5!()(named(Red2Menu) menu("Red2") bg(#FFFFFF20) margins(5, 5) rules(100%, 90%))
+            }
+            Entity(height(0%))
+        }
+        GreenMenu(column menu("Green") bg(GREEN) rules(33.33%, 100%)) {
+            GreenColumnText(text("Submenu list, use backspace\nor B on gamepad to go back"))
+            green_row!(green_1, 50%, 49%)
+            green_row!(green_2, 69%, 29%)
+            green_row!(green_3, 54%, 44%)
+            green_row!(green_4, 39%, 59%)
+            green_row!(green_5, 24%, 74%)
+            green_row!(green_6, 4%, 94%)
+            green_row!(green_7, 65%, 34%)
+            green_row!(green_8, 54%, 44%)
+            Entity(height(0%))
+        }
+        BlueMenu(column menu("Blue") bg(BLUE) rules(33.33%, 100%)) {
+            Entity(height(0%))
+            button!(80%, Blue submenu button 1)(named(Blue1))
+            button!(80%, Blue submenu button 2)(named(Blue2))
+            button!(80%, Blue submenu button 3)(named(Blue3))
+            button!(80%, Blue submenu button 4)(named(Blue4))
+            Entity(height(0%))
+        }
+    }
+}

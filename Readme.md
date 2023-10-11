@@ -10,7 +10,7 @@ A generic UI navigation algorithm for the
 
 ```toml
 [dependencies]
-bevy-ui-navigation = "0.31.1"
+bevy-ui-navigation = "0.32.0"
 ```
 
 The in-depth design specification is [available here][rfc41].
@@ -377,8 +377,8 @@ A usage demo is available in [the `marking.rs` example][example-marking].
 * `0.9.1`: Fix #8, Panic on diagonal gamepad input
 * `0.10.0`: Add the `bevy-ui` feature, technically this includes breaking
   changes, but it is very unlikely you need to change your code to get it
-  working 
-  * **Breaking**: if you were manually calling `default_mouse_input`, it now has 
+  working
+  * **Breaking**: if you were manually calling `default_mouse_input`, it now has
     additional parameters
   * **Breaking**: `ui_focusable_at` and `NodePosQuery` now have type parameters
 * `0.11.0`: Add the `Focusable::lock` feature. A focusable now can be declared
@@ -550,6 +550,10 @@ A usage demo is available in [the `marking.rs` example][example-marking].
   * Removed all mouse-related systems and types in `systems`.
     * Consider using `bevy_mod_picking` instead.
 * `0.31.1`: Fix examples link in Readme.
+* `0.32.0`: **BREAKING**:
+  * Upgrade to `cuicui_dsl v0.10.0`
+  * Add `cuicui_chirp` support
+  * Add `ParseDsl` impl for `NavigationDsl`
 
 [the RFC PR]: https://github.com/bevyengine/bevy/pull/5378
 [diff-18-19]: https://github.com/nicopap/ui-navigation/compare/v0.18.0...v0.19.0
@@ -598,7 +602,7 @@ A usage demo is available in [the `marking.rs` example][example-marking].
 
 | bevy | latest supporting version      |
 |------|--------|
-| 0.11 | 0.31.1 |
+| 0.11 | 0.32.0 |
 | 0.10 | 0.24.1 |
 | 0.9  | 0.23.1 |
 | 0.8  | 0.21.0 |

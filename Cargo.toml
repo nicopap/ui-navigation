@@ -9,7 +9,8 @@ categories = ["game-development", "accessibility", "gui"]
 repository = "https://github.com/nicopap/ui-navigation"
 homepage = "https://github.com/nicopap/ui-navigation"
 exclude = ["assets", ".github"]
-version = "0.31.1"
+version = "0.32.0"
+rust-version = "1.70"
 edition = "2021"
 
 [features]
@@ -17,21 +18,21 @@ default = ["bevy_ui", "bevy_reflect", "pointer_focus"]
 bevy_reflect = []
 bevy_ui = ["bevy/bevy_ui", "bevy/bevy_render", "bevy_mod_picking?/backend_bevy_ui"]
 pointer_focus = ["bevy_mod_picking"]
+cuicui_chirp = ["cuicui_dsl", "dep:cuicui_chirp"]
 
 [dependencies]
 bevy = { version = "0.11", default-features = false, features = ["bevy_asset"] }
 bevy_mod_picking = { version = "0.15.0", optional = true, default-features = false }
-cuicui_dsl = { version = "0.8.1", optional = true }
+cuicui_chirp = { version = "0.10.0", optional = true }
+cuicui_dsl = { version = "0.10.0", optional = true }
 non-empty-vec = { version = "0.2.2", default-features = false }
 
 [dev-dependencies]
 fastrand = "1.7"
-# bevy-inspector-egui = "0.19"
-# bevy_framepace = "0.12.1"
-cuicui_layout_bevy_ui = "0.8.0"
-cuicui_layout = "0.8.0"
+cuicui_layout_bevy_ui = "0.10.0"
+cuicui_layout = "0.10.0"
 bevy = { version = "0.11", default-features = true }
 
 [[example]]
 name = "ultimate_menu_navigation"
-required-features = ["cuicui_dsl"]
+required-features = ["cuicui_chirp"]
