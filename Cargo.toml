@@ -9,7 +9,7 @@ categories = ["game-development", "accessibility", "gui"]
 repository = "https://github.com/nicopap/ui-navigation"
 homepage = "https://github.com/nicopap/ui-navigation"
 exclude = ["assets", ".github"]
-version = "0.32.0"
+version = "0.33.0"
 rust-version = "1.70"
 edition = "2021"
 
@@ -21,8 +21,8 @@ pointer_focus = ["bevy_mod_picking"]
 cuicui_chirp = ["cuicui_dsl", "dep:cuicui_chirp"]
 
 [dependencies]
-bevy = { version = "0.11", default-features = false, features = ["bevy_asset"] }
-bevy_mod_picking = { version = "0.15.0", optional = true, default-features = false }
+bevy = { version = "0.12", default-features = false, features = ["bevy_asset"] }
+bevy_mod_picking = { version = "0.16.0", optional = true, default-features = false }
 cuicui_chirp = { version = "0.10.0", optional = true, default-features = false, features = ["macros"] }
 cuicui_dsl = { version = "0.10.0", optional = true }
 non-empty-vec = { version = "0.2.2", default-features = false }
@@ -31,7 +31,7 @@ non-empty-vec = { version = "0.2.2", default-features = false }
 fastrand = "1.7"
 cuicui_layout_bevy_ui = { version = "0.10.0", default-features = false }
 cuicui_layout = { version = "0.10.0", default-features = false }
-bevy = { version = "0.11", default-features = false, features = ["bevy_asset", "png", "x11", "default_font"] }
+bevy = { version = "0.12", default-features = false, features = ["bevy_asset", "png", "x11", "default_font"] }
 
 [[example]]
 name = "ultimate_menu_navigation"

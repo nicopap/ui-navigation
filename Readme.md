@@ -629,6 +629,7 @@ fn return_trigger_action(mut requests: EventWriter<NavRequest>, input: Res<Input
 
 | bevy | latest supporting version      |
 |------|--------|
+| 0.12 | 0.33.0 |
 | 0.11 | 0.32.0 |
 | 0.10 | 0.24.1 |
 | 0.9  | 0.23.1 |
