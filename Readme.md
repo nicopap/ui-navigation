@@ -367,6 +367,33 @@ can use `NavMarker` in the [`mark`][module-marking] module.
 A usage demo is available in [the `marking.rs` example][example-marking].
 
 
+### Menu action with keyboard return (enter) key
+
+The default [`InputMapping`] key to trigger menu actions is the space key.
+To use the return key, change the `key_action` attribute.
+
+Otherwise, if you are not using default input handling, add this system:
+
+```rust
+use bevy::prelude::*;
+use bevy_ui_navigation::prelude::{NavRequest, NavRequestSystem};
+
+fn main() {
+    App::new()
+        // ...
+        .add_systems(Update, (
+            return_trigger_action.before(NavRequestSystem),
+        ));
+}
+
+fn return_trigger_action(mut requests: EventWriter<NavRequest>, input: Res<Input<KeyCode>>) {
+    if input.just_pressed(KeyCode::Return) {
+        requests.send(NavRequest::Action);
+    }
+}
+```
+
+
 ## Changelog
 
 * `0.8.2`: Fix offsetting of mouse focus with `UiCamera`s with a transform set
