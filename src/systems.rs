@@ -1,7 +1,7 @@
 //! System for the navigation tree and default input systems to get started.
 use crate::{
     events::{Direction, NavRequest, ScopeDirection},
-    resolve::{Focusable, Focused},
+    resolve::Focused,
 };
 
 #[cfg(feature = "bevy_ui")]
@@ -72,7 +72,7 @@ pub struct InputMapping {
     pub key_previous: KeyCode,
     /// Keyboard key for [`NavRequest::Unlock`]
     pub key_free: KeyCode,
-    /// Whether mouse hover gives focus to [`Focusable`] elements.
+    /// Whether mouse hover gives focus to [`Focusable`](crate::resolve::Focusable) elements.
     pub focus_follows_mouse: bool,
 }
 impl Default for InputMapping {
@@ -124,7 +124,7 @@ macro_rules! mapping {
 /// The button mapping may be controlled through the [`InputMapping`] resource.
 /// You may however need to customize the behavior of this system (typically
 /// when integrating in the game) in this case, you should write your own
-/// system that sends [`NavRequest`](crate::events::NavRequest) events
+/// system that sends [`NavRequest`] events
 pub fn default_gamepad_input(
     mut nav_cmds: EventWriter<NavRequest>,
     has_focused: Query<(), With<Focused>>,
@@ -195,7 +195,7 @@ pub fn default_gamepad_input(
 /// The button mapping may be controlled through the [`InputMapping`] resource.
 /// You may however need to customize the behavior of this system (typically
 /// when integrating in the game) in this case, you should write your own
-/// system that sends [`NavRequest`](crate::events::NavRequest) events.
+/// system that sends [`NavRequest`] events.
 pub fn default_keyboard_input(
     has_focused: Query<(), With<Focused>>,
     keyboard: Res<Input<KeyCode>>,
@@ -277,7 +277,7 @@ pub fn update_boundaries(
 
 #[cfg(feature = "pointer_focus")]
 fn send_request<E: EntityEvent>(
-    f: impl Fn(Query<&Focusable>, Res<ListenerInput<E>>, EventWriter<NavRequest>)
+    f: impl Fn(Query<&crate::resolve::Focusable>, Res<ListenerInput<E>>, EventWriter<NavRequest>)
         + Send
         + Sync
         + Copy
@@ -310,7 +310,7 @@ fn send_request<E: EntityEvent>(
 #[allow(clippy::type_complexity)]
 pub fn enable_click_request(
     input_mapping: Res<InputMapping>,
-    to_add: Query<Entity, (With<Focusable>, Without<On<Pointer<Click>>>)>,
+    to_add: Query<Entity, (With<crate::resolve::Focusable>, Without<On<Pointer<Click>>>)>,
     mut commands: Commands,
 ) {
     use crate::prelude::FocusState::Blocked;

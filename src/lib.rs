@@ -33,8 +33,8 @@
 [`NavRequest::ScopeMove`]: events::NavRequest::ScopeMove
 [`NavRequestSystem`]: NavRequestSystem
 */
-#![forbid(missing_docs)]
 #![doc = include_str!("../Readme.md")]
+#![forbid(missing_docs)]
 #![allow(clippy::unnecessary_lazy_evaluations)]
 
 mod commands;

@@ -374,7 +374,7 @@ To use the return key, change the `key_action` attribute.
 
 Otherwise, if you are not using default input handling, add this system:
 
-```rust
+```rust, no_run
 use bevy::prelude::*;
 use bevy_ui_navigation::prelude::{NavRequest, NavRequestSystem};
 
