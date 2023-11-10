@@ -89,7 +89,7 @@ impl<C> NavigationDsl<C> {
     }
 }
 impl<C: DslBundle> DslBundle for NavigationDsl<C> {
-    fn insert(&mut self, cmds: &mut EntityCommands) -> Entity {
+    fn insert(&mut self, cmds: &mut EntityCommands) {
         self.inner.insert(cmds);
         if let Some(menu) = self.menu.take() {
             let builder = match menu.reachable_from {
@@ -110,6 +110,5 @@ impl<C: DslBundle> DslBundle for NavigationDsl<C> {
             };
             cmds.insert(focusable);
         }
-        cmds.id()
     }
 }

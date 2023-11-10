@@ -581,6 +581,9 @@ fn return_trigger_action(mut requests: EventWriter<NavRequest>, input: Res<Input
   * Upgrade to `cuicui_dsl v0.10.0`
   * Add `cuicui_chirp` support
   * Add `ParseDsl` impl for `NavigationDsl`
+* `0.33.0`: **BREAKING**:
+  * Upgrade to `cuicui v0.12.0`
+  * Upgrade to `bevy v0.12.0`
 
 [the RFC PR]: https://github.com/bevyengine/bevy/pull/5378
 [diff-18-19]: https://github.com/nicopap/ui-navigation/compare/v0.18.0...v0.19.0
@@ -629,6 +632,7 @@ fn return_trigger_action(mut requests: EventWriter<NavRequest>, input: Res<Input
 
 | bevy | latest supporting version      |
 |------|--------|
+| 0.12 | 0.32.0 |
 | 0.11 | 0.32.0 |
 | 0.10 | 0.24.1 |
 | 0.9  | 0.23.1 |
@@ -636,30 +640,9 @@ fn return_trigger_action(mut requests: EventWriter<NavRequest>, input: Res<Input
 | 0.7  | 0.18.0 |
 | 0.6  | 0.14.0 |
 
-### Notes on API Stability
-
-In the 4th week of January, there has been 5 breaking version changes. `0.13.0`
-marks the end of this wave of API changes. And things should go much slower in
-the future.
-
-The new `NavMenu` construction system helps adding orthogonal features to the
-library without breaking API changes. However, since bevy is still in `0.*`
-territory, it doesn't make sense for this library to leave the `0.*` range.
-
-Also, the way cargo handles versioning for `0.*` crates is in infraction of
-the semver specification. Meaning that additional features without breakages
-requires bumping the minor version rather than the patch version (as should
-pre-`1.` versions do).
-
-
 # License
 
 Copyright © 2022 Nicola Papale
 
 This software is licensed under either MIT or Apache 2.0 at your leisure. See
 licenses directory for details.
-
-### Font
-
-The font in `font.ttf` is derived from Adobe SourceSans, licensed
-under the SIL OFL. see file at `licenses/SIL Open Font License.txt`.

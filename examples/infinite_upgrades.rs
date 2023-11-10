@@ -50,7 +50,6 @@ fn main() {
         .add_systems(PostUpdate, mark_buttons)
         .add_systems(Startup, setup)
         // Our systems.
-        .init_resource::<MenuFont>()
         .init_resource::<MenuMap>()
         .run();
 }
@@ -131,15 +130,6 @@ struct MenuMap {
 impl MenuMap {
     fn is_free(&self, at: IVec2) -> bool {
         !self.grid.contains_key(&at)
-    }
-}
-
-#[derive(Resource)]
-struct MenuFont(Handle<Font>);
-impl FromWorld for MenuFont {
-    fn from_world(world: &mut World) -> Self {
-        let assets = world.get_resource::<AssetServer>().unwrap();
-        MenuFont(assets.load("font.ttf"))
     }
 }
 
@@ -380,7 +370,7 @@ const QUALIFICATIVES: &[&str] = &[
 //
 // === === ===
 
-fn setup(mut commands: Commands, font: Res<MenuFont>, mut menus: ResMut<MenuMap>) {
+fn setup(mut commands: Commands, mut menus: ResMut<MenuMap>) {
     let name = NAMES[fastrand::usize(0..NAMES.len())];
     let upgrade = if fastrand::bool() {
         Upgrade::Roman(1)
@@ -390,7 +380,7 @@ fn setup(mut commands: Commands, font: Res<MenuFont>, mut menus: ResMut<MenuMap>
     let weapon = Weapon::new(name, upgrade);
     commands.spawn((Camera2dBundle::default(), Animate::default()));
     let at = IVec2::ZERO;
-    let menu = spawn_weapon_upgrade_menu(&mut commands, at, &weapon, &font, None);
+    let menu = spawn_weapon_upgrade_menu(&mut commands, at, &weapon, None);
     menus.grid.insert(at, menu);
 }
 
@@ -452,7 +442,7 @@ fn handle_menu_change(
     menu_position: Query<&GlobalTransform, With<Menu>>,
     menu_query: Query<&ParentMenu>,
 ) {
-    for event in nav_events.iter() {
+    for event in nav_events.read() {
         if let NavEvent::FocusChanged { to, from } = event {
             let menu_query = (menu_query.get(*from.first()), menu_query.get(*to.first()));
             if let (Ok(from), Ok(to)) = menu_query {
@@ -481,7 +471,7 @@ fn upgrade_weapon(
     mut commands: Commands,
     mut events: EventReader<NavEvent>,
     mut requests: EventWriter<NavRequest>,
-    (mut menus, time, font): (ResMut<MenuMap>, Res<Time>, Res<MenuFont>),
+    (mut menus, time): (ResMut<MenuMap>, Res<Time>),
     mut cam: Query<&mut Animate, With<Camera2d>>,
     query: Query<(&ParentMenu, &WeaponUpgrade, &SpawnDirection, Entity)>,
     menu_data: Query<&Menu>,
@@ -502,7 +492,7 @@ fn upgrade_weapon(
             // `Menu.weapon`, but instead reads the `WeaponUpgrade` component of all
             // focusable in the `from` field of `NavEvent::NoChanges` to generate
             // the current weapon upgrade.
-            let menu = spawn_weapon_upgrade_menu(&mut commands, at, &weapon, &font, Some(entity));
+            let menu = spawn_weapon_upgrade_menu(&mut commands, at, &weapon, Some(entity));
             menus.grid.insert(at, menu);
             requests.send(NavRequest::Action);
         } else {
@@ -558,7 +548,6 @@ fn spawn_weapon_upgrade_menu(
     commands: &mut Commands,
     position: IVec2,
     weapon: &Weapon,
-    font: &MenuFont,
     parent: Option<Entity>,
 ) -> Entity {
     let quals = QUALIFICATIVES.len();
@@ -568,9 +557,9 @@ fn spawn_weapon_upgrade_menu(
     let menu_grid_offset = Vec2::new(MENU_WIDTH, MENU_HEIGHT) + MENU_GAP;
     let at = position.as_vec2() * menu_grid_offset;
     let text_style = || TextStyle {
-        font: font.0.clone_weak(),
         color: Color::WHITE,
         font_size: FONT_SIZE,
+        ..default()
     };
     let item_position = |at: Vec2| Transform::from_translation(at.extend(0.1));
     // Rectangle

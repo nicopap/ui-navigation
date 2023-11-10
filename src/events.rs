@@ -231,7 +231,7 @@ impl<'w, 's, 'a> NavEventReader<'w, 's, 'a> {
     /// triggered by `request` type requests.
     pub fn with_request(&mut self, request: NavRequest) -> impl Iterator<Item = Entity> + '_ {
         self.event_reader
-            .iter()
+            .read()
             .filter_map(move |nav_event| match nav_event {
                 NavEvent::NoChanges {
                     from,
@@ -254,7 +254,7 @@ impl<'w, 's, 'a> NavEventReader<'w, 's, 'a> {
     /// with the "relevant" entity of the event.
     pub fn types(&mut self) -> impl Iterator<Item = (&NavEvent, Entity)> + '_ {
         use NavEvent::{FocusChanged, InitiallyFocused, Locked, NoChanges, Unlocked};
-        self.event_reader.iter().filter_map(|event| {
+        self.event_reader.read().filter_map(|event| {
             let entity = match event {
                 NoChanges { from, .. } => Some(*from.first()),
                 InitiallyFocused(initial) => Some(*initial),

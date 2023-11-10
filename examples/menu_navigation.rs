@@ -94,7 +94,7 @@ fn handle_nav_events(
     game: Res<Gameui>,
 ) {
     use NavRequest::Action;
-    for event in events.iter() {
+    for event in events.read() {
         if let NavEvent::FocusChanged { from, to } = &event {
             println!("----------\nfrom: {:?}\n  to: {:?}", from, to);
         }

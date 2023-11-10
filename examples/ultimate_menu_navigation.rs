@@ -17,8 +17,8 @@ struct UltimateMenuDsl {
 #[parse_dsl_impl(delegate = inner)]
 impl UltimateMenuDsl {}
 impl DslBundle for UltimateMenuDsl {
-    fn insert(&mut self, cmds: &mut EntityCommands) -> Entity {
-        self.inner.insert(cmds)
+    fn insert(&mut self, cmds: &mut EntityCommands) {
+        self.inner.insert(cmds);
     }
 }
 
@@ -37,14 +37,15 @@ impl DslBundle for UltimateMenuDsl {
 ///
 /// Navigation also works with controller
 fn main() {
+    let primary_window = Some(Window {
+        resolution: (1280., 720.).into(),
+        ..default()
+    });
     App::new()
         .add_plugins((
-            DefaultPlugins.set({
-                let delay = std::time::Duration::from_millis(200);
-                AssetPlugin {
-                    watch_for_changes: bevy::asset::ChangeWatcher::with_delay(delay),
-                    ..default()
-                }
+            DefaultPlugins.set(WindowPlugin {
+                primary_window,
+                ..default()
             }),
             DefaultNavigationPlugins,
             cuicui_chirp::loader::Plugin::new::<UltimateMenuDsl>(),

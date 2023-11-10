@@ -907,7 +907,7 @@ pub(crate) fn listen_nav_requests<STGY: SystemParam>(
 
     // Cache focus result from previous iteration to avoid re-running costly `pick_first_focused`
     let mut computed_focused = None;
-    for request in requests.iter() {
+    for request in requests.read() {
         if lock.is_locked() && *request != NavRequest::Unlock {
             continue;
         }
