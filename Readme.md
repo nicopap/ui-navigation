@@ -10,7 +10,7 @@ A generic UI navigation algorithm for the
 
 ```toml
 [dependencies]
-bevy-ui-navigation = "0.33.0"
+bevy-ui-navigation = "0.33.1"
 ```
 
 The in-depth design specification is [available here][rfc41].
@@ -435,7 +435,7 @@ See the changelog at <https://github.com/nicopap/ui-navigation/blob/master/CHANG
 
 | bevy | latest supporting version      |
 |------|--------|
-| 0.12 | 0.33.0 |
+| 0.12 | 0.33.1 |
 | 0.11 | 0.32.0 |
 | 0.10 | 0.24.1 |
 | 0.9  | 0.23.1 |
