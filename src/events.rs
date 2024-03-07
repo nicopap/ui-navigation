@@ -20,7 +20,7 @@ use bevy::{
     ecs::{
         entity::Entity,
         event::EventReader,
-        query::{ReadOnlyWorldQuery, WorldQuery},
+        query::{QueryData, QueryFilter, ReadOnlyQueryData},
         system::Query,
     },
     math::Vec2,
@@ -270,7 +270,7 @@ impl<'w, 's, 'a> NavEventReader<'w, 's, 'a> {
     /// Iterate over query items of _activated_ focusables.
     ///
     /// See [`Self::activated`] for meaning of _"activated"_.
-    pub fn activated_in_query<'b, 'c: 'b, Q: ReadOnlyWorldQuery, F: ReadOnlyWorldQuery>(
+    pub fn activated_in_query<'b, 'c: 'b, Q: ReadOnlyQueryData, F: QueryFilter>(
         &'b mut self,
         query: &'c Query<Q, F>,
     ) -> impl Iterator<Item = Q::Item<'c>> + 'b {
@@ -281,7 +281,7 @@ impl<'w, 's, 'a> NavEventReader<'w, 's, 'a> {
     ///
     /// Unlike [`Self::activated_in_query`] this works with mutable queries.
     /// see [`Self::activated`] for meaning of _"activated"_.
-    pub fn activated_in_query_foreach_mut<Q: WorldQuery, F: ReadOnlyWorldQuery>(
+    pub fn activated_in_query_foreach_mut<Q: QueryData, F: QueryFilter>(
         &mut self,
         query: &mut Query<Q, F>,
         mut for_each: impl FnMut(Q::Item<'_>),
