@@ -123,7 +123,7 @@ pub struct ScreenBoundaries {
 pub(crate) struct ChildQueries<'w, 's> {
     children: Query<'w, 's, &'static Children>,
     is_focusable: Query<'w, 's, &'static Focusable>,
-    is_menu: Query<'w, 's, With<MenuSetting>>,
+    is_menu: Query<'w, 's, (), With<MenuSetting>>,
 }
 
 /// System parameter for the default cursor navigation system.

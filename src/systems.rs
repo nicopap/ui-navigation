@@ -92,19 +92,19 @@ impl Default for InputMapping {
             previous_button: GamepadButtonType::LeftTrigger,
             next_button: GamepadButtonType::RightTrigger,
             free_button: GamepadButtonType::Start,
-            key_left: KeyCode::A,
-            key_right: KeyCode::D,
-            key_up: KeyCode::W,
-            key_down: KeyCode::S,
-            key_left_alt: KeyCode::Left,
-            key_right_alt: KeyCode::Right,
-            key_up_alt: KeyCode::Up,
-            key_down_alt: KeyCode::Down,
+            key_left: KeyCode::KeyA,
+            key_right: KeyCode::KeyD,
+            key_up: KeyCode::KeyW,
+            key_down: KeyCode::KeyS,
+            key_left_alt: KeyCode::ArrowLeft,
+            key_right_alt: KeyCode::ArrowRight,
+            key_up_alt: KeyCode::ArrowUp,
+            key_down_alt: KeyCode::ArrowDown,
             key_action: KeyCode::Space,
-            key_cancel: KeyCode::Back,
-            key_next: KeyCode::E,
+            key_cancel: KeyCode::Backspace,
+            key_next: KeyCode::KeyE,
             key_next_alt: KeyCode::Tab,
-            key_previous: KeyCode::Q,
+            key_previous: KeyCode::KeyQ,
             key_free: KeyCode::Escape,
             focus_follows_mouse: false,
         }
@@ -129,7 +129,7 @@ pub fn default_gamepad_input(
     mut nav_cmds: EventWriter<NavRequest>,
     has_focused: Query<(), With<Focused>>,
     input_mapping: Res<InputMapping>,
-    buttons: Res<Input<GamepadButton>>,
+    buttons: Res<ButtonInput<GamepadButton>>,
     axis: Res<Axis<GamepadAxis>>,
     mut ui_input_status: Local<bool>,
 ) {
@@ -181,7 +181,7 @@ pub fn default_gamepad_input(
                 button_type,
             };
             if buttons.just_pressed(button) {
-                nav_cmds.send(request)
+                nav_cmds.send(request);
             }
         }
     }
@@ -198,7 +198,7 @@ pub fn default_gamepad_input(
 /// system that sends [`NavRequest`] events.
 pub fn default_keyboard_input(
     has_focused: Query<(), With<Focused>>,
-    keyboard: Res<Input<KeyCode>>,
+    keyboard: Res<ButtonInput<KeyCode>>,
     input_mapping: Res<InputMapping>,
     mut nav_cmds: EventWriter<NavRequest>,
 ) {
@@ -230,7 +230,7 @@ pub fn default_keyboard_input(
     };
     let mut send_command = |&(key, request)| {
         if keyboard.just_pressed(key) {
-            nav_cmds.send(request)
+            nav_cmds.send(request);
         }
     };
     if input_mapping.keyboard_navigation {
@@ -248,14 +248,13 @@ pub fn default_keyboard_input(
 pub fn update_boundaries(
     mut commands: Commands,
     mut boundaries: Option<ResMut<ScreenBoundaries>>,
-    cam: Query<(&Camera, Option<&UiCameraConfig>), Or<(Changed<Camera>, Changed<UiCameraConfig>)>>,
+    targets: Query<&TargetCamera, Changed<TargetCamera>>,
+    cam: Query<&Camera>,
 ) {
-    // TODO: this assumes there is only a single camera with activated UI.
-    let first_visible_ui_cam = |(cam, config): (_, Option<&UiCameraConfig>)| {
-        config.map_or(true, |c| c.show_ui).then_some(cam)
-    };
+    // TODO: this assumes there is only a single camera with UI.
     let mut update_boundaries = || {
-        let cam = cam.iter().find_map(first_visible_ui_cam)?;
+        let first_ui_cam = targets.iter().next()?;
+        let cam = cam.get(first_ui_cam.0).ok()?;
         let physical_size = cam.physical_viewport_size()?;
         let new_boundaries = ScreenBoundaries {
             position: Vec2::ZERO,

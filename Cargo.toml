@@ -16,14 +16,22 @@ edition = "2021"
 [features]
 default = ["bevy_ui", "bevy_reflect", "pointer_focus"]
 bevy_reflect = []
-bevy_ui = ["bevy/bevy_ui", "bevy/bevy_render", "bevy_mod_picking?/backend_bevy_ui"]
+bevy_ui = [
+  "bevy/bevy_ui",
+  "bevy/bevy_render",
+  "bevy_mod_picking?/backend_bevy_ui",
+]
 pointer_focus = ["bevy_mod_picking"]
 cuicui_chirp = ["cuicui_dsl", "dep:cuicui_chirp"]
 
 [dependencies]
-bevy = { version = "0.12", default-features = false, features = ["bevy_asset"] }
-bevy_mod_picking = { version = "0.17.0", optional = true, default-features = false }
-cuicui_chirp = { version = "0.12.0", optional = true, default-features = false, features = ["macros"] }
+bevy = { version = "0.13", default-features = false, features = ["bevy_asset"] }
+bevy_mod_picking = { version = "0.18.0", optional = true, default-features = false }
+# TODO
+cuicui_chirp = { version = "0.12.0", optional = true, default-features = false, features = [
+  "macros",
+] }
+# TODO
 cuicui_dsl = { version = "0.12.0", optional = true }
 non-empty-vec = { version = "0.2.2", default-features = false }
 
@@ -31,12 +39,18 @@ non-empty-vec = { version = "0.2.2", default-features = false }
 fastrand = "2.0.1"
 cuicui_layout_bevy_ui = { version = "0.12.0", default-features = false }
 cuicui_layout = { version = "0.12.0", default-features = false }
-bevy = { version = "0.12", default-features = false, features = ["bevy_asset", "png", "x11", "default_font", "bevy_gilrs"] }
+bevy = { version = "0.13", default-features = false, features = [
+  "bevy_asset",
+  "png",
+  "x11",
+  "default_font",
+  "bevy_gilrs",
+] }
 
 [package.metadata.release]
 pre-release-replacements = [
-  {search="\\| 0.12 \\| [0-9.]* \\|",replace="| 0.12 | {{version}} |",file="Readme.md"},
-  {search="bevy-ui-navigation = \"[0-9.]*\"",replace="bevy-ui-navigation = \"{{version}}\"",file="Readme.md"},
+  { search = "\\| 0.12 \\| [0-9.]* \\|", replace = "| 0.12 | {{version}} |", file = "Readme.md" },
+  { search = "bevy-ui-navigation = \"[0-9.]*\"", replace = "bevy-ui-navigation = \"{{version}}\"", file = "Readme.md" },
 ]
 
 [[example]]
