@@ -208,7 +208,7 @@ fn button_system() {}
 
 ### Locking
 
-If you need to supress the navigation algorithm temporarily, you can declare a
+If you need to suppress the navigation algorithm temporarily, you can declare a
 [`Focusable`] as [`Focusable::lock`].
 
 This is useful for example if you want to implement custom widget with their
@@ -427,7 +427,7 @@ fn return_trigger_action(mut requests: EventWriter<NavRequest>, input: Res<Input
 [`NavRequestSystem`]: https://docs.rs/bevy-ui-navigation/latest/bevy_ui_navigation/struct.NavRequestSystem.html
 [rfc41]: https://github.com/nicopap/rfcs/blob/ui-navigation/rfcs/41-ui-navigation.md
 
-### Chagelog
+### Changelog
 
 See the changelog at <https://github.com/nicopap/ui-navigation/blob/master/CHANGELOG.md>
 
