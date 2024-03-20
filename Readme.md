@@ -396,7 +396,7 @@ fn return_trigger_action(mut requests: EventWriter<NavRequest>, input: Res<Input
 }
 ```
 
-[`ButtonBundle`]: https://docs.rs/bevy/latest/bevy/ui/entity/struct.ButtonBundle.html
+[`ButtonBundle`]: https://docs.rs/bevy/latest/bevy/ui/node_bundles/struct.ButtonBundle.html
 [Changed]: https://docs.rs/bevy/latest/bevy/ecs/prelude/struct.Changed.html
 [doc-root]: https://docs.rs/bevy-ui-navigation/latest/bevy_ui_navigation/
 [`Entity`]: https://docs.rs/bevy/latest/bevy/ecs/entity/struct.Entity.html
@@ -413,9 +413,9 @@ fn return_trigger_action(mut requests: EventWriter<NavRequest>, input: Res<Input
 [module-event_helpers]: https://docs.rs/bevy-ui-navigation/latest/bevy_ui_navigation/events/trait.NavEventReaderExt.html
 [module-marking]: https://docs.rs/bevy-ui-navigation/latest/bevy_ui_navigation/mark/index.html
 [module-systems]: https://docs.rs/bevy-ui-navigation/latest/bevy_ui_navigation/systems/index.html
-[Name]: https://docs.rs/bevy/latest/bevy/core/enum.Name.html
+[Name]: https://docs.rs/bevy/latest/bevy/core/struct.Name.html
 [`NavEvent::FocusChanged`]: https://docs.rs/bevy-ui-navigation/latest/bevy_ui_navigation/events/enum.NavEvent.html#variant.FocusChanged
-[`MenuSetting`]: https://docs.rs/bevy-ui-navigation/latest/bevy_ui_navigation/menu/enum.MenuSetting.html
+[`MenuSetting`]: https://docs.rs/bevy-ui-navigation/latest/bevy_ui_navigation/menu/struct.MenuSetting.html
 [`MenuBuilder`]: https://docs.rs/bevy-ui-navigation/latest/bevy_ui_navigation/menu/enum.MenuBuilder.html
 [MenuBuilder::reachable_from]: https://docs.rs/bevy-ui-navigation/latest/bevy_ui_navigation/menu/enum.MenuBuilder.html#variant.EntityParent
 [MenuBuilder::reachable_from_named]: https://docs.rs/bevy-ui-navigation/latest/bevy_ui_navigation/menu/enum.MenuBuilder.html#method.from_named
