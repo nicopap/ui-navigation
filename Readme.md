@@ -1,8 +1,8 @@
 # Bevy UI navigation
 
-[![Bevy tracking](https://img.shields.io/badge/Bevy%20tracking-released%20version-lightblue)](https://github.com/bevyengine/bevy/blob/main/docs/plugins_guidelines.md#main-branch-tracking)
+[![Bevy tracking](https://img.shields.io/badge/Bevy%20tracking-released%20version-lightblue)](https://bevyengine.org/learn/quick-start/plugin-development/#main-branch-tracking)
 [![Latest version](https://img.shields.io/crates/v/bevy_ui_navigation.svg)](https://crates.io/crates/bevy_ui_navigation)
-[![MIT/Apache 2.0](https://img.shields.io/badge/license-MIT%2FApache-blue.svg)](./LICENSE)
+[![MIT/Apache 2.0](https://img.shields.io/badge/license-MIT%2FApache-blue.svg)](./licenses)
 [![Documentation](https://docs.rs/bevy-ui-navigation/badge.svg)](https://docs.rs/bevy-ui-navigation/)
 
 A generic UI navigation algorithm for the
@@ -15,12 +15,11 @@ bevy-ui-navigation = "0.33.1"
 
 The in-depth design specification is [available here][rfc41].
 
-### Examples
+## Examples
 
 Check out the [`examples`][examples] directory for bevy examples.
 
 ![Demonstration of "Ultimate navigation" example](https://user-images.githubusercontent.com/26321040/141612751-ba0e62b2-23d6-429a-b5d1-48b09c10d526.gif)
-
 
 ## Cargo Features
 
@@ -46,7 +45,6 @@ See [this example][example-simple] for a quick start guide.
 doesn't include many examples. This page contains most of the doc examples,
 you should check the [examples directory][examples] for examples showcasing
 all features of this crate.
-
 
 ### Simple case
 
@@ -142,6 +140,7 @@ go, and you get there.
 
 Any [`Entity`] can be converted into a focusable entity by adding the [`Focusable`]
 component to it. To do so, just:
+
 ```rust
 # use bevy::prelude::*;
 # use bevy_ui_navigation::prelude::Focusable;
@@ -149,11 +148,13 @@ fn system(mut cmds: Commands, my_entity: Entity) {
     cmds.entity(my_entity).insert(Focusable::default());
 }
 ```
+
 That's it! Now `my_entity` is part of the navigation tree. The player can select
 it with their controller the same way as any other [`Focusable`] element.
 
 You probably want to render the focused button differently than other buttons,
 this can be done with the [`Changed<Focusable>`][Changed] query parameter as follow:
+
 ```rust
 use bevy::prelude::*;
 use bevy_ui_navigation::prelude::{FocusState, Focusable};
@@ -178,6 +179,7 @@ You will want the interaction feedback to be snappy. This means the
 interaction feedback should run the same frame as the focus change. For this to
 happen every frame, you should add `button_system` to your app using the
 [`NavRequestSystem`] label like so:
+
 ```rust, no_run
 use bevy::prelude::*;
 use bevy_ui_navigation::prelude::{NavRequestSystem, NavRequest, NavigationPlugin};
@@ -203,7 +205,6 @@ fn main() {
 fn button_system() {}
 ```
 
-
 ## More complex use cases
 
 ### Locking
@@ -214,7 +215,6 @@ If you need to suppress the navigation algorithm temporarily, you can declare a
 This is useful for example if you want to implement custom widget with their
 own controls, or if you want to disable menu navigation while in game. To
 resume the navigation system, you'll need to send a [`NavRequest::Free`].
-
 
 ### `NavRequest::FocusOn`
 
@@ -246,9 +246,11 @@ this behavior, spawn a prioritized [`Focusable`] with [`Focusable::prioritized`]
 Suppose you have a more complex game with menus sub-menus and sub-sub-menus etc.
 For example, in your everyday 2021 AAA game, to change the antialiasing you
 would go through a few menus:
+
 ```text
 game menu → options menu → graphics menu → custom graphics menu → AA
 ```
+
 In this case, you need to be capable of specifying which button in the previous
 menu leads to the next menu (for example, you would press the "Options" button
 in the game menu to access the options menu).
@@ -256,6 +258,7 @@ in the game menu to access the options menu).
 For that, you need to use [`MenuBuilder`].
 
 The high level usage of [`MenuBuilder`] is as follow:
+
 1. First you need a "root" menu using `MenuBuilder::Root`.
 2. You need to spawn into the ECS your "options" button with a [`Focusable`]
    component. To link the button to your options menu, you need to do one of
@@ -272,6 +275,7 @@ The high level usage of [`MenuBuilder`] is as follow:
      if you have an [`Entity`] id.
 
 In code, This will look like this:
+
 ```rust
 use bevy::prelude::*;
 use bevy_ui_navigation::prelude::{Focusable, MenuSetting, MenuBuilder};
@@ -348,6 +352,7 @@ menu.
 To define a menu, you need both the `MenuBuilder` and `MenuSetting` components.
 
 A [`MenuSetting`] gives you fine-grained control on how navigation is handled within a menu:
+
 * `MenuSetting::new().wrapping()` enables looping
   navigation, where going offscreen in one direction "wraps" to the opposite
   screen edge.
@@ -358,14 +363,12 @@ A [`MenuSetting`] gives you fine-grained control on how navigation is handled wi
 See the [`MenuSetting`] documentation or the ["ultimate" menu navigation
 example][example-ultimate] for details.
 
-
 #### Marking
 
 If you need to know from which menu a [`NavEvent::FocusChanged`] originated, you
 can use `NavMarker` in the [`mark`][module-marking] module.
 
 A usage demo is available in [the `marking.rs` example][example-marking].
-
 
 ### Menu action with keyboard return (enter) key
 
@@ -403,7 +406,6 @@ fn return_trigger_action(mut requests: EventWriter<NavRequest>, input: Res<Input
 [example-simple]: https://github.com/nicopap/ui-navigation/tree/master/examples/simple.rs
 [example-ultimate]: https://github.com/nicopap/ui-navigation/blob/master/examples/ultimate_menu_navigation.rs
 [`FocusableButtonBundle`]: https://docs.rs/bevy-ui-navigation/latest/bevy_ui_navigation/components/struct.FocusableButtonBundle.html
-[`Focusable::block`]: https://docs.rs/bevy-ui-navigation/latest/bevy_ui_navigation/prelude/struct.Focusable.html#method.block
 [`Focusable::prioritized`]: https://docs.rs/bevy-ui-navigation/latest/bevy_ui_navigation/prelude/struct.Focusable.html#method.prioritized
 [`Focusable`]: https://docs.rs/bevy-ui-navigation/latest/bevy_ui_navigation/prelude/struct.Focusable.html
 [`Focusable::lock`]: https://docs.rs/bevy-ui-navigation/latest/bevy_ui_navigation/prelude/struct.Focusable.html#method.lock
@@ -413,7 +415,6 @@ fn return_trigger_action(mut requests: EventWriter<NavRequest>, input: Res<Input
 [module-systems]: https://docs.rs/bevy-ui-navigation/latest/bevy_ui_navigation/systems/index.html
 [Name]: https://docs.rs/bevy/latest/bevy/core/enum.Name.html
 [`NavEvent::FocusChanged`]: https://docs.rs/bevy-ui-navigation/latest/bevy_ui_navigation/events/enum.NavEvent.html#variant.FocusChanged
-[`NavEvent`]: https://docs.rs/bevy-ui-navigation/latest/bevy_ui_navigation/events/enum.NavEvent.html
 [`MenuSetting`]: https://docs.rs/bevy-ui-navigation/latest/bevy_ui_navigation/menu/enum.MenuSetting.html
 [`MenuBuilder`]: https://docs.rs/bevy-ui-navigation/latest/bevy_ui_navigation/menu/enum.MenuBuilder.html
 [MenuBuilder::reachable_from]: https://docs.rs/bevy-ui-navigation/latest/bevy_ui_navigation/menu/enum.MenuBuilder.html#variant.EntityParent
@@ -422,16 +423,15 @@ fn return_trigger_action(mut requests: EventWriter<NavRequest>, input: Res<Input
 [`NavRequest::Action`]: https://docs.rs/bevy-ui-navigation/latest/bevy_ui_navigation/events/enum.NavRequest.html#variant.Action
 [`NavRequest::FocusOn`]: https://docs.rs/bevy-ui-navigation/latest/bevy_ui_navigation/events/enum.NavRequest.html#variant.FocusOn
 [`NavRequest::Free`]: https://docs.rs/bevy-ui-navigation/latest/bevy_ui_navigation/events/enum.NavRequest.html#variant.Unlock
-[`NavRequest::Unlock`]: https://docs.rs/bevy-ui-navigation/latest/bevy_ui_navigation/events/enum.NavRequest.html#variant.Unlock
 [`NavRequest::ScopeMove`]: https://docs.rs/bevy-ui-navigation/latest/bevy_ui_navigation/events/enum.NavRequest.html#variant.ScopeMove
 [`NavRequestSystem`]: https://docs.rs/bevy-ui-navigation/latest/bevy_ui_navigation/struct.NavRequestSystem.html
 [rfc41]: https://github.com/nicopap/rfcs/blob/ui-navigation/rfcs/41-ui-navigation.md
 
-### Changelog
+## Changelog
 
 See the changelog at <https://github.com/nicopap/ui-navigation/blob/master/CHANGELOG.md>
 
-### Version matrix
+## Version matrix
 
 | bevy | latest supporting version      |
 |------|--------|
@@ -443,7 +443,7 @@ See the changelog at <https://github.com/nicopap/ui-navigation/blob/master/CHANG
 | 0.7  | 0.18.0 |
 | 0.6  | 0.14.0 |
 
-# License
+## License
 
 Copyright © 2022 Nicola Papale
 
